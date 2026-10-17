@@ -1,0 +1,39 @@
+# Built application files
+build/
+**/build/
+*.apk
+*.aab
+.externalNativeBuild/
+.cxx/
+**/app/.cxx/*
+
+# Prebuilt native libraries (keep bundled libXlorie.so)
+*.so
+!lorie/src/main/jniLibs/**/*.so
+
+# Large runtime archives (published as GitHub Release assets)
+lorie-app/src/main/assets/*.tar.xz
+
+# Private signing keystores (keep fallback debug keystore only)
+lorie-app/asycuda_release.jks
+.signing/
+
+# Local configuration & Gradle cache
+local.properties
+.gradle/
+github.properties
+
+# IDE files
+.idea/
+*.iml
+/captures
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+*.swp
+ehthumbs.db
+Thumbs.db
