@@ -1,0 +1,71 @@
+apply plugin: 'com.android.application'
+apply from: '../lorie/version.gradle'
+
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def releaseStorePass = localProps.getProperty('release.storePassword') ?: System.getenv('ASYCUDA_KEYSTORE_PASS')
+def releaseKeyPass = localProps.getProperty('release.keyPassword') ?: System.getenv('ASYCUDA_KEY_PASS')
+def useReleaseKeystore = file('asycuda_release.jks').exists() && releaseStorePass != null
+
+android {
+    namespace 'com.termux.x11.app'
+    compileSdkVersion 34
+    defaultConfig {
+        applicationId "iq.asycuda"
+        minSdkVersion 24
+        targetSdkVersion 28
+        versionCode 36
+        versionName "3.6.0"
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file(useReleaseKeystore ? 'asycuda_release.jks' : 'testkey_untrusted.jks')
+            keyAlias useReleaseKeystore ? 'asycuda_iraq' : 'alias'
+            storePassword useReleaseKeystore ? releaseStorePass : '123456'
+            keyPassword useReleaseKeystore ? releaseKeyPass : '123456'
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+        release {
+            storeFile file(useReleaseKeystore ? 'asycuda_release.jks' : 'testkey_untrusted.jks')
+            keyAlias useReleaseKeystore ? 'asycuda_iraq' : 'alias'
+            storePassword useReleaseKeystore ? releaseStorePass : '123456'
+            keyPassword useReleaseKeystore ? releaseKeyPass : '123456'
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
+
+    compileOptions.sourceCompatibility JavaVersion.VERSION_1_9
+    compileOptions.targetCompatibility JavaVersion.VERSION_1_9
+    packagingOptions.jniLibs.useLegacyPackaging true
+
+    androidResources {
+        noCompress 'xz'
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+            debuggable false
+        }
+    }
+}
+
+dependencies {
+    implementation project(':lorie')
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE resources [
+    <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
+    <!ENTITY TERMUX_APP_NAME "Termux">
+    <!ENTITY TERMUX_X11_APP_NAME "ئەسیکۆدا عێراق">
+    ]>
+<resources>
+    <string name="lorie_app_name">&TERMUX_X11_APP_NAME;</string>
+
+    <string name="not_connected">پەیوەندی نییە</string>
+    <string name="preferences_button_text">ڕێکخستنەکان</string>
+    <string name="help_button_text">یارمەتی</string>
+    <string name="exit_button_text">دەرچوون</string>
+    <string name="displays_button_text">شاشەکان</string>
+    <string name="displays_dialog_title">شاشەکان</string>
+    <string name="displays_dialog_empty">هیچ شاشەیەکی تر کراوە نییە</string>
+    <string name="lorie_notification_content_text">ڕابکێشە خوارەوە بۆ بینینی هەڵبژاردنەکان</string>
+    <string name="lorie_notification_open_preferences">ڕێکخستنەکان</string>
+    <string name="lorie_notification_exit">دەرچوون</string>
+    <string name="lorie_notification_restart_activity">دووبارە پێکردنەوە</string>
+    <string name="lorie_notification_toggle_soft_keyboard">پیشاندان/شاردنەوەی تەختەکلیل</string>
+    <string name="lorie_notification_toggle_additional_key_bar">پیشاندان/شاردنەوەی شریتی دوگمە زیادەکان</string>
+    <string name="lorie_notification_release_pointer_and_keyboard_capture">ئازادکردنی نیشاندەر و تەختەکلیل</string>
+    <string name="lorie_notification_toggle_fullscreen">پڕ شاشە</string>
+
+    <string name="lorie_pref_main">ڕێکخستنەکان</string>
+    <string name="lorie_pref_output">پیشاندان و شاشە</string>
+    <string name="lorie_pref_pointer">نیشاندەر و دەستلێدان</string>
+    <string name="lorie_pref_kbd">تەختەکلیل</string>
+    <string name="lorie_pref_other">هیتر</string>
+    <string name="lorie_pref_version">وەشان</string>
+    <string name="lorie_pref_ekbar">ڕێکخستنەکانی شریتی دوگمە زیادەکان</string>
+    <string name="lorie_pref_userActions">وەڵامدانەوەی کردارەکانی بەکارهێنەر</string>
+
+    <string name="lorie_pref_displayResolutionMode">دۆخی وردیی شاشە</string>
+    <string name="lorie_pref_displayScale">قەبارەی پیشاندان %</string>
+    <string name="lorie_pref_displayResolutionExact">وردیی شاشە</string>
+    <string name="lorie_pref_displayResolutionCustom">وردیی تایبەتی شاشە</string>
+    <string name="lorie_pref_displayFilteringMode">دۆخی سافکردنی پیشاندان</string>
+    <string name="lorie_pref_adjustResolution">گونجاندنی وردی لەگەڵ ئاڕاستەی شاشە</string>
+    <string name="lorie_pref_displayStretch">کشاندنی پیشاندان بۆ پڕکردنەوەی شاشە</string>
+    <string name="lorie_pref_Reseed">ڕێکخستنی قەبارەی شاشە کاتی کردنەوەی تەختەکلیل</string>
+    <string name="lorie_pref_Reseed_summary">قەبارەی شاشە خۆکارانە دەگۆڕێت کاتێک تەختەکلیل کراوەیە.</string>
+    <string name="lorie_pref_PIP">دۆخی پەنجەرە لەناو پەنجەرە (PIP)</string>
+    <string name="lorie_pref_PIP_summary">پیشاندانی بەرنامە لە پەنجەرەیەکی بچووکدا کاتی چوونە دەرەوە</string>
+    <string name="lorie_pref_fullscreen">پڕ شاشە</string>
+    <string name="lorie_pref_fullscreen_summary">چالاککردنی دۆخی پڕ شاشە لەسەر ئامێرەکەت</string>
+    <string name="lorie_pref_forceOrientation">ئاڕاستەی شاشە</string>
+    <string name="lorie_pref_hideCutout">شاردنەوەی بڕینی شاشە (ئەگەر هەبێت)</string>
+    <string name="lorie_pref_screenIdleTimeout">کاتی کوژانەوەی شاشە</string>
+
+    <string name="lorie_pref_touchMode">دۆخی دەستلێدانی شاشە</string>
+    <string name="lorie_pref_scaleTouchpad">جێبەجێکردنی قەبارەی پیشاندان لەسەر تەچپاد</string>
+    <string name="lorie_pref_showStylusClickOverride">هەڵبژاردنەکانی کرتەی پێنووس</string>
+    <string name="lorie_pref_showStylusClickOverride_summary">دیاریکردنی کرتەی چەپ، ناوەڕاست یان ڕاست بۆ پێنووس</string>
+    <string name="lorie_pref_stylusIsMouse">چالاککردنی دۆخی ماوس بۆ پێنووس</string>
+    <string name="lorie_pref_stylusIsMouse_summary">بەکارهێنانی پێنووس وەک ماوس بۆ جوڵاندنی نیشاندەر و کرتەکردن.</string>
+    <string name="lorie_pref_stylusButtonContactModifierMode">دۆخی دوگمەی پێنووس لەکاتی بەرکەوتن</string>
+    <string name="lorie_pref_stylusButtonContactModifierMode_summary">ناردنی کرتەی ڕاست یان ناوەڕاست تەنها کاتێک پێنووس بەر شاشەکە دەکەوێت.</string>
+    <string name="lorie_pref_showMouseHelper">پیشاندانی دوگمەکانی ماوس لەسەر شاشە</string>
+    <string name="lorie_pref_showMouseHelper_summary">دوگمەی یارمەتیدەری ماوس لەسەر شاشە بۆ بەکارهێنان لەگەڵ تەچپاد</string>
+    <string name="lorie_pref_pointerCapture">بەکارهێنانی ماوسی دەرەکی</string>
+    <string name="lorie_pref_pointerCapture_summary">وەرگرتنی جوڵەی ماوسی دەرەکی. دوگمەی Escape دابگرە بۆ گەڕانەوە.</string>
+    <string name="lorie_pref_transformCapturedPointer">گۆڕینی جوڵەی نیشاندەر</string>
+    <string name="lorie_pref_capturedPointerSpeedFactor">خێرایی نیشاندەر %</string>
+    <string name="lorie_pref_tapToMove">چالاککردنی کرتە بۆ جوڵاندن لە دۆخی تەچپاد</string>
+    <string name="lorie_pref_ignoreGamepadEvents">پشتگوێخستنی دوگمەکانی یاری</string>
+    <string name="lorie_pref_ignoreGamepadEvents_summary">ڕێگریکردن لە ناردنی فەرمانی دەسکی یاری بۆ سێرڤەری گرافیک</string>
+    <string name="lorie_pref_zoomFollowsCursor">جوڵاندنی شاشە لەگەڵ نیشاندەر لەکاتی گەورەکردن</string>
+
+    <string name="lorie_pref_showAdditionalKbd">پیشاندانی شریتی دوگمە زیادەکان</string>
+    <string name="lorie_pref_showAdditionalKbd_summary">پیشاندانی شریتی دوگمە تایبەتەکان و تیرەکان.</string>
+    <string name="lorie_pref_showIMEWhileExternalConnected">پیشاندانی تەختەکلیلی شاشە لەگەڵ کیبۆردی دەرەکی</string>
+    <string name="lorie_pref_showIMEWhileExternalConnected_summary">پیشاندانی تەختەکلیلی شاشە تەنانەت کاتێک کیبۆردی دەرەکی بەستراوە.</string>
+    <string name="lorie_pref_preferScancodes">بەکارهێنانی کۆدی ڕاستەوخۆی دوگمەکان (Scancodes)</string>
+    <string name="lorie_pref_preferScancodes_summary">ڕێگەدان بە سێرڤەری X11 بۆ بەڕێوەبردنی تەختەکلیلی دەرەکی.</string>
+    <string name="lorie_pref_hardwareKbdScancodesWorkaround">چارەسەرکردنی کێشەی کیبۆردی دەرەکی</string>
+    <string name="lorie_pref_hardwareKbdScancodesWorkaround_summary">چاککردنی کۆدی دوگمەکان لەسەر هەندێک ئامێر.</string>
+    <string name="lorie_pref_dexMetaKeyCapture">وەرگرتنی کورتەبڕەکانی سیستەم (Samsung DeX)</string>
+    <string name="lorie_pref_dexMetaKeyCapture_summary">تایبەت بە Samsung DeX بۆ وەرگرتنی Alt+F4 و ئەوانی تر.</string>
+    <string name="lorie_pref_enableAccessibilityService">چالاککردنی خزمەتگوزاری Accessibility بەدەست</string>
+    <string name="lorie_pref_enableAccessibilityService_summary">کردنەوەی ڕێکخستنەکانی Accessibility.</string>
+    <string name="lorie_pref_enableAccessibilityServiceAutomatically">چالاککردنی خزمەتگوزاری Accessibility خۆکارانە</string>
+    <string name="lorie_pref_enableAccessibilityServiceAutomatically_summary">پێویستی بە مۆڵەتی WRITE_SECURE_SETTINGS هەیە.</string>
+    <string name="lorie_pref_pauseKeyInterceptingWithEsc">ڕاگرتنی کاتیی وەرگرتنی دوگمەکان بە دوگمەی Esc</string>
+    <string name="lorie_pref_filterOutWinkey">پاڵاوتنی دوگمەی Win (Meta)</string>
+    <string name="lorie_pref_filterOutWinkey_summary">ڕێگەدان بە بەکارهێنانی کورتەبڕەکانی سیستەم.</string>
+    <string name="lorie_pref_enforceCharBasedInput">ناردنی پیت بە پیت (بێ پێشنیار)</string>
+    <string name="lorie_pref_enforceCharBasedInput_summary">ناچالاککردنی پێشنیاری وشە و چاککردنی خۆکارانەی تەختەکلیل</string>
+
+    <string name="lorie_pref_clipboardEnable">هاوبەشکردنی کلیپبۆرد (کۆپی و پەیست)</string>
+    <string name="lorie_pref_requestNotificationPermission">داواکردنی مۆڵەتی ئاگادارکردنەوەکان</string>
+    <string name="lorie_pref_xrMode">دۆخی XR</string>
+    <string name="lorie_pref_configureResponseToUserActions">ڕێکخستنی دوگمە و جوڵەکان</string>
+    <string name="lorie_pref_storeSecondaryDisplayPreferencesSeparately">پاشەکەوتکردنی ڕێکخستنەکانی شاشەی دووەم بە جیا</string>
+    <string name="lorie_pref_storeSecondaryDisplayPreferencesSeparately_summary">ئەم پەڕەیە لەسەر ئەو شاشەیە بکەرەوە کە دەتەوێت ڕێکیبخەیت</string>
+
+    <string name="lorie_pref_adjustHeightForEK">ڕێگریکردن لە داپۆشینی شاشە لەلایەن شریتی دوگمەکان</string>
+    <string name="lorie_pref_useTermuxEKBarBehaviour">ناچالاککردنی دوگمە تایبەتەکان دوای هەر داگرتنێک</string>
+    <string name="lorie_pref_useTermuxEKBarBehaviour_summary">داگرتنی درێژ بەکاربهێنە بۆ قفڵکردنی دوگمە تایبەتەکان</string>
+    <string name="lorie_pref_ekbarPosition">شوێنی شریتەکە</string>
+    <string name="lorie_pref_ekbarPositionIgnoreOrientation">جێگیرکردنی شوێن بەبێ گوێدانە ئاڕاستەی ئامێرەکە</string>
+    <string name="lorie_pref_opacityEKBar">ڕووناکی و دیاریی شریتی دوگمەکان %</string>
+    <string name="lorie_pref_extra_keys_config">ڕێکخستنی دوگمە زیادەکان</string>
+
+    <string name="lorie_pref_swipeUpAction">ڕاکێشانی سێ پەنجە بۆ سەرەوە</string>
+    <string name="lorie_pref_swipeDownAction">ڕاکێشانی سێ پەنجە بۆ خوارەوە</string>
+    <string name="lorie_pref_volumeUpAction">دوگمەی زیادکردنی دەنگ</string>
+    <string name="lorie_pref_volumeDownAction">دوگمەی کەمکردنەوەی دەنگ</string>
+    <string name="lorie_pref_backButtonAction">دوگمەی گەڕانەوە</string>
+    <string name="lorie_pref_notificationTapAction">داگرتنی ئاگادارکردنەوە</string>
+    <string name="lorie_pref_notificationButton0Action">دوگمەی یەکەمی ئاگادارکردنەوە</string>
+    <string name="lorie_pref_notificationButton1Action">دوگمەی دووەمی ئاگادارکردنەوە</string>
+    <string name="lorie_pref_mediaKeysAction">دوگمەکانی میدیا</string>
+</resources>
