@@ -175,8 +175,7 @@ public class LorieApp extends Application {
                 break;
             }
             case MainActivity.ACTION_STOP:
-                if (activity != null)
-                    activity.finishAffinity();
+                AsycudaStandaloneManager.shutdownApp(activity != null ? activity : this);
                 break;
             case ACTION_PREFERENCES_CHANGED:
                 for (MainActivity a : MainActivity.getInstances()) {
@@ -185,9 +184,16 @@ public class LorieApp extends Application {
                 }
                 break;
             case MainActivity.ACTION_CUSTOM:
-                Log.d("ACTION_CUSTOM", "action " + intent.getStringExtra("what"));
+                String what = intent.getStringExtra("what");
+                Log.d("ACTION_CUSTOM", "action " + what);
+                Prefs prefsToUse = activity != null ? activity.prefs : builtInPrefs;
+                LoriePreferences.PrefsProto.Preference pref = what != null ? prefsToUse.keys.get(what + "Action") : null;
+                if ("exit".equals(what) || (pref != null && "exit".equals(pref.asList().get()))) {
+                    AsycudaStandaloneManager.shutdownApp(activity != null ? activity : this);
+                    break;
+                }
                 if (activity != null)
-                    activity.mInputHandler.extractUserActionFromPreferences(activity.prefs, intent.getStringExtra("what")).accept(0, true);
+                    activity.mInputHandler.extractUserActionFromPreferences(activity.prefs, what).accept(0, true);
                 break;
         }
 

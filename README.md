@@ -2,25 +2,25 @@
 
 Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
 
-[**Download Latest APK (v3.6.0)**](../../releases/latest)
+[**Download Latest APK (v3.7.0)**](../../releases/latest)
 
 ---
 
 ## Features
 
 - **Direct Installation**: Installs as a standard Android APK on 64-bit ARM (`arm64-v8a`) phones and tablets running Android 8.0 or newer.
-- **Automatic MOF Updates**: Checks `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` on launch and from the in-app menu to keep client libraries synchronized with the Ministry of Finance server.
+- **High-Speed Customs Network & Cache**: Uses internal flash storage for reference/tariff caches, pre-resolved DNS, and 1 MB TCP/RMI socket buffers for fast document and declaration loading.
+- **Unified Update Center**: Verifies both new application releases on GitHub (with in-app download & installation) and Ministry of Finance (`asy.mof.gov.iq`) client packages in a single progress window.
 - **PDF Printing & File Export**: Prints customs declarations, receipts, and assessment notices directly to PDF (`Download/Asycuda_Prints`) and opens Android's native file picker when attaching documents.
 - **Multi-Language Interface**: Supports **English**, **Arabic (العربية)**, and **Kurdish (کوردی)** across the app menu and settings.
-- **Stable Background Connection**: Keeps the network session active when switching to other apps (such as WhatsApp, Authenticator, or PDF viewers).
-- **Touch & Keyboard Controls**: Includes touchpad cursor control, two-finger scrolling, pinch-to-zoom, and an on-screen shortcut bar (`TAB`, `CTRL`, `ESC`, arrow keys).
-- **Diagnostics Export**: Packages runtime logs into a `.zip` file from the menu for support and troubleshooting.
+- **Configurable Auto-Keyboard**: Enable or disable automatic on-screen keyboard popups when tapping text fields inside ASYCUDA.
+- **In-App Issue Reporting & Feedback**: Submit issue descriptions, screen captures or images, and diagnostic logs directly from the Control Center without needing an account.
 
 ---
 
 ## Installation
 
-1. Download `ASYCUDA_Iraq_v3.6.0.apk` from the [Releases](../../releases/latest) page.
+1. Download `ASYCUDA_Iraq_v3.7.0.apk` from the [Releases](../../releases/latest) page.
 2. Open the APK on your Android phone or tablet to install it.
 3. On first launch, grant file access when prompted so the app can save printed PDFs and attach declaration files.
 4. Wait ~10–15 seconds on the first run while the client unpacks its libraries and connects to the customs server.

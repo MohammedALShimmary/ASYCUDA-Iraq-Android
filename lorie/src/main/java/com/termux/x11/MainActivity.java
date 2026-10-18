@@ -1151,6 +1151,14 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 47892 && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            AsycudaStandaloneManager.onImagePicked(this, data.getData());
+        }
+    }
+
     private static float getSystemDimenFloat(String name, float fallback) {
         Resources resources = Resources.getSystem();
         TypedValue value = new TypedValue();

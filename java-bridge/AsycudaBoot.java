@@ -53,9 +53,16 @@ public class AsycudaBoot {
 
             long s1 = rawFile.length();
             if (s1 <= 0) return;
-            Thread.sleep(600);
+            Thread.sleep(150);
             long s2 = rawFile.length();
-            if (s1 != s2) Thread.sleep(600);
+            if (s1 != s2) {
+                for (int i = 0; i < 10; i++) {
+                    s1 = s2;
+                    Thread.sleep(150);
+                    s2 = rawFile.length();
+                    if (s1 == s2 && s2 > 0) break;
+                }
+            }
             if (rawFile.length() <= 0) return;
 
             String pathKey = rawFile.getAbsolutePath() + "_" + rawFile.lastModified() + "_" + rawFile.length();
@@ -532,6 +539,7 @@ public class AsycudaBoot {
                                         f.setBounds(0, 0, scr.width, scr.height);
                                     }
                                 } else if (w instanceof Dialog) {
+                                    redirectFileChooserToDownloads(w);
                                     if (w.getX() <= 0 && w.getY() <= 0) {
                                         w.setLocationRelativeTo(w.getOwner());
                                     }
@@ -555,13 +563,38 @@ public class AsycudaBoot {
                     try {
                         scanTmpDir(tmpDir, 0);
                         scanDownloadsForSo(dlDir);
-                        Thread.sleep(1000);
+                        Thread.sleep(250);
                     } catch (Throwable ignored) {}
                 }
             }
         }, "Asycuda-FileDaemon");
         watcher.setDaemon(true);
         watcher.start();
+    }
+
+    private static void redirectFileChooserToDownloads(Container root) {
+        if (root == null) return;
+        File dlDir = new File("/storage/emulated/0/Download/Asycuda_Files");
+        if (!dlDir.exists()) dlDir.mkdirs();
+        if (root instanceof FileDialog) {
+            FileDialog fd = (FileDialog) root;
+            String cur = fd.getDirectory();
+            if (cur == null || cur.contains("/data/data/")) {
+                fd.setDirectory(dlDir.getAbsolutePath());
+            }
+            return;
+        }
+        for (Component c : root.getComponents()) {
+            if (c instanceof JFileChooser) {
+                JFileChooser fc = (JFileChooser) c;
+                File cur = fc.getCurrentDirectory();
+                if (cur == null || cur.getAbsolutePath().contains("/data/data/")) {
+                    fc.setCurrentDirectory(dlDir);
+                }
+            } else if (c instanceof Container) {
+                redirectFileChooserToDownloads((Container) c);
+            }
+        }
     }
 
     private static void scanTmpDir(File dir, int depth) {
@@ -594,7 +627,7 @@ public class AsycudaBoot {
             if (f.isFile() && f.getName().endsWith(".so") && f.length() > 0) {
                 try {
                     long s1 = f.length();
-                    Thread.sleep(500);
+                    Thread.sleep(150);
                     if (f.length() != s1) continue;
                     String[] info = detectExtensionAndMime(f);
                     String ext = info[0];
@@ -608,7 +641,43 @@ public class AsycudaBoot {
         }
     }
 
+    private static void installHighSpeedNetworkTuning() {
+        try {
+            System.setProperty("java.net.preferIPv4Stack", "true");
+            System.setProperty("networkaddress.cache.ttl", "-1");
+            System.setProperty("sun.net.inetaddr.ttl", "-1");
+            System.setProperty("networkaddress.cache.negative.ttl", "0");
+            System.setProperty("http.keepAlive", "true");
+            System.setProperty("http.maxConnections", "32");
+            System.setProperty("sun.rmi.transport.tcp.responseTimeout", "120000");
+            System.setProperty("sun.rmi.transport.connectionTimeout", "15000");
+
+            final java.rmi.server.RMISocketFactory defaultFactory =
+                    java.rmi.server.RMISocketFactory.getDefaultSocketFactory();
+            java.rmi.server.RMISocketFactory.setSocketFactory(new java.rmi.server.RMISocketFactory() {
+                @Override
+                public Socket createSocket(String host, int port) throws IOException {
+                    Socket s = defaultFactory.createSocket(host, port);
+                    try {
+                        s.setTcpNoDelay(true);
+                        s.setKeepAlive(true);
+                        s.setReceiveBufferSize(1024 * 1024);
+                        s.setSendBufferSize(1024 * 1024);
+                        s.setTrafficClass(0x10 | 0x08);
+                    } catch (Throwable ignored) {}
+                    return s;
+                }
+
+                @Override
+                public java.net.ServerSocket createServerSocket(int port) throws IOException {
+                    return defaultFactory.createServerSocket(port);
+                }
+            });
+        } catch (Throwable ignored) {}
+    }
+
     public static void main(String[] args) throws Exception {
+        installHighSpeedNetworkTuning();
         System.setSecurityManager(new SecurityManager() {
             @Override public void checkPermission(Permission perm) {}
             @Override public void checkPermission(Permission perm, Object context) {}

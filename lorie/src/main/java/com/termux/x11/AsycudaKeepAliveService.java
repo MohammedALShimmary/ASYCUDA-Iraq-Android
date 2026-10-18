@@ -33,8 +33,16 @@ public class AsycudaKeepAliveService extends Service {
         acquireLocks();
     }
 
+    public static final String ACTION_EXIT_APP = "iq.asycuda.ACTION_EXIT_APP";
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_EXIT_APP.equals(intent.getAction())) {
+            stopForeground(true);
+            stopSelf();
+            AsycudaStandaloneManager.shutdownApp(this);
+            return START_NOT_STICKY;
+        }
         startForeground(FG_NOTIFICATION_ID, buildForegroundNotification());
         acquireLocks();
         return START_STICKY;
@@ -89,11 +97,21 @@ public class AsycudaKeepAliveService extends Service {
         int piFlags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
         PendingIntent pi = PendingIntent.getActivity(this, 0, openIntent, piFlags);
 
+        Intent exitIntent = new Intent(this, AsycudaKeepAliveService.class);
+        exitIntent.setAction(ACTION_EXIT_APP);
+        PendingIntent exitPi = PendingIntent.getService(this, 99, exitIntent, piFlags);
+
+        String exitLabel = AsycudaMaterialUi.tr(this, "Exit", "خروج", "دەرچوون");
+
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("ASYCUDA World Iraq")
-                .setContentText("Session active • Network connection protected in background")
+                .setContentText(AsycudaMaterialUi.tr(this,
+                        "Session active • Network protected in background",
+                        "الجلسة نشطة • الاتصال محمي في الخلفية",
+                        "دانیشتن چالاکە • هێڵی ئینتەرنێت پارێزراوە"))
                 .setSmallIcon(R.drawable.ic_x11_icon)
                 .setContentIntent(pi)
+                .addAction(R.drawable.ic_menu_exit, exitLabel, exitPi)
                 .setOngoing(true)
                 .setSilent(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)

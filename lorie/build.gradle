@@ -29,9 +29,16 @@ android {
     defaultConfig {
         minSdkVersion 24
         targetSdkVersion 28
+        def localProps = new Properties()
+        def localPropsFile = rootProject.file('local.properties')
+        if (localPropsFile.exists()) {
+            localPropsFile.withInputStream { localProps.load(it) }
+        }
+        def sentryDsn = localProps.getProperty('sentry.dsn') ?: "https://89805f1c6efda1d97a28cc2e21c5cc69@o4512278937206784.ingest.de.sentry.io/4512279030530128"
         buildConfigField "String", "VERSION_NAME", "\"${termuxX11VersionName}\""
         buildConfigField "String", "COMMIT", "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""
         buildConfigField "String", "APPLICATION_ID", "\"${hostApplicationId}\""
+        buildConfigField "String", "SENTRY_DSN", "\"${sentryDsn}\""
 
         consumerProguardFiles 'proguard-rules.pro'
     }
