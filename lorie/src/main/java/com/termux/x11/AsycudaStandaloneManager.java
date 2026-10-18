@@ -216,6 +216,16 @@ public class AsycudaStandaloneManager {
         return "screenshot.png";
     }
 
+    public static void onSingleBackPressForExit(MainActivity activity) {
+        if (activity == null) return;
+        UI.post(() -> Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                "Press Back again to exit ASYCUDA",
+                "اضغط زر الرجوع مرة أخرى للخروج من التطبيق",
+                "دووبارە دوگمەی گەڕانەوە دابگرە بۆ دەرچوون لە بەرنامە"), Toast.LENGTH_SHORT).show());
+    }
+
+    private static volatile boolean sTermsDialogShowing = false;
+
     private void initOnActivity(MainActivity activity) {
         View stub = activity.findViewById(R.id.stub);
         if (stub != null) stub.setVisibility(View.GONE);
@@ -234,13 +244,13 @@ public class AsycudaStandaloneManager {
                     .putBoolean("adjustResolution", false)
                     .putBoolean("tapToMove", false)
                     .putBoolean("enableAccessibilityServiceAutomatically", false)
-                    .putString("backButtonAction", "toggle soft keyboard")
+                    .putString("backButtonAction", "double_back_exit")
                     .putBoolean("adjustHeightForEK", false)
                     .putString("notificationTapAction", "open preferences")
                     .putBoolean("showAdditionalKbd", true)
                     .putBoolean("stylusButtonContactModifierMode", false)
                     .putBoolean("additionalKbdVisible", true)
-                    .putInt("opacityEKBar", 8)
+                    .putInt("opacityEKBar", 80)
                     .putString("displayResolutionCustom", "2144x1103")
                     .putBoolean("stylusIsMouse", false)
                     .putBoolean("clipboardEnable", true)
@@ -276,6 +286,33 @@ public class AsycudaStandaloneManager {
                     .apply();
                 activity.toggleExtraKeys(true, true);
                 prefsMarker.createNewFile();
+            } catch (Throwable ignored) {}
+        }
+
+        // One-time migration for devices that had the old 8% default opacity
+        File opacityMigrated = new File(activity.getFilesDir(), ".x11_opacity_v3_7");
+        if (!opacityMigrated.exists()) {
+            try {
+                android.content.SharedPreferences sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity);
+                if (sp.getInt("opacityEKBar", 80) < 20) {
+                    sp.edit().putInt("opacityEKBar", 80).apply();
+                    activity.onPreferencesChangedCallback();
+                }
+                opacityMigrated.createNewFile();
+            } catch (Throwable ignored) {}
+        }
+
+        // One-time migration: replace deprecated "toggle soft keyboard" backButtonAction with "double_back_exit"
+        File backMigrated = new File(activity.getFilesDir(), ".x11_back_v3_7_1");
+        if (!backMigrated.exists()) {
+            try {
+                android.content.SharedPreferences sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(activity);
+                String curBack = sp.getString("backButtonAction", "toggle soft keyboard");
+                if ("toggle soft keyboard".equals(curBack)) {
+                    sp.edit().putString("backButtonAction", "double_back_exit").apply();
+                    activity.onPreferencesChangedCallback();
+                }
+                backMigrated.createNewFile();
             } catch (Throwable ignored) {}
         }
 
@@ -315,6 +352,40 @@ public class AsycudaStandaloneManager {
 
     private synchronized void checkPermissionsAndProceed(MainActivity activity) {
         if (activity == null) return;
+
+        // Gate 0: First-Launch Terms & Conditions and Liability Policy Acceptance
+        if (!AsycudaMaterialUi.hasAcceptedTerms(activity)) {
+            updateStatus(AsycudaMaterialUi.tr(activity,
+                    "Please review and accept the Terms & Conditions to continue.",
+                    "يرجى مراجعة الشروط والأحكام والموافقة عليها للمتابعة.",
+                    "تکایە پێداچوونەوە بە مەرج و ڕێساکان بکە و پەسەندی بکە بۆ بەردەوامبوون."));
+            if (!sTermsDialogShowing) {
+                sTermsDialogShowing = true;
+                UI.post(() -> {
+                    try {
+                        AsycudaMaterialUi.showTermsAndConditionsModal(
+                                activity,
+                                receipt -> {
+                                    sTermsDialogShowing = false;
+                                    uploadConsentReceiptToSentry(activity, receipt);
+                                    checkPermissionsAndProceed(activity);
+                                },
+                                () -> {
+                                    sTermsDialogShowing = false;
+                                    shutdownApp(activity);
+                                });
+                    } catch (Throwable t) {
+                        sTermsDialogShowing = false;
+                    }
+                });
+            }
+            return;
+        } else if (!AsycudaMaterialUi.isTermsCloudSynced(activity)) {
+            JSONObject savedReceipt = AsycudaMaterialUi.loadSavedConsentReceipt(activity);
+            if (savedReceipt != null) {
+                uploadConsentReceiptToSentry(activity, savedReceipt);
+            }
+        }
 
         // Gate 1: All Files Access Permission (Required for /sdcard/Download/Asycuda_Files & Prints)
         if (!hasStoragePermission()) {
@@ -698,9 +769,9 @@ public class AsycudaStandaloneManager {
     private int syncGovernmentJars(File clientDir, boolean manualForceCheck, AsycudaMaterialUi.UpdateCenterController modalCtrl) {
         int updatedCount = 0;
         try {
-            updateStatus("Connecting to MOF Server (asy.mof.gov.iq) to verify JARs...");
+            updateStatus("Checking customs packages on asy.mof.gov.iq...");
             if (modalCtrl != null) {
-                modalCtrl.setMofUpdateStatus("Connecting to asy.mof.gov.iq...", "Fetching AWIQWorld.jnlp", 0, 100, true);
+                modalCtrl.setMofUpdateStatus("Connecting to asy.mof.gov.iq...", "Reading AWIQWorld.jnlp", 0, 100, true);
             }
             if (!manualForceCheck) {
                 Thread.sleep(300);
@@ -715,9 +786,9 @@ public class AsycudaStandaloneManager {
             int code = jnlpConn.getResponseCode();
             if (code != 200) {
                 jnlpConn.disconnect();
-                updateStatus("MOF Server returned HTTP " + code + " • Using cached JARs");
+                updateStatus("Server returned HTTP " + code + ", using local packages");
                 if (modalCtrl != null) {
-                    modalCtrl.setMofUpdateStatus("MOF server returned HTTP " + code + " • Using cached packages", "Offline / Cached", 0, 0, false);
+                    modalCtrl.setMofUpdateStatus("Server returned HTTP " + code + " (using local files)", "Cached", 0, 0, false);
                 }
                 Thread.sleep(400);
                 return 0;
@@ -808,7 +879,7 @@ public class AsycudaStandaloneManager {
                         int done = checkedCounter.incrementAndGet();
                         if (modalCtrl != null) {
                             modalCtrl.setMofUpdateStatus(
-                                    "Verifying MOF packages (" + done + " / " + total + ")...",
+                                    "Checking server packages (" + done + " / " + total + ")...",
                                     flatName, done, total, false);
                         }
                         return needsDl;
@@ -848,7 +919,7 @@ public class AsycudaStandaloneManager {
             for (int d = 0; d < toDownloadUrls.size(); d++) {
                 String jarUrl = toDownloadUrls.get(d);
                 File targetJar = toDownloadFiles.get(d);
-                String msg = "Downloading update: " + targetJar.getName() + " (" + (d + 1) + "/" + toDownloadUrls.size() + ")...";
+                String msg = "Downloading " + targetJar.getName() + " (" + (d + 1) + "/" + toDownloadUrls.size() + ")...";
                 updateStatus(msg);
                 if (modalCtrl != null) {
                     modalCtrl.setMofUpdateStatus(msg, targetJar.getName(), d + 1, toDownloadUrls.size(), false);
@@ -872,17 +943,17 @@ public class AsycudaStandaloneManager {
 
             if (modalCtrl != null) {
                 if (updatedCount > 0) {
-                    modalCtrl.setMofUpdateStatus("✓ Downloaded " + updatedCount + " updated MOF package(s)",
-                            total + " total packages verified", total, total, false);
+                    modalCtrl.setMofUpdateStatus("Downloaded " + updatedCount + " updated package(s)",
+                            total + " packages checked", total, total, false);
                 } else {
-                    modalCtrl.setMofUpdateStatus("✓ All " + total + " MOF customs packages are up to date",
-                            "Verified against asy.mof.gov.iq", 0, 0, false);
+                    modalCtrl.setMofUpdateStatus("All " + total + " customs packages are up to date",
+                            "asy.mof.gov.iq", 0, 0, false);
                 }
             } else if (!manualForceCheck) {
                 if (updatedCount > 0) {
-                    updateStatus("✓ Downloaded " + updatedCount + " new Government JAR(s) from MOF!");
+                    updateStatus("Downloaded " + updatedCount + " updated package(s)");
                 } else {
-                    updateStatus("✓ MOF Government JARs Verified (" + total + " packages up to date)");
+                    updateStatus("Customs packages verified (" + total + " files)");
                 }
                 Thread.sleep(500);
             }
@@ -890,10 +961,10 @@ public class AsycudaStandaloneManager {
         } catch (Throwable ignored) {
             try {
                 int cached = new File(clientDir, "jars").list().length;
-                updateStatus("✓ Offline Mode: Using " + cached + " cached MOF JARs");
+                updateStatus("Offline mode: using " + cached + " local packages");
                 if (modalCtrl != null) {
-                    modalCtrl.setMofUpdateStatus("MOF server unreachable • Using " + cached + " cached packages",
-                            "Check internet or VPN connection", 0, 0, false);
+                    modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
+                            "Check your internet or VPN connection", 0, 0, false);
                 }
                 Thread.sleep(400);
             } catch (Throwable ignored2) {}
@@ -1244,6 +1315,65 @@ public class AsycudaStandaloneManager {
         }
     }
 
+    private void shareMultipleFilesWithProvider(Context ctx, List<File> files) {
+        if (files == null || files.isEmpty()) return;
+        try {
+            ArrayList<Uri> uris = new ArrayList<>();
+            for (File f : files) {
+                if (f != null && f.exists()) {
+                    uris.add(FileProvider.getUriForFile(ctx, "iq.asycuda.fileprovider", f));
+                }
+            }
+            if (uris.isEmpty()) return;
+            Intent share = new Intent(Intent.ACTION_SEND_MULTIPLE);
+            share.setType("*/*");
+            share.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            ctx.startActivity(Intent.createChooser(share, AsycudaMaterialUi.tr(ctx,
+                    "Share " + uris.size() + " files",
+                    "مشاركة " + uris.size() + " ملفات",
+                    "هاوبەشکردنی " + uris.size() + " پەڕگە")));
+        } catch (Throwable t) {
+            Toast.makeText(ctx, "Share error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void deleteSelectedFiles(MainActivity activity, List<File> filesToDelete, AsycudaMaterialUi.MenuActionCallback cb) {
+        if (filesToDelete == null || filesToDelete.isEmpty()) return;
+        int deleted = 0;
+        File internalPrints = new File(activity.getFilesDir(), "prints");
+        File pubPrints = new File("/storage/emulated/0/Download/Asycuda_Prints");
+        File pubFiles = new File("/storage/emulated/0/Download/Asycuda_Files");
+
+        for (File f : filesToDelete) {
+            if (f == null) continue;
+            String name = f.getName();
+            boolean ok = f.delete();
+            // Also remove mirrored copies with the same name so they don't reappear
+            new File(internalPrints, name).delete();
+            new File(pubPrints, name).delete();
+            new File(pubFiles, name).delete();
+            if (ok) deleted++;
+        }
+
+        Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                "Deleted " + Math.max(1, deleted) + " file(s)",
+                "تم حذف " + Math.max(1, deleted) + " ملف",
+                Math.max(1, deleted) + " پەڕگە سڕایەوە"), Toast.LENGTH_SHORT).show();
+
+        if (cb != null) {
+            cb.onOpenFiles();
+        }
+    }
+
+    public static void openDisplaySettings(MainActivity activity) {
+        if (activity == null) return;
+        UI.post(() -> {
+            if (sInstance == null) sInstance = new AsycudaStandaloneManager();
+            AsycudaMaterialUi.showDisplaySettingsModal(activity, sInstance.createMenuCallback(activity));
+        });
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void setupFloatingMenuPill(MainActivity activity, FrameLayout root) {
         if (root.findViewWithTag("asycuda_floating_pill") != null) {
@@ -1259,7 +1389,6 @@ public class AsycudaStandaloneManager {
         pill.setAlpha(0.90f);
         pill.setElevation(dp(activity, 12));
 
-        // Apple iOS/macOS Translucent Dark Capsule
         GradientDrawable pillBg = new GradientDrawable();
         pillBg.setColor(Color.parseColor("#E61C1C1E"));
         pillBg.setCornerRadius(dp(activity, 20));
@@ -1324,8 +1453,8 @@ public class AsycudaStandaloneManager {
         root.addView(pill, lp);
     }
 
-    private void openMaterialControlCenter(MainActivity activity) {
-        AsycudaMaterialUi.MenuActionCallback cb = new AsycudaMaterialUi.MenuActionCallback() {
+    private AsycudaMaterialUi.MenuActionCallback createMenuCallback(MainActivity activity) {
+        return new AsycudaMaterialUi.MenuActionCallback() {
             @Override
             public void onToggleAutoKeyboard(boolean newState) {
                 if (!newState && activity.getLorieView() != null) {
@@ -1334,28 +1463,32 @@ public class AsycudaStandaloneManager {
             }
 
             @Override
-            public void onToggleAssistKeys() {
-                activity.prefs.showAdditionalKbd.put(true);
-                activity.toggleExtraKeys();
+            public void onToggleAssistKeys(boolean newState) {
+                AsycudaMaterialUi.setAssistKeysEnabled(activity, newState);
             }
 
             @Override
             public void onOpenFiles() {
-                List<File> allFiles = new ArrayList<>();
-                collectFiles(new File(activity.getFilesDir(), "prints"), allFiles);
-                collectFiles(new File("/storage/emulated/0/Download/Asycuda_Files"), allFiles);
-                if (allFiles.isEmpty()) {
-                    collectFiles(new File("/storage/emulated/0/Download/Asycuda_Prints"), allFiles);
+                List<File> rawFiles = new ArrayList<>();
+                collectFiles(new File(activity.getFilesDir(), "prints"), rawFiles);
+                collectFiles(new File("/storage/emulated/0/Download/Asycuda_Files"), rawFiles);
+                collectFiles(new File("/storage/emulated/0/Download/Asycuda_Prints"), rawFiles);
+                rawFiles.sort(Comparator.comparingLong(File::lastModified).reversed());
+
+                // Deduplicate by filename so mirrored files appear once
+                List<File> uniqueFiles = new ArrayList<>();
+                Set<String> seenNames = new LinkedHashSet<>();
+                for (File f : rawFiles) {
+                    if (seenNames.add(f.getName())) {
+                        uniqueFiles.add(f);
+                    }
                 }
-                allFiles.sort(Comparator.comparingLong(File::lastModified).reversed());
-                AsycudaMaterialUi.showFilesModal(activity, allFiles, this);
+                AsycudaMaterialUi.showFilesModal(activity, uniqueFiles, this);
             }
 
             @Override
             public void onOpenDisplaySettings() {
-                Intent prefIntent = new Intent(activity, LoriePreferences.class);
-                prefIntent.setAction(Intent.ACTION_MAIN);
-                activity.startActivity(prefIntent);
+                AsycudaMaterialUi.showDisplaySettingsModal(activity, this);
             }
 
             @Override
@@ -1407,9 +1540,21 @@ public class AsycudaStandaloneManager {
             public void onShareFile(File f) {
                 shareFileWithProvider(activity, f, guessMime(f.getName()));
             }
-        };
 
-        AsycudaMaterialUi.showControlCenter(activity, cb);
+            @Override
+            public void onShareMultipleFiles(List<File> files) {
+                shareMultipleFilesWithProvider(activity, files);
+            }
+
+            @Override
+            public void onDeleteFiles(List<File> files) {
+                deleteSelectedFiles(activity, files, this);
+            }
+        };
+    }
+
+    private void openMaterialControlCenter(MainActivity activity) {
+        AsycudaMaterialUi.showControlCenter(activity, createMenuCallback(activity));
     }
 
     private void restartAsycudaSession(MainActivity activity) {
@@ -1418,9 +1563,9 @@ public class AsycudaStandaloneManager {
             setupSplashOverlay(activity, root);
             hideSplashButton();
             updateStatus(AsycudaMaterialUi.tr(activity,
-                    "Restarting ASYCUDA World Iraq...",
-                    "جاري إعادة تشغيل نظام أسيكودا العراق...",
-                    "دووبارە پێکردنەوەی ئەسیکۆدای عێراق..."));
+                    "Restarting session...",
+                    "جاري إعادة تشغيل الجلسة...",
+                    "دووبارە پێکردنەوەی دانیشتن..."));
         }
         new Thread(() -> {
             if (sJavaProcess != null) {
@@ -1431,15 +1576,11 @@ public class AsycudaStandaloneManager {
         }, "Asycuda-SessionRestart").start();
     }
 
-    /**
-     * Requirement #5: Unified Blocking Update Center Modal
-     * Checks both GitHub Releases for new APK versions AND Ministry of Finance (MOF) JARs.
-     */
     private void runUnifiedUpdateCheckModal(MainActivity activity) {
         if (!sSyncInProgress.compareAndSet(false, true)) {
             Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                    "Update check is already in progress...",
-                    "عملية فحص التحديثات جارية بالفعل...",
+                    "Update check is already running...",
+                    "فحص التحديثات جارٍ بالفعل...",
                     "پشکنینی نوێکردنەوە لە کاردایە..."), Toast.LENGTH_SHORT).show();
             return;
         }
@@ -1449,11 +1590,10 @@ public class AsycudaStandaloneManager {
         new Thread(() -> {
             boolean appUpdateAvailable = false;
             try {
-                // Step 1: Check GitHub Releases API for a newer APK
                 ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
                         "Checking GitHub for new app releases...",
-                        "جاري التحقق من وجود تحديث للتطبيق على GitHub...",
-                        "پشکنینی GitHub بۆ وەشانی نوێی بەرنامە..."), 0, true);
+                        "جاري البحث عن تحديث للتطبيق...",
+                        "گەڕان بۆ وەشانی نوێی بەرنامە..."), 0, true);
 
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
                 HttpURLConnection ghConn = (HttpURLConnection) new URL(GITHUB_LATEST_RELEASE_API).openConnection();
@@ -1505,27 +1645,26 @@ public class AsycudaStandaloneManager {
                         });
                     } else {
                         ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                                "✓ Application is up to date (" + currentVer + ")",
-                                "✓ التطبيق محدّث لآخر إصدار (" + currentVer + ")",
-                                "✓ بەرنامەکە نوێکراوەتەوە (" + currentVer + ")"), -1, false);
+                                "App is up to date (" + currentVer + ")",
+                                "التطبيق محدّث (" + currentVer + ")",
+                                "بەرنامەکە نوێکراوەتەوە (" + currentVer + ")"), -1, false);
                     }
                 } else {
                     ghConn.disconnect();
                     ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                            "✓ Running version " + currentVer,
-                            "✓ الإصدار الحالي " + currentVer,
-                            "✓ وەشانی ئێستا " + currentVer), -1, false);
+                            "Current version: " + currentVer,
+                            "الإصدار الحالي: " + currentVer,
+                            "وەشانی ئێستا: " + currentVer), -1, false);
                 }
             } catch (Throwable ignored) {
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
                 ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                        "✓ Running version " + currentVer,
-                        "✓ الإصدار الحالي " + currentVer,
-                        "✓ وەشانی ئێستا " + currentVer), -1, false);
+                        "Current version: " + currentVer,
+                        "الإصدار الحالي: " + currentVer,
+                        "وەشانی ئێستا: " + currentVer), -1, false);
             }
 
             try {
-                // Step 2: Check Ministry of Finance (MOF) Government JARs
                 File clientDir = new File(activity.getFilesDir(), "client");
                 int updatedJars = syncGovernmentJars(clientDir, true, ctrl);
                 ctrl.onCheckFinished(updatedJars, appUpdateAvailable, () -> restartAsycudaSession(activity));
@@ -1578,9 +1717,9 @@ public class AsycudaStandaloneManager {
             }
 
             ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                    "✓ Download complete • Launching installer...",
-                    "✓ اكتمل التحميل • جاري فتح المثبت...",
-                    "✓ دابەزاندن تەواو بوو • کردنەوەی دامەزرێنەر..."), 100, false);
+                    "Download complete. Opening installer...",
+                    "اكتمل التحميل. جاري فتح المثبت...",
+                    "دابەزاندن تەواو بوو. کردنەوەی دامەزرێنەر..."), 100, false);
 
             UI.post(() -> {
                 try {
@@ -1618,8 +1757,38 @@ public class AsycudaStandaloneManager {
     }
 
     /**
-     * Requirement #6: Full-Fledged Feedback & Bug Report Modal + Background Sentry Envelope Upload
+     * Captures the live X11 SurfaceView (LorieView) using Android's hardware PixelCopy API
+     * so screenshots are never blank/white.
      */
+    @SuppressLint("NewApi")
+    private void captureWindow(MainActivity activity, java.util.function.Consumer<Bitmap> callback) {
+        try {
+            LorieView lorieView = activity.getLorieView();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && lorieView != null && lorieView.getWidth() > 0 && lorieView.getHeight() > 0) {
+                Bitmap bmp = Bitmap.createBitmap(lorieView.getWidth(), lorieView.getHeight(), Bitmap.Config.ARGB_8888);
+                android.view.PixelCopy.request(lorieView, bmp, copyResult -> {
+                    if (copyResult == android.view.PixelCopy.SUCCESS) {
+                        callback.accept(bmp);
+                    } else if (activity.getWindow() != null) {
+                        android.view.PixelCopy.request(activity.getWindow(), bmp, winRes -> {
+                            callback.accept(winRes == android.view.PixelCopy.SUCCESS ? bmp : null);
+                        }, UI);
+                    } else {
+                        callback.accept(null);
+                    }
+                }, UI);
+                return;
+            }
+            View decor = activity.getWindow().getDecorView();
+            Bitmap bmp = Bitmap.createBitmap(Math.max(1, decor.getWidth()), Math.max(1, decor.getHeight()), Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bmp);
+            decor.draw(canvas);
+            callback.accept(bmp);
+        } catch (Throwable t) {
+            callback.accept(null);
+        }
+    }
+
     private void openFeedbackAndBugReportModal(MainActivity activity) {
         sActiveFeedbackController = AsycudaMaterialUi.showFeedbackModal(activity, new AsycudaMaterialUi.FeedbackSubmitHandler() {
             @Override
@@ -1627,31 +1796,28 @@ public class AsycudaStandaloneManager {
                 try {
                     feedbackDialog.hide();
                 } catch (Throwable ignored) {}
-                UI.postDelayed(() -> {
+                UI.postDelayed(() -> captureWindow(activity, bmp -> {
                     try {
-                        View decor = activity.getWindow().getDecorView();
-                        int w = Math.max(1, decor.getWidth());
-                        int h = Math.max(1, decor.getHeight());
-                        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                        Canvas canvas = new Canvas(bmp);
-                        decor.draw(canvas);
-
+                        if (bmp == null) throw new IllegalStateException("empty frame");
                         File printsDir = new File(activity.getFilesDir(), "prints");
                         printsDir.mkdirs();
-                        File capFile = new File(printsDir, "screen_capture.png");
+                        File capFile = new File(printsDir, "screen_capture.jpg");
                         try (FileOutputStream fos = new FileOutputStream(capFile)) {
-                            bmp.compress(Bitmap.CompressFormat.PNG, 90, fos);
+                            bmp.compress(Bitmap.CompressFormat.JPEG, 88, fos);
                             fos.getFD().sync();
                         }
-                        controller.onImageAttached(capFile, "screen_capture.png");
+                        controller.onImageAttached(capFile, "screen_capture.jpg");
                     } catch (Throwable t) {
-                        Toast.makeText(activity, "Capture error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                                "Couldn't capture the screen",
+                                "تعذر التقاط الشاشة",
+                                "نەتوانرا وێنەی شاشە بگیرێت"), Toast.LENGTH_SHORT).show();
                     } finally {
                         try {
                             feedbackDialog.show();
                         } catch (Throwable ignored) {}
                     }
-                }, 180);
+                }), 250);
             }
 
             @Override
@@ -1663,7 +1829,7 @@ public class AsycudaStandaloneManager {
                     pick.putExtra(Intent.EXTRA_MIME_TYPES, new String[] { "image/png", "image/jpeg", "image/webp" });
                     pick.addCategory(Intent.CATEGORY_OPENABLE);
                     activity.startActivityForResult(Intent.createChooser(pick,
-                            AsycudaMaterialUi.tr(activity, "Select Screenshot or Image", "اختر صورة الشاشة", "وێنەیەک هەڵبژێرە")),
+                            AsycudaMaterialUi.tr(activity, "Select Image", "اختر صورة", "وێنەیەک هەڵبژێرە")),
                             REQ_PICK_FEEDBACK_IMAGE);
                 } catch (Throwable t) {
                     Toast.makeText(activity, "Cannot open image picker: " + t.getMessage(), Toast.LENGTH_SHORT).show();
@@ -1674,9 +1840,9 @@ public class AsycudaStandaloneManager {
             public void onSubmitToSentry(String description, File attachedImage,
                                          AsycudaMaterialUi.FeedbackModalController controller, Dialog feedbackDialog) {
                 controller.setUploadState(true, AsycudaMaterialUi.tr(activity,
-                        "Packaging diagnostic logs & uploading report in background...",
-                        "جاري تجميع السجلات ورفع البلاغ تلقائياً في الخلفية...",
-                        "ئامادەکردنی تۆمارەکان و ناردنی ڕاپۆرت لە پاشبنەمادا..."), false);
+                        "Sending report and logs...",
+                        "جاري إرسال البلاغ والسجلات...",
+                        "ناردنی ڕاپۆرت و تۆمارەکان..."), false);
 
                 new Thread(() -> {
                     try {
@@ -1684,17 +1850,17 @@ public class AsycudaStandaloneManager {
                         boolean sent = uploadReportEnvelopeToSentry(activity, description, zipFile, attachedImage);
                         if (sent) {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                    "✓ Report & diagnostic logs uploaded successfully! Thank you.",
-                                    "✓ تم إرسال البلاغ وسجلات التشخيص للمطور بنجاح! شكراً لك.",
-                                    "✓ ڕاپۆرت و تۆمارەکانی پشکنین بە سەرکەوتوویی نێردران! سوپاس."), true);
+                                    "Report sent. Thank you!",
+                                    "تم إرسال البلاغ بنجاح. شكراً لك!",
+                                    "ڕاپۆرتەکە بە سەرکەوتوویی نێردرا. سوپاس!"), true);
                             UI.postDelayed(() -> {
                                 try { feedbackDialog.dismiss(); } catch (Throwable ignored) {}
-                            }, 1400);
+                            }, 1300);
                         } else {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                    "Could not reach server. Tap 'Share ZIP...' to send manually.",
-                                    "تعذر الاتصال بالخادم. يمكنك الضغط على 'مشاركة ملف ZIP...' لإرساله.",
-                                    "پەیوەندی بە سێرڤەرەوە نەکرا. دەتوانیت گرتە لە هاوبەشکردنی ZIP بکەیت."), false);
+                                    "Couldn't connect. Tap 'Share Logs ZIP...' to send manually.",
+                                    "تعذر الاتصال بالخادم. اضغط 'مشاركة ملف السجلات...' لإرساله يدوياً.",
+                                    "پەیوەندی نەکرا. گرتە لە هاوبەشکردنی ZIP بکە."), false);
                         }
                     } catch (Throwable t) {
                         controller.setUploadState(false, "Upload error: " + t.getMessage(), false);
@@ -1705,9 +1871,9 @@ public class AsycudaStandaloneManager {
             @Override
             public void onExportZipLocally(String description, File attachedImage, Dialog feedbackDialog) {
                 Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                        "Preparing Diagnostics ZIP...",
-                        "جاري تجهيز ملف التشخيص (ZIP)...",
-                        "ئامادەکردنی پەڕگەی پشکنین (ZIP)..."), Toast.LENGTH_SHORT).show();
+                        "Preparing logs ZIP...",
+                        "جاري تجهيز ملف السجلات...",
+                        "ئامادەکردنی پەڕگەی تۆمارەکان..."), Toast.LENGTH_SHORT).show();
                 new Thread(() -> {
                     try {
                         File zipFile = buildDiagnosticsZipFile(activity, description, attachedImage);
@@ -1738,24 +1904,28 @@ public class AsycudaStandaloneManager {
 
             // 1. User Description & Device Summary
             StringBuilder info = new StringBuilder();
-            info.append("=== ASYCUDA World Iraq Diagnostics & Feedback Report ===\n");
+            info.append("=== ASYCUDA Iraq Diagnostics Report ===\n");
             info.append("Timestamp: ").append(new Date().toString()).append("\n");
             info.append("App Version: ").append(AsycudaMaterialUi.getAppVersionLabel(activity)).append("\n");
             info.append("Package: ").append(activity.getPackageName()).append("\n");
             info.append("Language: ").append(AsycudaMaterialUi.getAppLanguage(activity)).append("\n");
             info.append("Auto-Show Keyboard: ").append(AsycudaMaterialUi.isAutoKeyboardEnabled(activity)).append("\n");
+            info.append("Function Keys Bar: ").append(AsycudaMaterialUi.isAssistKeysEnabled(activity)).append("\n");
             info.append("Device Manufacturer: ").append(Build.MANUFACTURER).append("\n");
             info.append("Device Model: ").append(Build.MODEL).append(" (").append(Build.DEVICE).append(")\n");
             info.append("Android Version: ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
             info.append("Supported ABIs: ").append(java.util.Arrays.toString(Build.SUPPORTED_ABIS)).append("\n");
             info.append("JVM Process Alive: ").append(sJavaProcess != null && isProcessAlive(sJavaProcess)).append("\n");
             info.append("Free Internal Storage (MB): ").append(filesDir.getUsableSpace() / (1024 * 1024)).append("\n");
+            info.append("\n=== LEGAL CONSENT AUDIT ===\n");
+            info.append(AsycudaMaterialUi.getTermsConsentSummaryForDiagnostics(activity)).append("\n");
             if (userDescription != null && !userDescription.isEmpty()) {
-                info.append("\n=== USER FEEDBACK / ISSUE DESCRIPTION ===\n");
+                info.append("\n=== USER REPORT ===\n");
                 info.append(userDescription).append("\n");
                 addBytesToZip(zos, "user_description.txt", userDescription.getBytes(StandardCharsets.UTF_8));
             }
             addBytesToZip(zos, "device_info.txt", info.toString().getBytes(StandardCharsets.UTF_8));
+            addFileToZipIfExists(zos, new File(filesDir, "legal_consent_receipt.json"), "legal_consent_receipt.json");
 
             // 2. Attached Screenshot / Image if present
             if (attachedImage != null && attachedImage.exists()) {
@@ -1786,16 +1956,25 @@ public class AsycudaStandaloneManager {
             File prefsXml = new File(filesDir.getParentFile(), "shared_prefs/" + activity.getPackageName() + "_preferences.xml");
             addFileToZipIfExists(zos, prefsXml, "x11_preferences.xml");
 
-            // 6. Recent Android Logcat
+            // 6. Recent Android Logcat (using /system/bin/logcat -d -t 800 -v threadtime)
             try {
-                Process logProc = new ProcessBuilder("logcat", "-d", "-t", "1500").redirectErrorStream(true).start();
+                Process logProc = new ProcessBuilder("/system/bin/logcat", "-d", "-t", "800", "-v", "threadtime")
+                        .redirectErrorStream(true)
+                        .start();
                 ByteArrayOutputStream lbo = new ByteArrayOutputStream();
                 try (InputStream in = logProc.getInputStream()) {
                     byte[] buf = new byte[8192];
                     int n;
-                    while ((n = in.read(buf)) != -1) lbo.write(buf, 0, n);
+                    while ((n = in.read(buf)) != -1) {
+                        lbo.write(buf, 0, n);
+                        if (lbo.size() > 512 * 1024) break;
+                    }
                 }
-                addBytesToZip(zos, "android_logcat.txt", lbo.toByteArray());
+                logProc.waitFor();
+                byte[] logBytes = lbo.toByteArray();
+                if (logBytes.length > 0) {
+                    addBytesToZip(zos, "android_logcat.txt", logBytes);
+                }
             } catch (Throwable ignored) {}
 
             zos.finish();
@@ -1819,8 +1998,156 @@ public class AsycudaStandaloneManager {
     }
 
     /**
+     * Records a tamper-evident cloud consent audit event in Sentry when a user accepts the
+     * Terms & Conditions and Liability Policy on initial launch.
+     */
+    private void uploadConsentReceiptToSentry(Context ctx, JSONObject receipt) {
+        if (ctx == null || receipt == null) return;
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                String dsn = BuildConfig.SENTRY_DSN;
+                if (dsn == null || dsn.isEmpty()) return;
+                URI_Parts parts = parseSentryDsn(dsn);
+                if (parts == null) return;
+
+                String eventId = UUID.randomUUID().toString().replace("-", "");
+                SimpleDateFormat isoFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                isoFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+                String nowIso = isoFmt.format(new Date());
+
+                String consentId = receipt.optString("consent_id", "IRQ-UNKNOWN");
+                String sigName = receipt.optString("signatory_name", "Unknown");
+                String compName = receipt.optString("company_name", "Unknown");
+                String deviceHash = receipt.optString("device_hash", "unknown_device");
+                String policyVer = receipt.optString("policy_version", AsycudaMaterialUi.CURRENT_POLICY_VERSION);
+                String appVer = receipt.optString("app_version", AsycudaMaterialUi.getAppVersionLabel(ctx));
+                String devModel = receipt.optString("device_model", Build.MANUFACTURER + " " + Build.MODEL);
+                String sha256 = receipt.optString("sha256_signature", "");
+
+                JSONObject envHeader = new JSONObject();
+                envHeader.put("event_id", eventId);
+                envHeader.put("sent_at", nowIso);
+                envHeader.put("dsn", dsn);
+
+                JSONObject eventObj = new JSONObject();
+                eventObj.put("event_id", eventId);
+                eventObj.put("timestamp", nowIso);
+                eventObj.put("platform", "java");
+                eventObj.put("level", "info");
+                eventObj.put("release", "iq.asycuda@" + appVer.replaceFirst("^v", "") + "+37");
+                eventObj.put("environment", "production");
+
+                // Custom fingerprint by device_hash so multiple reinstalls on the same physical phone
+                // merge into a single chronological Issue thread per device while keeping distinct devices separate.
+                JSONArray fingerprint = new JSONArray();
+                fingerprint.put("terms-accepted");
+                fingerprint.put(deviceHash);
+                eventObj.put("fingerprint", fingerprint);
+
+                JSONObject msgObj = new JSONObject();
+                msgObj.put("formatted", "[Terms Accepted] " + sigName + " (" + compName + ") • Receipt #"
+                        + consentId + " • " + devModel);
+                eventObj.put("message", msgObj);
+
+                JSONObject userObj = new JSONObject();
+                userObj.put("id", deviceHash);
+                userObj.put("username", sigName + " (" + compName + ")");
+                userObj.put("ip_address", "{{auto}}");
+                eventObj.put("user", userObj);
+
+                JSONObject tags = new JSONObject();
+                tags.put("audit_category", "terms_accepted");
+                tags.put("signatory_name", sigName);
+                tags.put("company_name", compName);
+                tags.put("consent_id", consentId);
+                tags.put("policy_version", policyVer);
+                tags.put("app_version", appVer);
+                tags.put("device_model", devModel);
+                tags.put("device_hash", deviceHash);
+                tags.put("locale", receipt.optString("locale", "ar"));
+                eventObj.put("tags", tags);
+
+                JSONObject contexts = new JSONObject();
+                JSONObject devCtx = new JSONObject();
+                devCtx.put("name", Build.MODEL);
+                devCtx.put("model", Build.MODEL);
+                devCtx.put("manufacturer", Build.MANUFACTURER);
+                devCtx.put("brand", Build.BRAND);
+                devCtx.put("arch", "arm64-v8a");
+                contexts.put("device", devCtx);
+
+                JSONObject osCtx = new JSONObject();
+                osCtx.put("name", "Android");
+                osCtx.put("version", Build.VERSION.RELEASE);
+                contexts.put("os", osCtx);
+
+                JSONObject appCtx = new JSONObject();
+                appCtx.put("app_identifier", ctx.getPackageName());
+                appCtx.put("app_name", "ASYCUDA Iraq");
+                appCtx.put("app_version", appVer);
+                contexts.put("app", appCtx);
+                eventObj.put("contexts", contexts);
+
+                JSONObject extra = new JSONObject();
+                extra.put("consent_receipt", receipt.toString());
+                extra.put("signatory_name", sigName);
+                extra.put("company_name", compName);
+                extra.put("sha256_signature", sha256);
+                eventObj.put("extra", extra);
+
+                byte[] eventBytes = eventObj.toString().getBytes(StandardCharsets.UTF_8);
+                JSONObject itemHeader = new JSONObject();
+                itemHeader.put("type", "event");
+                itemHeader.put("length", eventBytes.length);
+                itemHeader.put("content_type", "application/json");
+
+                byte[] receiptBytes = receipt.toString(2).getBytes(StandardCharsets.UTF_8);
+                JSONObject attHeader = new JSONObject();
+                attHeader.put("type", "attachment");
+                attHeader.put("length", receiptBytes.length);
+                attHeader.put("filename", "legal_consent_receipt.json");
+                attHeader.put("content_type", "application/json");
+                attHeader.put("attachment_type", "event.attachment");
+
+                ByteArrayOutputStream envelope = new ByteArrayOutputStream();
+                envelope.write((envHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+                envelope.write((itemHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+                envelope.write(eventBytes);
+                envelope.write('\n');
+                envelope.write((attHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+                envelope.write(receiptBytes);
+                envelope.write('\n');
+
+                String endpoint = "https://" + parts.host + "/api/" + parts.projectId
+                        + "/envelope/?sentry_key=" + parts.publicKey + "&sentry_version=7&sentry_client=asycuda.android/3.7.0";
+                conn = (HttpURLConnection) new URL(endpoint).openConnection();
+                conn.setRequestMethod("POST");
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(20000);
+                conn.setDoOutput(true);
+                conn.setRequestProperty("Content-Type", "application/x-sentry-envelope");
+                byte[] payload = envelope.toByteArray();
+                conn.setFixedLengthStreamingMode(payload.length);
+                try (OutputStream out = conn.getOutputStream()) {
+                    out.write(payload);
+                    out.flush();
+                }
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    AsycudaMaterialUi.markTermsCloudSynced(ctx);
+                }
+            } catch (Throwable ignored) {
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }, "Asycuda-ConsentAudit").start();
+    }
+
+    /**
      * Uploads the user report, device metadata, optional screenshot/image, and full Diagnostics ZIP
-     * directly to Sentry's Envelope API (write-only public DSN) in the background with zero login.
+     * directly to Sentry's Envelope API (write-only public DSN) in the background with zero login,
+     * and then syncs the verified Sentry issue to GitHub Issues via Sentry's GitHub Integration.
      */
     private boolean uploadReportEnvelopeToSentry(Context ctx, String description, File zipFile, File attachedImage) {
         HttpURLConnection conn = null;
@@ -1877,7 +2204,7 @@ public class AsycudaStandaloneManager {
             devCtx.put("name", Build.MODEL);
             devCtx.put("model", Build.MODEL);
             devCtx.put("manufacturer", Build.MANUFACTURER);
-            devCtx.put(" brand", Build.BRAND);
+            devCtx.put("brand", Build.BRAND);
             devCtx.put("arch", "arm64-v8a");
             contexts.put("device", devCtx);
 

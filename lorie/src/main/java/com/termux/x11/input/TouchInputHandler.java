@@ -509,15 +509,29 @@ public class TouchInputHandler {
             mTouchpadHandler.reloadPreferences(p);
     }
 
+    private long mLastBackPressTime = 0;
+
     public BiConsumer<Integer, Boolean> extractUserActionFromPreferences(Prefs p, String name) {
         LoriePreferences.PrefsProto.Preference pref = p.keys.get(name + "Action");
         if (pref == null)
             return noAction;
 
         switch(pref.asList().get()) {
+            case "double_back_exit": return (key, down) -> {
+                if (down) {
+                    long now = System.currentTimeMillis();
+                    if (now - mLastBackPressTime <= 2000) {
+                        mLastBackPressTime = 0;
+                        com.termux.x11.AsycudaStandaloneManager.shutdownApp(mActivity);
+                    } else {
+                        mLastBackPressTime = now;
+                        com.termux.x11.AsycudaStandaloneManager.onSingleBackPressForExit(mActivity);
+                    }
+                }
+            };
             case "toggle soft keyboard": return (key, down) -> { if (down) mActivity.toggleKeyboardVisibility(); };
             case "toggle additional key bar": return (key, down) -> { if (down) mActivity.toggleExtraKeys(); };
-            case "open preferences": return (key, down) -> { if (down) mActivity.startActivity(new Intent(mActivity, LoriePreferences.class) {{ setAction(Intent.ACTION_MAIN); }}); };
+            case "open preferences": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.openDisplaySettings(mActivity); };
             case "release pointer and keyboard capture": return (key, down) -> { if (down) setCapturingEnabled(false); };
             case "toggle fullscreen": return (key, down) -> { if (down) mActivity.prefs.fullscreen.put(!mActivity.prefs.fullscreen.get()); };
             case "exit": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.shutdownApp(mActivity); };
@@ -534,12 +548,6 @@ public class TouchInputHandler {
             return null;
 
         switch(pref.asList().get()) {
-            case "open preferences":
-                return PendingIntent.getActivity(ctx, requestCode, new Intent(ctx, LoriePreferences.class) {{
-                    putExtra("key", "value");
-                    setPackage(ctx.getPackageName());
-                    setAction(Intent.ACTION_MAIN);
-                }}, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             case "restart activity": {
                 MainActivity activity = (MainActivity) ctx;
                 return PendingIntent.getActivity(activity, requestCode,
@@ -547,6 +555,7 @@ public class TouchInputHandler {
                                 .setData(activity.getTag().isEmpty() ? null : Uri.parse(activity.getTag())),
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             }
+            case "open preferences":
             case "exit":
             case "toggle soft keyboard":
             case "toggle additional key bar":
@@ -941,8 +950,11 @@ public class TouchInputHandler {
         int k = e.getKeyCode();
 
         if (!mActivity.getLorieView().connected()) {
-            if (e.getKeyCode() == KEYCODE_BACK)
-                mActivity.finish();
+            if (e.getKeyCode() == KEYCODE_BACK) {
+                if (e.getRepeatCount() == 0)
+                    backButtonAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
+                return true;
+            }
 
             return false;
         }
@@ -984,7 +996,8 @@ public class TouchInputHandler {
             }
 
             if (e.getScanCode() == KEY_BACK && e.getDevice().getKeyboardType() != KEYBOARD_TYPE_ALPHABETIC || e.getScanCode() == 0) {
-                backButtonAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
+                if (e.getRepeatCount() == 0)
+                    backButtonAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
                 return true;
             }
         }

@@ -65,10 +65,9 @@
             android:taskAffinity=".LoriePreferences"
             android:supportsPictureInPicture="false"
             android:resizeableActivity="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-                <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
 	    <meta-data android:name="android.allow_multiple_resumed_activities" android:value="true" />
@@ -91,13 +90,13 @@
             android:enabled="true"
             android:exported="false" />
 
-        <receiver android:name=".LoriePreferences$Receiver" android:exported="true" tools:ignore="ExportedReceiver" android:enabled="true">
+        <receiver android:name=".LoriePreferences$Receiver" android:exported="false" android:enabled="true">
             <intent-filter>
                 <action android:name="com.termux.x11.CHANGE_PREFERENCE" />
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".LorieApp$Receiver" android:exported="true" tools:ignore="ExportedReceiver" android:enabled="true">
+        <receiver android:name=".LorieApp$Receiver" android:exported="false" android:enabled="true">
             <intent-filter>
                 <action android:name="com.termux.x11.CmdEntryPoint.ACTION_START" />
                 <action android:name="com.termux.x11.ACTION_STOP" />
