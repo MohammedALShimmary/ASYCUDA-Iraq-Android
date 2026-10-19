@@ -156,7 +156,6 @@ public class AsycudaMaterialUi {
         void onCaptureScreenRequested(FeedbackModalController controller, Dialog feedbackDialog);
         void onPickImageRequested(FeedbackModalController controller);
         void onSubmitToSentry(String description, File attachedImage, FeedbackModalController controller, Dialog feedbackDialog);
-        void onExportZipLocally(String description, File attachedImage, Dialog feedbackDialog);
     }
 
     public static String getAppLanguage(Context ctx) {
@@ -1739,9 +1738,9 @@ public class AsycudaMaterialUi {
 
         TextView zipInfoText = new TextView(activity);
         zipInfoText.setText(tr(activity,
-                "App technical logs are attached in private cache and automatically scrubbed — your ASYCUDA username, password, and declarations are never included.",
-                "يتم إرفاق سجلات الفحص التقنية بعد تنقيتها تلقائياً — لا يتم أبداً تضمين اسم المستخدم أو كلمة المرور أو التصاريح الكمركية الخاصة بك.",
-                "تۆمارە تەکنیکییەکان دوای پاککردنەوەی خۆکار هاوپێچ دەکرێن — هەرگیز ناوی بەکارهێنەر و وشەی تێپەڕ لەخۆ ناگرێت."));
+                "Sanitized app logs are sent directly over HTTPS to Sentry in memory — no local ZIP is saved and your ASYCUDA credentials are never included.",
+                "يتم إرسال سجلات الفحص المنقّاة مباشرة عبر اتصال مشفّر (Sentry) دون حفظ أي ملف محلي — ولا يتم أبداً تضمين بيانات الدخول الخاصة بك.",
+                "تۆمارە تەکنیکییەکان ڕاستەوخۆ لە ڕێگەی پەیوەندی پارێزراو دەنێردرێن بەبێ پاشەکەوتکردنی پەڕگە — زانیاری چوونەژوورەوە هەرگیز نانێردرێت."));
         zipInfoText.setTextColor(TEXT_SECONDARY);
         zipInfoText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         zipInfoRow.addView(zipInfoText);
@@ -1758,7 +1757,7 @@ public class AsycudaMaterialUi {
         scroll.addView(body);
         root.addView(scroll);
 
-        // Footer Buttons
+        // Footer Button (Direct Sentry submission only — no local ZIP file export)
         LinearLayout footer = new LinearLayout(activity);
         footer.setOrientation(LinearLayout.HORIZONTAL);
         footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -1766,18 +1765,6 @@ public class AsycudaMaterialUi {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         footLp.topMargin = dp(activity, 12);
         footer.setLayoutParams(footLp);
-
-        TextView exportZipBtn = createCupertinoButton(activity,
-                tr(activity, "Export Diagnostic ZIP...", "مشاركة ملف السجلات (ZIP)...", "هاوبەشکردنی پەڕگەی تۆمارەکان..."),
-                false, false, v -> {
-                    String desc = descInput.getText() != null ? descInput.getText().toString().trim() : "";
-                    if (handler != null) {
-                        handler.onExportZipLocally(desc, currentImageHolder[0], dialog);
-                    }
-                });
-        LinearLayout.LayoutParams exLp = (LinearLayout.LayoutParams) exportZipBtn.getLayoutParams();
-        exLp.setMarginEnd(dp(activity, 8));
-        footer.addView(exportZipBtn);
 
         TextView submitBtn = createCupertinoButton(activity,
                 tr(activity, "Submit Report", "إرسال البلاغ", "ناردنی ڕاپۆرت"),
@@ -1827,7 +1814,6 @@ public class AsycudaMaterialUi {
                 activity.runOnUiThread(() -> {
                     uploadProgress.setVisibility(uploading ? View.VISIBLE : View.GONE);
                     submitBtn.setEnabled(!uploading);
-                    exportZipBtn.setEnabled(!uploading);
                     submitBtn.setAlpha(uploading ? 0.5f : 1.0f);
                     if (statusMessage != null) {
                         zipInfoText.setText(statusMessage);

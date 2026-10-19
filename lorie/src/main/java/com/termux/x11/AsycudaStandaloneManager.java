@@ -2313,13 +2313,12 @@ public class AsycudaStandaloneManager {
                         "ناردنی ڕاپۆرت و تۆمارەکان..."), false);
 
                 new Thread(() -> {
-                    File zipFile = null;
                     try {
-                        zipFile = buildDiagnosticsZipFile(activity, description, attachedImage);
-                        boolean sent = uploadReportEnvelopeToSentry(activity, description, zipFile, attachedImage);
+                        byte[] zipBytes = buildDiagnosticsZipBytes(activity, description, attachedImage);
+                        boolean sent = uploadReportEnvelopeToSentry(activity, description, zipBytes, attachedImage);
                         if (sent) {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                     "Report sent. Thank you!",
+                                    "Report sent. Thank you!",
                                     "تم إرسال البلاغ بنجاح. شكراً لك!",
                                     "ڕاپۆرتەکە بە سەرکەوتوویی نێردرا. سوپاس!"), true);
                             UI.postDelayed(() -> {
@@ -2331,70 +2330,40 @@ public class AsycudaStandaloneManager {
                             }, 1300);
                         } else {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                    "Couldn't connect. Tap 'Share Logs ZIP...' to send manually.",
-                                    "تعذر الاتصال بالخادم. اضغط 'مشاركة ملف السجلات...' لإرساله يدوياً.",
-                                    "پەیوەندی نەکرا. گرتە لە هاوبەشکردنی ZIP بکە."), false);
+                                    "Couldn't connect to Sentry. Please check your internet connection and try again.",
+                                    "تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.",
+                                    "پەیوەندی نەکرا. تکایە هێڵی ئینتەرنێت بپشکنە و هەوڵ بدەرەوە."), false);
                         }
                     } catch (Exception t) {
                         controller.setUploadState(false, "Upload error: " + t.getMessage(), false);
-                    } finally {
-                        deleteQuietly(zipFile);
                     }
                 }, "Asycuda-SentryUploader").start();
-            }
-
-            @Override
-            public void onExportZipLocally(String description, File attachedImage, Dialog feedbackDialog) {
-                Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                        "Preparing sanitized logs ZIP...",
-                        "جاري تجهيز ملف السجلات المنقّى...",
-                        "ئامادەکردنی پەڕگەی تۆمارەکان..."), Toast.LENGTH_SHORT).show();
-                new Thread(() -> {
-                    try {
-                        File zipFile = buildDiagnosticsZipFile(activity, description, attachedImage);
-                        UI.post(() -> {
-                            try {
-                                feedbackDialog.dismiss();
-                            } catch (Exception ignored) {
-                                // Dialog already dismissed
-                            }
-                            shareFileWithProvider(activity, zipFile, MIME_ZIP);
-                        });
-                    } catch (Exception t) {
-                        UI.post(() -> Toast.makeText(activity, "Failed to export ZIP: " + t.getMessage(), Toast.LENGTH_LONG).show());
-                    }
-                }, "Asycuda-ExportZip").start();
             }
         }, () -> openMaterialControlCenter(activity));
     }
 
     /**
-     * Builds a strictly sanitized, credential-free diagnostic ZIP inside the app's private cache
-     * directory ({@code getCacheDir()/diagnostics}, mode {@code 0600}).
-     * Never writes diagnostic logs to external/shared storage ({@code Download/Asycuda_Prints}),
-     * never includes raw JNLP, SharedPreferences XML, or PII consent files, scopes logcat strictly
-     * to this process PID, and scrubs all usernames, passwords, tokens, TINs, and session IDs.
+     * Builds a strictly sanitized, credential-free diagnostic archive purely in memory
+     * ({@link ByteArrayOutputStream}) for direct HTTPS transmission to Sentry.
+     * Zero diagnostic {@code .zip} files are ever written to disk (neither internal nor external storage),
+     * raw JNLP/SharedPreferences/PII files are excluded, logcat is scoped strictly to {@code --pid},
+     * and all usernames, passwords, tokens, TINs, and session IDs are scrubbed before packaging.
      */
-    private File buildDiagnosticsZipFile(MainActivity activity, String userDescription, File attachedImage) throws IOException {
+    private byte[] buildDiagnosticsZipBytes(MainActivity activity, String userDescription, File attachedImage) throws IOException {
         File filesDir = activity.getFilesDir();
         File clientDir = new File(filesDir, DIR_CLIENT);
-        File diagCacheDir = new File(activity.getCacheDir(), "diagnostics");
-        ensureDir(diagCacheDir);
-        purgeStaleDiagnosticFiles(diagCacheDir, new File(filesDir, DIR_PRINTS), new File(DOWNLOAD_PRINTS_PATH));
-
-        String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-        String zipName = "ASYCUDA_Diagnostics_" + stamp + ".zip";
-        File zipFile = new File(diagCacheDir, zipName);
+        purgeStaleDiagnosticFiles(new File(activity.getCacheDir(), "diagnostics"),
+                new File(filesDir, DIR_PRINTS), new File(DOWNLOAD_PRINTS_PATH));
 
         String safeDescription = redactSensitiveLogContent(userDescription);
+        ByteArrayOutputStream zipBuffer = new ByteArrayOutputStream(65536);
 
-        try (FileOutputStream fos = new FileOutputStream(zipFile);
-             java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(fos)) {
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(zipBuffer)) {
 
-            // 1. Sanitized Device Summary (zero credentials, zero raw user PII)
+            // 1. Sanitized Device Summary (zero credentials, zero raw user PII, zero on-disk file)
             StringBuilder info = new StringBuilder();
-            info.append("=== ASYCUDA Iraq Sanitized Diagnostics Report ===\n");
-            info.append("PrivacySanitization: STRICT (Credentials, usernames, passwords, TINs, cookies, and session tokens scrubbed; stored only in private 0600 cache)\n");
+            info.append("=== ASYCUDA Iraq Sanitized Diagnostics Report (In-Memory Sentry Stream) ===\n");
+            info.append("PrivacySanitization: STRICT (Credentials, usernames, passwords, TINs, cookies, and session tokens scrubbed; streamed in RAM only; zero local ZIP files written to disk)\n");
             info.append("Timestamp: ").append(new Date().toString()).append("\n");
             info.append("App Version: ").append(AsycudaMaterialUi.getAppVersionLabel(activity)).append("\n");
             info.append("Package: ").append(activity.getPackageName()).append("\n");
@@ -2466,11 +2435,9 @@ public class AsycudaStandaloneManager {
             }
 
             zos.finish();
-            fos.getFD().sync();
         }
 
-        setReadableOwnerOnly(zipFile);
-        return zipFile;
+        return zipBuffer.toByteArray();
     }
 
     private static void purgeStaleDiagnosticFiles(File... dirs) {
@@ -2661,10 +2628,10 @@ public class AsycudaStandaloneManager {
     }
 
     /**
-     * Uploads the user report, device metadata, optional screenshot/image, and full Diagnostics ZIP
-     * directly to Sentry's Envelope API (write-only public DSN) in the background with zero login.
+     * Uploads the user report, device metadata, optional screenshot/image, and in-memory sanitized
+     * diagnostic bundle directly to Sentry's Envelope API (write-only public DSN) over HTTPS.
      */
-    private boolean uploadReportEnvelopeToSentry(Context ctx, String description, File zipFile, File attachedImage) {
+    private boolean uploadReportEnvelopeToSentry(Context ctx, String description, byte[] zipBytes, File attachedImage) {
         HttpURLConnection conn = null;
         try {
             String dsn = BuildConfig.SENTRY_DSN;
@@ -2762,19 +2729,16 @@ public class AsycudaStandaloneManager {
                 out.write(fbBytes);
                 out.write('\n');
 
-                if (zipFile != null && zipFile.exists()) {
-                    byte[] zipBytes = readFileBytes(zipFile);
-                    if (zipBytes.length > 0) {
-                        JSONObject zipHeader = new JSONObject();
-                        zipHeader.put("type", TYPE_ATTACHMENT);
-                        zipHeader.put(KEY_LENGTH, zipBytes.length);
-                        zipHeader.put(KEY_FILENAME, zipFile.getName());
-                        zipHeader.put(KEY_CONTENT_TYPE, MIME_ZIP);
-                        zipHeader.put(KEY_ATTACHMENT_TYPE, VAL_EVENT_ATTACHMENT);
-                        out.write((zipHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                        out.write(zipBytes);
-                        out.write('\n');
-                    }
+                if (zipBytes != null && zipBytes.length > 0) {
+                    JSONObject zipHeader = new JSONObject();
+                    zipHeader.put("type", TYPE_ATTACHMENT);
+                    zipHeader.put(KEY_LENGTH, zipBytes.length);
+                    zipHeader.put(KEY_FILENAME, "ASYCUDA_Diagnostics_Sanitized.zip");
+                    zipHeader.put(KEY_CONTENT_TYPE, MIME_ZIP);
+                    zipHeader.put(KEY_ATTACHMENT_TYPE, VAL_EVENT_ATTACHMENT);
+                    out.write((zipHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+                    out.write(zipBytes);
+                    out.write('\n');
                 }
 
                 if (attachedImage != null && attachedImage.exists()) {
