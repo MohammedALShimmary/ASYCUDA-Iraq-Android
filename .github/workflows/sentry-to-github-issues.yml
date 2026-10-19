@@ -1,0 +1,131 @@
+name: Sync Sentry User Reports to GitHub Issues
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync-sentry-reports:
+    name: Mirror New Sentry [User Report] Events to GitHub Issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Sentry User Reports and Create GitHub Issues
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, sys, urllib.request
+
+          sentry_token = os.environ.get("SENTRY_AUTH_TOKEN", "").strip()
+          gh_token = os.environ.get("GITHUB_TOKEN", "").strip()
+          repo = os.environ.get("GITHUB_REPOSITORY", "MohammedALShimmary/ASYCUDA-Iraq-Android")
+
+          if not sentry_token:
+              print("SENTRY_AUTH_TOKEN not set; skipping sync.")
+              sys.exit(0)
+
+          # 1. Fetch existing GitHub issues (open + closed) to avoid duplicates
+          issues_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=100"
+          gh_req = urllib.request.Request(
+              issues_url,
+              headers={
+                  "Authorization": f"Bearer {gh_token}",
+                  "Accept": "application/vnd.github+json",
+                  "User-Agent": "ASYCUDA-Iraq-Sentry-Bridge"
+              }
+          )
+          existing_bodies = []
+          with urllib.request.urlopen(gh_req) as resp:
+              for issue in json.loads(resp.read().decode("utf-8")):
+                  existing_bodies.append((issue.get("body") or "") + " " + (issue.get("title") or ""))
+
+          # 2. Fetch recent events from Sentry (DE region)
+          sentry_url = "https://de.sentry.io/api/0/projects/mohammed-ammar-hussein/asycuda-iraq-android/events/?full=true"
+          s_req = urllib.request.Request(
+              sentry_url,
+              headers={
+                  "Authorization": f"Bearer {sentry_token}",
+                  "Accept": "application/json",
+                  "User-Agent": "ASYCUDA-Iraq-Sentry-Bridge"
+              }
+          )
+          with urllib.request.urlopen(s_req) as resp:
+              events = json.loads(resp.read().decode("utf-8"))
+
+          created_count = 0
+          for ev in reversed(events):
+              ev_id = ev.get("eventID", "")
+              title = (ev.get("title") or ev.get("message") or "").strip()
+              if not ev_id or not title.startswith("[User Report]"):
+                  continue
+
+              if any(ev_id in b for b in existing_bodies):
+                  print(f"Skipping already-synced Sentry event {ev_id}")
+                  continue
+
+              tags = {t.get("key"): t.get("value") for t in (ev.get("tags") or []) if isinstance(t, dict)}
+              ctx = ev.get("context") or {}
+              full_desc = ctx.get("full_description") or ev.get("message") or title
+              device_model = tags.get("device_model", "Unknown")
+              android_ver = tags.get("android_version", "Unknown")
+              app_ver = tags.get("app_version", "Unknown")
+              app_lang = tags.get("app_language", "Unknown")
+              has_screenshot = tags.get("has_screenshot", "false")
+              created_at = ev.get("dateCreated", "Unknown")
+              group_id = ev.get("groupID", "")
+              sentry_link = (
+                  f"https://mohammed-ammar-hussein.sentry.io/issues/{group_id}/events/{ev_id}/"
+                  if group_id else "https://mohammed-ammar-hussein.sentry.io/issues/"
+              )
+
+              issue_title = title.splitlines()[0][:120]
+              issue_body = (
+                  f"### 📩 User Feedback / Bug Report\n\n"
+                  f"{full_desc}\n\n"
+                  f"---\n"
+                  f"### 📱 Device & Session Metadata\n"
+                  f"| Field | Value |\n"
+                  f"| :--- | :--- |\n"
+                  f"| **Device Model** | `{device_model}` |\n"
+                  f"| **Android Version** | `Android {android_ver}` |\n"
+                  f"| **App Version** | `{app_ver}` |\n"
+                  f"| **UI Language** | `{app_lang}` |\n"
+                  f"| **Screenshot / Attachments** | `{has_screenshot}` (Viewable in Sentry) |\n"
+                  f"| **Submitted At (UTC)** | `{created_at}` |\n"
+                  f"| **Sentry Event ID** | `{ev_id}` |\n"
+                  f"| **Sentry Dashboard Link** | [Open Event & Attachments in Sentry]({sentry_link}) |\n"
+              )
+
+              post_data = json.dumps({
+                  "title": issue_title,
+                  "body": issue_body
+              }).encode("utf-8")
+
+              create_req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/issues",
+                  data=post_data,
+                  headers={
+                      "Authorization": f"Bearer {gh_token}",
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "User-Agent": "ASYCUDA-Iraq-Sentry-Bridge"
+                  },
+                  method="POST"
+              )
+              with urllib.request.urlopen(create_req) as c_resp:
+                  res_obj = json.loads(c_resp.read().decode("utf-8"))
+                  print(f"Created GitHub Issue #{res_obj.get('number')}: {res_obj.get('html_url')}")
+                  existing_bodies.append(issue_body)
+                  created_count += 1
+
+          print(f"Sync complete. Created {created_count} new GitHub issue(s).")
+          PYEOF
