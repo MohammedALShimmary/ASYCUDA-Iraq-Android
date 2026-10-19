@@ -1238,7 +1238,7 @@ public class AsycudaStandaloneManager {
                             total + " packages checked", total, total, false);
                 } else {
                     modalCtrl.setMofUpdateStatus("All " + total + " customs packages are up to date",
-                            "asy.mof.gov.iq", 0, 0, false);
+                            ALLOWED_MOF_HOST, 0, 0, false);
                 }
             } else if (!manualForceCheck) {
                 if (updatedCount > 0) {
@@ -1800,7 +1800,7 @@ public class AsycudaStandaloneManager {
         try {
             Uri u = Uri.parse(url);
             String scheme = u.getScheme();
-            return "https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme);
+            return SCHEME_HTTPS.equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme);
         } catch (Exception t) {
             return false;
         }
