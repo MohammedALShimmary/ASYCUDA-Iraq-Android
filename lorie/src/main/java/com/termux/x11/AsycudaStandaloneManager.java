@@ -1284,7 +1284,7 @@ public class AsycudaStandaloneManager {
                 out.getFD().sync();
             }
 
-            if (tmpJar.length() > 0) {
+            if (tmpJar.length() > 0 && verifyDownloadedJarIntegrity(tmpJar)) {
                 if (targetJar.exists()) deleteQuietly(targetJar);
                 if (tmpJar.renameTo(targetJar)) {
                     setReadableOwnerOnly(targetJar);
@@ -1301,6 +1301,32 @@ public class AsycudaStandaloneManager {
             if (tmpJar.exists()) deleteQuietly(tmpJar);
         }
         return false;
+    }
+
+    /**
+     * Verifies that a downloaded JAR is a well-formed ZIP/JAR archive and enforces
+     * standard Java cryptographic signature verification (`JarFile(..., true)`) on all
+     * signed entries (`META-INF/*.SF`, `.RSA`, `.DSA`) before admitting the JAR to the classpath.
+     */
+    private static boolean verifyDownloadedJarIntegrity(File jarFile) {
+        if (jarFile == null || !jarFile.exists() || jarFile.length() < 22) return false;
+        try (java.util.jar.JarFile jf = new java.util.jar.JarFile(jarFile, true)) {
+            Enumeration<java.util.jar.JarEntry> entries = jf.entries();
+            int entryCount = 0;
+            byte[] buf = new byte[16384];
+            while (entries.hasMoreElements()) {
+                java.util.jar.JarEntry je = entries.nextElement();
+                entryCount++;
+                try (InputStream is = jf.getInputStream(je)) {
+                    while (is.read(buf) != -1) {
+                        // Draining the entry stream triggers JarVerifier digest & signature validation
+                    }
+                }
+            }
+            return entryCount > 0;
+        } catch (SecurityException | IOException invalidJar) {
+            return false;
+        }
     }
 
     private HttpURLConnection openMofConnection(String urlStr, SSLSocketFactory sslFactory, int connTimeout, int readTimeout) throws IOException {
@@ -2642,13 +2668,14 @@ public class AsycudaStandaloneManager {
             SentryUriParts parts = parseSentryDsn(dsn);
             if (parts == null) return false;
 
+            String safeDescription = redactSensitiveLogContent(description != null ? description : "");
             String eventId = UUID.randomUUID().toString().replace("-", "");
             SimpleDateFormat isoFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
             isoFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
             String nowIso = isoFmt.format(new Date());
 
             String verLabel = AsycudaMaterialUi.getAppVersionLabel(ctx);
-            String firstLine = description.split("\n")[0].trim();
+            String firstLine = safeDescription.split("\n")[0].trim();
             if (firstLine.length() > 90) firstLine = firstLine.substring(0, 90) + "...";
 
             // 1. Envelope Header
@@ -2667,7 +2694,7 @@ public class AsycudaStandaloneManager {
             eventObj.put("environment", "production");
 
             JSONObject msgObj = new JSONObject();
-            msgObj.put("formatted", "[User Report] " + firstLine + "\n\n" + description);
+            msgObj.put("formatted", "[User Report] " + firstLine + "\n\n" + safeDescription);
             eventObj.put("message", msgObj);
 
             JSONObject userObj = new JSONObject();
@@ -2686,7 +2713,7 @@ public class AsycudaStandaloneManager {
             eventObj.put("contexts", buildSentryContexts(ctx, verLabel));
 
             JSONObject extra = new JSONObject();
-            extra.put("full_description", description);
+            extra.put("full_description", safeDescription);
             extra.put("jvm_running", sJavaProcess != null && isProcessAlive(sJavaProcess));
             File logFile = new File(new File(ctx.getFilesDir(), DIR_CLIENT), FILE_ASYCUDA_LOG);
             extra.put("asycuda_log_tail", redactSensitiveLogContent(readTail(logFile, 2500)));
@@ -2703,7 +2730,7 @@ public class AsycudaStandaloneManager {
             fbObj.put(KEY_EVENT_ID, eventId);
             fbObj.put("name", Build.MANUFACTURER + " " + Build.MODEL);
             fbObj.put("email", "user@asycuda-iraq.app");
-            fbObj.put("comments", description);
+            fbObj.put("comments", safeDescription);
             byte[] fbBytes = fbObj.toString().getBytes(StandardCharsets.UTF_8);
             JSONObject fbItemHeader = new JSONObject();
             fbItemHeader.put("type", "user_report");

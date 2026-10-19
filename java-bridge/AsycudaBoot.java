@@ -834,9 +834,16 @@ public class AsycudaBoot {
 
     public static void main(String[] args) throws Exception {
         installHighSpeedNetworkTuning();
+        // Install a filesystem-watching SecurityManager that intercepts temporary PDF print
+        // files written to /tmp/ while blocking OS subprocess execution (Runtime.exec / ProcessBuilder).
+        // Note: Authentication & session traffic on port 2006 are encrypted at the SOClass application
+        // protocol layer by UNCTAD's official `socrypto.jar` (`so.security.*`) and `sslca.jar` libraries.
         System.setSecurityManager(new SecurityManager() {
             @Override public void checkPermission(Permission perm) { /* Allow JNLP client runtime permissions */ }
             @Override public void checkPermission(Permission perm, Object context) { /* Allow JNLP client runtime permissions */ }
+            @Override public void checkExec(String cmd) {
+                throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
+            }
             @Override public void checkWrite(String file) {
                 if (Boolean.TRUE.equals(IN_CHECK.get())) return;
                 if (file != null && file.contains("/tmp/")) {
