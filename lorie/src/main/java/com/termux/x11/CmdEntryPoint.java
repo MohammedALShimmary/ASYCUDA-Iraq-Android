@@ -93,7 +93,7 @@ public class CmdEntryPoint extends ICmdEntryInterface.Stub {
 
     static void sendBroadcast(Intent intent) {
         try {
-            ctx.sendBroadcast(intent);
+            ctx.sendBroadcast(intent, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
         } catch (Exception e) {
             if (e instanceof NullPointerException && ctx == null)
                 Log.i("Broadcast", "Context is null, falling back to manual broadcasting");

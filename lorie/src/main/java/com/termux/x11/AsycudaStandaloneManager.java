@@ -324,18 +324,20 @@ public class AsycudaStandaloneManager {
                     return;
                 }
                 String origName = queryUriDisplayName(activity, uri);
-                String ext = "png";
-                if (origName != null && origName.contains(".")) {
-                    ext = origName.substring(origName.lastIndexOf('.') + 1).toLowerCase(Locale.US);
+                String safeFileName = "feedback_attachment.png";
+                if (origName != null) {
+                    String lower = origName.toLowerCase(Locale.US);
+                    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+                        safeFileName = "feedback_attachment.jpg";
+                    } else if (lower.endsWith(".webp")) {
+                        safeFileName = "feedback_attachment.webp";
+                    }
                 } else if (mime != null && mime.contains("jpeg")) {
-                    ext = "jpg";
-                }
-                if (!ext.equals("png") && !ext.equals("jpg") && !ext.equals("jpeg") && !ext.equals("webp")) {
-                    ext = "png";
+                    safeFileName = "feedback_attachment.jpg";
                 }
                 File printsDir = new File(activity.getFilesDir(), DIR_PRINTS);
                 ensureDir(printsDir);
-                File outImg = new File(printsDir, "feedback_attachment." + ext);
+                File outImg = new File(printsDir, safeFileName);
                 try (InputStream in = activity.getContentResolver().openInputStream(uri);
                      FileOutputStream out = new FileOutputStream(outImg)) {
                     if (in == null) return;

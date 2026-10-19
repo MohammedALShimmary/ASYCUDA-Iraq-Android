@@ -74,9 +74,10 @@ public class AsycudaMaterialUi {
 
     private static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
     private static final String KU_DONE = "تەواو";
-    private static final String EN_BACK_CONTROL_CENTER = "← Control Center";
-    private static final String AR_BACK_CONTROL_CENTER = "← القائمة الرئيسية";
-    private static final String KU_BACK_CONTROL_CENTER = "← لیستی سەرەکی";
+    private static final String EN_BACK_CONTROL_CENTER = "← Back";
+    private static final String AR_BACK_CONTROL_CENTER = "← رجوع";
+    private static final String KU_BACK_CONTROL_CENTER = "← گەڕانەوە";
+    private static final String PERMISSION_INTERNAL_BROADCAST = "iq.asycuda.PERMISSION_INTERNAL_BROADCAST";
     private static final String SONAR_DASHBOARD_URL = "https://sonarcloud.io/summary/new_code?id=MohammedALShimmary_ASYCUDA-Iraq-Android";
     private static final String SONAR_MEASURES_API_URL = "https://sonarcloud.io/api/measures/component?component=MohammedALShimmary_ASYCUDA-Iraq-Android&metricKeys=alert_status,bugs,vulnerabilities,code_smells,security_rating,reliability_rating,sqale_rating";
     private static final String AR_ON = "مفعّل";
@@ -525,7 +526,7 @@ public class AsycudaMaterialUi {
                 Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
                 broadcast.putExtra(KEY_FROM_BROADCAST, true);
                 broadcast.setPackage(activity.getPackageName());
-                activity.sendBroadcast(broadcast);
+                activity.sendBroadcast(broadcast, PERMISSION_INTERNAL_BROADCAST);
                 activity.onPreferencesChangedCallback();
             } catch (Exception ignored) { /* Best-effort UI operation */ }
             dialog.dismiss();
@@ -636,7 +637,7 @@ public class AsycudaMaterialUi {
                                 Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
                                 broadcast.putExtra(KEY_FROM_BROADCAST, true);
                                 broadcast.setPackage(activity.getPackageName());
-                                activity.sendBroadcast(broadcast);
+                                activity.sendBroadcast(broadcast, PERMISSION_INTERNAL_BROADCAST);
                                 activity.onPreferencesChangedCallback();
                             } catch (Exception ignored) { /* Best-effort UI operation */ }
                         }
@@ -786,7 +787,7 @@ public class AsycudaMaterialUi {
                             Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
                             broadcast.putExtra(KEY_FROM_BROADCAST, true);
                             broadcast.setPackage(activity.getPackageName());
-                            activity.sendBroadcast(broadcast);
+                            activity.sendBroadcast(broadcast, PERMISSION_INTERNAL_BROADCAST);
                             activity.onPreferencesChangedCallback();
                         } catch (Exception ignored) { /* Best-effort UI operation */ }
                     }

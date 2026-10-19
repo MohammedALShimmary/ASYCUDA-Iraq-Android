@@ -1,0 +1,52 @@
+name: Security & SAST Verification (Snyk & SonarQube)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Runs automatically every day at 06:00 UTC in addition to every commit
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snyk-security-scan:
+    name: Snyk Code (SAST) & Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Snyk CLI
+        run: |
+          curl -sL https://static.snyk.io/cli/latest/snyk-linux -o /usr/local/bin/snyk
+          chmod +x /usr/local/bin/snyk
+
+      - name: Run Snyk Code Static Analysis (SAST)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            snyk code test
+          else
+            echo "SNYK_TOKEN secret not configured; skipping Snyk CLI step."
+          fi
+
+      - name: Run Snyk Open Source Dependency Scan & Update Dashboard
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            snyk test --sub-project=lorie --configuration-matching="^releaseRuntimeClasspath$"
+            snyk monitor --sub-project=lorie --configuration-matching="^releaseRuntimeClasspath$" --target-reference=main || true
+          fi

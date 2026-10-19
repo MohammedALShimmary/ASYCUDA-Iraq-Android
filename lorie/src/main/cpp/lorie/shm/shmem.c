@@ -65,8 +65,11 @@ static bool isProot(void) {
     if (status_fd == -1)
         return false;
 
-    read(status_fd, buf, sizeof(buf) - 1);
+    ssize_t bytes_read = read(status_fd, buf, sizeof(buf) - 1);
     close(status_fd);
+    if (bytes_read <= 0)
+        return false;
+    buf[bytes_read] = '\0';
 
     const char *tracer_str = strstr(buf, "TracerPid:");
 
@@ -417,8 +420,7 @@ int shmget(key_t key, size_t size, int flags)
 		// (3) If connected and opened, done. If connection refused
 		//     take ownership of the key and create the symlink.
 		// (4) If no symlink, create it.
-		const char *tmp_dir = getenv("TMPDIR");
-		if (!tmp_dir || !tmp_dir[0]) tmp_dir = "/data/data/iq.asycuda/cache";
+		const char *tmp_dir = "/data/data/iq.asycuda/cache";
 		snprintf(symlink_path, sizeof(symlink_path), "%s/ashv_key_%d", tmp_dir, key);
 		char path_buffer[256];
 		char num_buffer[64];

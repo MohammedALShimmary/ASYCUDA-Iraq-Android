@@ -153,9 +153,9 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
         super.onResume();
         IntentFilter filter = new IntentFilter(ACTION_PREFERENCES_CHANGED);
         if (SDK_INT >= Build.VERSION_CODES.O)
-            registerReceiver(receiver, filter, SDK_INT >= Build.VERSION_CODES.TIRAMISU ? RECEIVER_NOT_EXPORTED : 0);
+            registerReceiver(receiver, filter, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST", null, SDK_INT >= Build.VERSION_CODES.TIRAMISU ? RECEIVER_NOT_EXPORTED : 0);
         else
-            registerReceiver(receiver, filter);
+            registerReceiver(receiver, filter, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST", null);
     }
 
     @Override
@@ -558,7 +558,7 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
             broadcast.putExtra("key", key);
             broadcast.putExtra("fromBroadcast", true);
             broadcast.setPackage(requireContext().getPackageName());
-            requireContext().sendBroadcast(broadcast);
+            requireContext().sendBroadcast(broadcast, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
 
             return true;
         }
@@ -727,7 +727,7 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
                         intent0.putExtra("key", key);
                         intent0.putExtra("fromBroadcast", true);
                         intent0.setPackage(context.getPackageName());
-                        context.sendBroadcast(intent0);
+                        context.sendBroadcast(intent0, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
                     }
                     edit.commit();
                 }

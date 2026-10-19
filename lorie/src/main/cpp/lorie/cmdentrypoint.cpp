@@ -280,8 +280,11 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
     if (read(fd, &e, sizeof(e)) == sizeof(e)) {
         switch(e.type) {
             case EVENT_SCREEN_SIZE: {
-                auto *copy = (lorieEvent*) calloc(1, sizeof(lorieEvent) + e.screenSize.name_size + 1);
-                memcpy(copy, &e, sizeof(e));
+                uint16_t safe_name_size = e.screenSize.name_size < 1024 ? e.screenSize.name_size : 1024;
+                auto *copy = (lorieEvent*) calloc(1, sizeof(lorieEvent) + 1025);
+                if (!copy) break;
+                *copy = e;
+                copy->screenSize.name_size = safe_name_size;
                 copy->screenSize.name = copy->screenSize.name_size ? (char*) (copy + 1) : nullptr;
                 if (copy->screenSize.name_size)
                     read(fd, copy->screenSize.name, copy->screenSize.name_size);
@@ -298,7 +301,8 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
             }
             case EVENT_TOUCH: {
                 auto *copy = (lorieEvent*) calloc(1, sizeof(lorieEvent));
-                memcpy(copy, &e, sizeof(e));
+                if (!copy) break;
+                *copy = e;
                 QueueWorkProc(handleTouchEvent, nullptr, copy);
                 lorieWakeServer();
                 break;
@@ -455,7 +459,8 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
             }
             case EVENT_LOCK_KEYS_STATE: {
                 auto *copy = (lorieEvent*) calloc(1, sizeof(lorieEvent));
-                memcpy(copy, &e, sizeof(e));
+                if (!copy) break;
+                *copy = e;
                 QueueWorkProc(+[](__unused ClientPtr pClient, void *closure) -> Bool {
                     // This must be done only on X server thread (touches XKB state directly).
                     auto *e = (lorieEvent*) closure;

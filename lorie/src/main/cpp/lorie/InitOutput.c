@@ -292,10 +292,6 @@ void ddxReady(void) {
     if (NoListenAll)
         return;
     if (!xstartupArgv) {
-        if (xstartup && xstartup[0] == '\0') // allow overriding $TERMUX_X11_XSTARTUP with empty xstartup arg
-            return;
-        if (!xstartup || xstartup[0] == '\0')
-            xstartup = getenv("TERMUX_X11_XSTARTUP");
         if (!xstartup || xstartup[0] == '\0')
             return;
     }
