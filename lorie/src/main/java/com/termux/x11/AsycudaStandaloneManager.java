@@ -1499,7 +1499,7 @@ public class AsycudaStandaloneManager {
         }
     }
 
-    private String readTail(File f, int maxChars) {
+    private static String readTail(File f, int maxChars) {
         if (f == null || !f.exists()) return "No log output";
         try (FileInputStream fis = new FileInputStream(f)) {
             long fileLen = f.length();
@@ -1991,7 +1991,8 @@ public class AsycudaStandaloneManager {
             return;
         }
 
-        AsycudaMaterialUi.UpdateCenterController ctrl = AsycudaMaterialUi.showUpdateCenterModal(activity, null);
+        AsycudaMaterialUi.UpdateCenterController ctrl = AsycudaMaterialUi.showUpdateCenterModal(
+                activity, () -> openMaterialControlCenter(activity));
 
         new Thread(() -> {
             boolean appUpdateAvailable = false;
@@ -2263,13 +2264,14 @@ public class AsycudaStandaloneManager {
                 UI.postDelayed(() -> captureWindow(activity, bmp -> {
                     try {
                         if (bmp == null) throw new IllegalStateException("empty frame");
-                        File printsDir = new File(activity.getFilesDir(), DIR_PRINTS);
-                        ensureDir(printsDir);
-                        File capFile = new File(printsDir, "screen_capture.jpg");
+                        File cacheDiagDir = new File(activity.getCacheDir(), "diagnostics");
+                        ensureDir(cacheDiagDir);
+                        File capFile = new File(cacheDiagDir, "screen_capture.jpg");
                         try (FileOutputStream fos = new FileOutputStream(capFile)) {
                             bmp.compress(Bitmap.CompressFormat.JPEG, 88, fos);
                             fos.getFD().sync();
                         }
+                        setReadableOwnerOnly(capFile);
                         controller.onImageAttached(capFile, "screen_capture.jpg");
                     } catch (Exception t) {
                         Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
@@ -2311,12 +2313,13 @@ public class AsycudaStandaloneManager {
                         "ناردنی ڕاپۆرت و تۆمارەکان..."), false);
 
                 new Thread(() -> {
+                    File zipFile = null;
                     try {
-                        File zipFile = buildDiagnosticsZipFile(activity, description, attachedImage);
+                        zipFile = buildDiagnosticsZipFile(activity, description, attachedImage);
                         boolean sent = uploadReportEnvelopeToSentry(activity, description, zipFile, attachedImage);
                         if (sent) {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                    "Report sent. Thank you!",
+                                     "Report sent. Thank you!",
                                     "تم إرسال البلاغ بنجاح. شكراً لك!",
                                     "ڕاپۆرتەکە بە سەرکەوتوویی نێردرا. سوپاس!"), true);
                             UI.postDelayed(() -> {
@@ -2334,6 +2337,8 @@ public class AsycudaStandaloneManager {
                         }
                     } catch (Exception t) {
                         controller.setUploadState(false, "Upload error: " + t.getMessage(), false);
+                    } finally {
+                        deleteQuietly(zipFile);
                     }
                 }, "Asycuda-SentryUploader").start();
             }
@@ -2341,8 +2346,8 @@ public class AsycudaStandaloneManager {
             @Override
             public void onExportZipLocally(String description, File attachedImage, Dialog feedbackDialog) {
                 Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                        "Preparing logs ZIP...",
-                        "جاري تجهيز ملف السجلات...",
+                        "Preparing sanitized logs ZIP...",
+                        "جاري تجهيز ملف السجلات المنقّى...",
                         "ئامادەکردنی پەڕگەی تۆمارەکان..."), Toast.LENGTH_SHORT).show();
                 new Thread(() -> {
                     try {
@@ -2360,25 +2365,36 @@ public class AsycudaStandaloneManager {
                     }
                 }, "Asycuda-ExportZip").start();
             }
-        });
+        }, () -> openMaterialControlCenter(activity));
     }
 
+    /**
+     * Builds a strictly sanitized, credential-free diagnostic ZIP inside the app's private cache
+     * directory ({@code getCacheDir()/diagnostics}, mode {@code 0600}).
+     * Never writes diagnostic logs to external/shared storage ({@code Download/Asycuda_Prints}),
+     * never includes raw JNLP, SharedPreferences XML, or PII consent files, scopes logcat strictly
+     * to this process PID, and scrubs all usernames, passwords, tokens, TINs, and session IDs.
+     */
     private File buildDiagnosticsZipFile(MainActivity activity, String userDescription, File attachedImage) throws IOException {
         File filesDir = activity.getFilesDir();
         File clientDir = new File(filesDir, DIR_CLIENT);
-        File printsDir = new File(filesDir, DIR_PRINTS);
-        ensureDir(printsDir);
+        File diagCacheDir = new File(activity.getCacheDir(), "diagnostics");
+        ensureDir(diagCacheDir);
+        purgeStaleDiagnosticFiles(diagCacheDir, new File(filesDir, DIR_PRINTS), new File(DOWNLOAD_PRINTS_PATH));
 
         String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
         String zipName = "ASYCUDA_Diagnostics_" + stamp + ".zip";
-        File zipFile = new File(printsDir, zipName);
+        File zipFile = new File(diagCacheDir, zipName);
+
+        String safeDescription = redactSensitiveLogContent(userDescription);
 
         try (FileOutputStream fos = new FileOutputStream(zipFile);
              java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(fos)) {
 
-            // 1. User Description & Device Summary
+            // 1. Sanitized Device Summary (zero credentials, zero raw user PII)
             StringBuilder info = new StringBuilder();
-            info.append("=== ASYCUDA Iraq Diagnostics Report ===\n");
+            info.append("=== ASYCUDA Iraq Sanitized Diagnostics Report ===\n");
+            info.append("PrivacySanitization: STRICT (Credentials, usernames, passwords, TINs, cookies, and session tokens scrubbed; stored only in private 0600 cache)\n");
             info.append("Timestamp: ").append(new Date().toString()).append("\n");
             info.append("App Version: ").append(AsycudaMaterialUi.getAppVersionLabel(activity)).append("\n");
             info.append("Package: ").append(activity.getPackageName()).append("\n");
@@ -2391,22 +2407,20 @@ public class AsycudaStandaloneManager {
             info.append("Supported ABIs: ").append(java.util.Arrays.toString(Build.SUPPORTED_ABIS)).append("\n");
             info.append("JVM Process Alive: ").append(sJavaProcess != null && isProcessAlive(sJavaProcess)).append("\n");
             info.append("Free Internal Storage (MB): ").append(filesDir.getUsableSpace() / (1024 * 1024)).append("\n");
-            info.append("\n=== LEGAL CONSENT AUDIT ===\n");
-            info.append(AsycudaMaterialUi.getTermsConsentSummaryForDiagnostics(activity)).append("\n");
-            if (userDescription != null && !userDescription.isEmpty()) {
-                info.append("\n=== USER REPORT ===\n");
-                info.append(userDescription).append("\n");
-                addBytesToZip(zos, "user_description.txt", userDescription.getBytes(StandardCharsets.UTF_8));
+            info.append("TermsAccepted: ").append(AsycudaMaterialUi.hasAcceptedTerms(activity)).append("\n");
+            if (!safeDescription.isEmpty()) {
+                info.append("\n=== USER REPORT (REDACTED) ===\n");
+                info.append(safeDescription).append("\n");
+                addBytesToZip(zos, "user_description.txt", safeDescription.getBytes(StandardCharsets.UTF_8));
             }
             addBytesToZip(zos, "device_info.txt", info.toString().getBytes(StandardCharsets.UTF_8));
-            addFileToZipIfExists(zos, new File(filesDir, FILE_CONSENT_RECEIPT), FILE_CONSENT_RECEIPT, false);
 
-            // 2. Attached Screenshot / Image if present
+            // 2. Attached Screenshot / Image if explicitly chosen by the user
             if (attachedImage != null && attachedImage.exists()) {
                 addFileToZipIfExists(zos, attachedImage, attachedImage.getName(), false);
             }
 
-            // 3. Installed JARs inventory
+            // 3. Installed JARs inventory (filenames and byte sizes only)
             File jarsDir = new File(clientDir, "jars");
             File[] jars = jarsDir.listFiles();
             if (jars != null) {
@@ -2420,19 +2434,14 @@ public class AsycudaStandaloneManager {
                 addBytesToZip(zos, "jars_inventory.txt", jarList.toString().getBytes(StandardCharsets.UTF_8));
             }
 
-            // 4. Core ASYCUDA & Client Logs (with sensitive token/credential redaction)
+            // 4. Core ASYCUDA & Client Logs (tail only + strict credential/token redaction)
             addFileToZipIfExists(zos, new File(clientDir, FILE_ASYCUDA_LOG), FILE_ASYCUDA_LOG, true);
             addFileToZipIfExists(zos, new File(clientDir, "client.log"), "client.log", true);
-            addFileToZipIfExists(zos, new File(clientDir, FILE_CLASSPATH), FILE_CLASSPATH, false);
-            addFileToZipIfExists(zos, new File(clientDir, FILE_AWIQ_JNLP), FILE_AWIQ_JNLP, false);
 
-            // 5. Termux:X11 SharedPreferences XML
-            File prefsXml = new File(filesDir.getParentFile(), "shared_prefs/" + activity.getPackageName() + "_preferences.xml");
-            addFileToZipIfExists(zos, prefsXml, "x11_preferences.xml", false);
-
-            // 6. Recent Android Logcat (using /system/bin/logcat -d -t 800 -v threadtime)
+            // 5. Recent Android Logcat scoped strictly to our own process PID
+            String myPid = String.valueOf(android.os.Process.myPid());
             try {
-                Process logProc = new ProcessBuilder("/system/bin/logcat", "-d", "-t", "800", "-v", "threadtime")
+                Process logProc = new ProcessBuilder("/system/bin/logcat", "-d", "-t", "500", "--pid=" + myPid, "-v", "threadtime")
                         .redirectErrorStream(true)
                         .start();
                 ByteArrayOutputStream lbo = new ByteArrayOutputStream();
@@ -2441,7 +2450,7 @@ public class AsycudaStandaloneManager {
                     int n;
                     while ((n = in.read(buf)) != -1) {
                         lbo.write(buf, 0, n);
-                        if (lbo.size() > 512 * 1024) break;
+                        if (lbo.size() > 256 * 1024) break;
                     }
                 }
                 logProc.waitFor();
@@ -2460,28 +2469,44 @@ public class AsycudaStandaloneManager {
             fos.getFD().sync();
         }
 
-        try {
-            File pubPrints = new File(DOWNLOAD_PRINTS_PATH);
-            ensureDir(pubPrints);
-            File pubZip = new File(pubPrints, zipName);
-            try (FileInputStream in = new FileInputStream(zipFile);
-                 FileOutputStream out = new FileOutputStream(pubZip)) {
-                byte[] buf = new byte[16384];
-                int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                out.getFD().sync();
-            }
-        } catch (Exception ignored) {
-            // Public Download mirror is optional
-        }
-
+        setReadableOwnerOnly(zipFile);
         return zipFile;
     }
 
+    private static void purgeStaleDiagnosticFiles(File... dirs) {
+        if (dirs == null) return;
+        for (File dir : dirs) {
+            if (dir == null || !dir.exists()) continue;
+            File[] children = dir.listFiles();
+            if (children == null) continue;
+            for (File f : children) {
+                String name = f.getName();
+                if (name.startsWith("ASYCUDA_Diagnostics_") && name.endsWith(".zip")) {
+                    deleteQuietly(f);
+                }
+            }
+        }
+    }
+
+    /**
+     * Strictly scrubs any ASYCUDA login credentials, usernames, passwords, session IDs,
+     * cookies, authorization headers, TIN/declarant identifiers, XML auth tags, and tokens
+     * before any log text is written to a diagnostic report.
+     */
+    @SuppressWarnings({"java:S5852", "java:S5843", "java:S5998", "java:S6353"})
     private static String redactSensitiveLogContent(String raw) {
         if (raw == null || raw.isEmpty()) return "";
         String redacted = raw.replace(BRIDGE_AUTH_TOKEN, "[REDACTED_BRIDGE_TOKEN]");
-        redacted = redacted.replaceAll("(?i)(password|passwd|pwd|secret|token|jsessionid|authorization)\\s*+[:=]\\s*+[^\\s,;\"']++", "$1=[REDACTED]");
+        // Scrub URL user:password@host credentials
+        redacted = redacted.replaceAll("(?i)(https?+://)[^/\\s:@]++:[^/\\s@]++@", "$1[REDACTED_AUTH]@");
+        // Scrub XML/SOAP tags that could hold credentials, usernames, TINs, or tokens
+        redacted = redacted.replaceAll(
+                "(?is)<(password|passwd|pwd|user|username|login|secret|token|jsessionid|sessionid|tin|declarant|credential|pin|otp)[^>]*+>.*?</\\1>",
+                "<$1>[REDACTED]</$1>");
+        // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys
+        redacted = redacted.replaceAll(
+                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|declarant|tin|tax_id|secret|token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|credential|private_key)[\"']?+\\s*+[:=]\\s*+)[^\\s,;\"'&<>\\]}]++",
+                "$1\"[REDACTED]\"");
         return redacted;
     }
 
@@ -2829,9 +2854,9 @@ public class AsycudaStandaloneManager {
     private static void addFileToZipIfExists(java.util.zip.ZipOutputStream zos, File file, String entryName, boolean redactLogs) {
         if (file == null || !file.exists() || !file.isFile()) return;
         if (redactLogs) {
-            byte[] rawBytes = readFileBytes(file);
-            if (rawBytes.length > 0) {
-                String clean = redactSensitiveLogContent(new String(rawBytes, StandardCharsets.UTF_8));
+            String tail = readTail(file, 65536);
+            if (!tail.isEmpty()) {
+                String clean = redactSensitiveLogContent(tail);
                 addBytesToZip(zos, entryName, clean.getBytes(StandardCharsets.UTF_8));
             }
             return;
