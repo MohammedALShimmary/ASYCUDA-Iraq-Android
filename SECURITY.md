@@ -20,6 +20,17 @@ All users should run **v3.8.0 or newer**. Earlier releases (`v3.7.0` and below) 
 | **v3.8.0+** | **Yes (Recommended)** | Full X.509 TLS verification, authenticated `127.0.0.1` IPC bridge, SHA-256 + signature verified updater, open-source `java-bridge/` |
 | **< v3.8.0** | No | Superseded — upgrade to **v3.8.0+** via the in-app Update Center or [GitHub Releases](../../releases/latest) |
 
+### Official APK X.509 Signing Certificate Fingerprint
+Every official release APK published on [GitHub Releases](../../releases/latest) (`ASYCUDA_Iraq_v3.8.0.apk`) can be cryptographically verified prior to installation using `apksigner verify --print-certs`:
+
+| Field | Value |
+| :--- | :--- |
+| **Application ID** | `iq.asycuda` |
+| **Version Name / Code** | `3.8.0` (`versionCode 38`) |
+| **Signer Certificate DN** | `CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ` |
+| **Signer SHA-256 Digest** | `d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023` |
+| **Signer SHA-1 Digest** | `e1b9c91b50e50223885fd2ee5326b165f16535e7` |
+
 ---
 
 ## 1. Data Privacy & Network Architecture
