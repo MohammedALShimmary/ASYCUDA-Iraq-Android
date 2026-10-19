@@ -228,6 +228,7 @@ public class AsycudaStandaloneManager {
     private static volatile AsycudaStandaloneManager sInstance = null;
     private static volatile boolean sExtractingOrBooting = false;
     private static final AtomicBoolean sSyncInProgress = new AtomicBoolean(false);
+    private static final AtomicBoolean sApkDownloadActive = new AtomicBoolean(false);
     private static final AtomicBoolean sStartupAppCheckDone = new AtomicBoolean(false);
     private static volatile boolean sServerStarted = false;
     private static volatile CmdEntryPoint sCmdEntry = null;
@@ -1201,6 +1202,9 @@ public class AsycudaStandaloneManager {
             }
 
             for (int d = 0; d < toDownloadUrls.size(); d++) {
+                if (sApkDownloadActive.get()) {
+                    break;
+                }
                 String jarUrl = toDownloadUrls.get(d);
                 File targetJar = toDownloadFiles.get(d);
                 String msg = "Downloading " + targetJar.getName() + " (" + (d + 1) + "/" + toDownloadUrls.size() + ")...";
@@ -2079,11 +2083,12 @@ public class AsycudaStandaloneManager {
                         final long finalApkSize = apkSize;
                         final String finalTag = tagName;
                         final String finalSha256 = apkSha256;
-                        String shortNotes = body.length() > 180 ? body.substring(0, 180).trim() + "..." : body.trim();
-                        ctrl.showAppUpdateAvailable(tagName, shortNotes, () ->
+                        String shortNotes = cleanReleaseNotesPreview(body);
+                        ctrl.showAppUpdateAvailable(tagName, shortNotes, () -> {
+                            sApkDownloadActive.set(true);
                             new Thread(() -> downloadAndInstallApkUpdate(activity, finalApkUrl, finalApkSize, finalTag, finalSha256, ctrl),
-                                    "Asycuda-ApkDownloader").start()
-                        );
+                                    "Asycuda-ApkDownloader").start();
+                        });
                     } else {
                         ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
                                 "App is up to date (" + currentVer + ")",
@@ -2115,10 +2120,35 @@ public class AsycudaStandaloneManager {
         }, "Asycuda-UnifiedUpdater").start();
     }
 
+    private static String cleanReleaseNotesPreview(String rawBody) {
+        if (rawBody == null || rawBody.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        String[] lines = rawBody.split("\n");
+        for (String line : lines) {
+            String t = line.trim();
+            if (t.isEmpty() || t.startsWith("[!") || t.startsWith("[![")
+                    || t.startsWith("|") || t.startsWith("---") || t.startsWith(">")) {
+                continue;
+            }
+            while (t.startsWith("#")) {
+                t = t.substring(1).trim();
+            }
+            t = t.replace("**", "").replace("`", "").trim();
+            if (t.isEmpty()) continue;
+            if (sb.length() > 0) sb.append("\n");
+            sb.append(t);
+            if (sb.length() >= 180) break;
+        }
+        String res = sb.toString().trim();
+        return res.length() > 190 ? res.substring(0, 187).trim() + "..." : res;
+    }
+
+    @SuppressWarnings("deprecation")
     private void downloadAndInstallApkUpdate(MainActivity activity, String apkUrl, long expectedSize,
                                              String versionTag, String expectedSha256,
                                              AsycudaMaterialUi.UpdateCenterController ctrl) {
         HttpURLConnection conn = null;
+        sApkDownloadActive.set(true);
         try {
             File printsDir = new File(activity.getFilesDir(), DIR_PRINTS);
             ensureDir(printsDir);
@@ -2189,6 +2219,8 @@ public class AsycudaStandaloneManager {
                     Uri apkUri = FileProvider.getUriForFile(activity, FILE_PROVIDER_AUTH, outApk);
                     Intent install = new Intent(Intent.ACTION_VIEW);
                     install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    install.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+                    install.putExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME, activity.getPackageName());
                     install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                     activity.startActivity(install);
                 } catch (Exception t) {
@@ -2198,6 +2230,7 @@ public class AsycudaStandaloneManager {
         } catch (Exception t) {
             ctrl.setAppUpdateStatus("Download failed: " + t.getMessage(), -1, false);
         } finally {
+            sApkDownloadActive.set(false);
             if (conn != null) conn.disconnect();
         }
     }

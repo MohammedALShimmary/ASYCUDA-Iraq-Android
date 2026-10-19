@@ -1218,6 +1218,15 @@ public class AsycudaMaterialUi {
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scroll.setLayoutParams(scrollLp);
+
+        LinearLayout scrollBody = new LinearLayout(activity);
+        scrollBody.setOrientation(LinearLayout.VERTICAL);
+
         // 1. App Release Update Card
         LinearLayout appCard = new LinearLayout(activity);
         appCard.setOrientation(LinearLayout.VERTICAL);
@@ -1270,7 +1279,7 @@ public class AsycudaMaterialUi {
         installAppBtn.setVisibility(View.GONE);
         appCard.addView(installAppBtn);
 
-        root.addView(appCard);
+        scrollBody.addView(appCard);
 
         // 2. MOF Government JARs Card
         LinearLayout mofCard = new LinearLayout(activity);
@@ -1313,7 +1322,9 @@ public class AsycudaMaterialUi {
         mpLp.topMargin = dp(activity, 10);
         mofCard.addView(mofProgress, mpLp);
 
-        root.addView(mofCard);
+        scrollBody.addView(mofCard);
+        scroll.addView(scrollBody);
+        root.addView(scroll);
 
         LinearLayout footer = new LinearLayout(activity);
         footer.setOrientation(LinearLayout.HORIZONTAL);
@@ -1333,6 +1344,8 @@ public class AsycudaMaterialUi {
 
         dialog.setContentView(root);
         dialog.show();
+
+        final boolean[] apkDownloadActive = new boolean[] { false };
 
         return new UpdateCenterController() {
             @Override
@@ -1367,6 +1380,8 @@ public class AsycudaMaterialUi {
                     appProgress.setVisibility(View.GONE);
                     installAppBtn.setVisibility(View.VISIBLE);
                     installAppBtn.setOnClickListener(v -> {
+                        apkDownloadActive[0] = true;
+                        appNotes.setVisibility(View.GONE);
                         installAppBtn.setVisibility(View.GONE);
                         appProgress.setVisibility(View.VISIBLE);
                         appProgress.setIndeterminate(false);
@@ -1397,7 +1412,8 @@ public class AsycudaMaterialUi {
             @Override
             public void onCheckFinished(int updatedJarsCount, boolean appUpdatePending, Runnable onRestartNow) {
                 activity.runOnUiThread(() -> {
-                    if (updatedJarsCount > 0) {
+                    // Never auto-dismiss or restart the session if an APK update is available or currently downloading
+                    if (updatedJarsCount > 0 && !appUpdatePending && !apkDownloadActive[0]) {
                         sub.setText(tr(activity,
                                 "Updates downloaded. Restarting session...",
                                 "تم تحميل التحديثات. جاري إعادة تشغيل الجلسة...",
@@ -1406,6 +1422,7 @@ public class AsycudaMaterialUi {
                         actionBtn.setBackground(createCupertinoButtonDrawable(activity, true, false));
                         actionBtn.setAlpha(1.0f);
                         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            if (apkDownloadActive[0]) return;
                             try { dialog.dismiss(); } catch (Exception ignored) { /* Best-effort UI operation */ }
                             if (onRestartNow != null) onRestartNow.run();
                         }, 1200);
@@ -1414,19 +1431,30 @@ public class AsycudaMaterialUi {
                         if (onCloseWhenUpToDate != null) {
                             dialog.setOnCancelListener(d -> onCloseWhenUpToDate.run());
                         }
-                        sub.setText(tr(activity,
-                                "Everything is up to date.",
-                                "جميع الملفات محدّثة.",
-                                "هەموو پەڕگەکان نوێکراونەتەوە."));
+                        if (appUpdatePending || apkDownloadActive[0]) {
+                            sub.setText(tr(activity,
+                                    "New app version available above.",
+                                    "يتوفر إصدار جديد للتطبيق أعلاه.",
+                                    "وەشانی نوێی بەرنامە لە سەرەوە بەردەستە."));
+                        } else {
+                            sub.setText(tr(activity,
+                                    "Everything is up to date.",
+                                    "جميع الملفات محدّثة.",
+                                    "هەموو پەڕگەکان نوێکراونەتەوە."));
+                        }
                         actionBtn.setEnabled(true);
                         actionBtn.setAlpha(1.0f);
                         actionBtn.setText(onCloseWhenUpToDate != null
                                 ? tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER)
                                 : tr(activity, "Continue", "متابعة", "بەردەوامبوون"));
-                        actionBtn.setBackground(createCupertinoButtonDrawable(activity, true, false));
+                        actionBtn.setBackground(createCupertinoButtonDrawable(activity, !appUpdatePending, false));
                         actionBtn.setOnClickListener(v -> {
                             dialog.dismiss();
-                            if (onCloseWhenUpToDate != null) onCloseWhenUpToDate.run();
+                            if (updatedJarsCount > 0 && !apkDownloadActive[0] && onRestartNow != null) {
+                                onRestartNow.run();
+                            } else if (onCloseWhenUpToDate != null) {
+                                onCloseWhenUpToDate.run();
+                            }
                         });
                     }
                 });
