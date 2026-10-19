@@ -47,6 +47,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           if [ -n "$SNYK_TOKEN" ]; then
+            sed -i '/org.gradle.java.home/d' gradle.properties
             snyk test --sub-project=lorie --configuration-matching="^releaseRuntimeClasspath$"
             snyk monitor --sub-project=lorie --configuration-matching="^releaseRuntimeClasspath$" --target-reference=main || true
           fi
