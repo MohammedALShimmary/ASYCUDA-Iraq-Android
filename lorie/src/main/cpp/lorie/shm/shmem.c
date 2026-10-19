@@ -195,8 +195,7 @@ static int ashmem_create_region(char const* name, size_t size)
 	if (fd < 0) return fd;
 
 	char name_buffer[ASHMEM_NAME_LEN] = {0};
-	strncpy(name_buffer, name, sizeof(name_buffer));
-	name_buffer[sizeof(name_buffer)-1] = 0;
+	snprintf(name_buffer, sizeof(name_buffer), "%s", name ? name : "ashmem");
 
 	int ret = ioctl(fd, ASHMEM_SET_NAME, name_buffer);
 	if (ret < 0) goto error;

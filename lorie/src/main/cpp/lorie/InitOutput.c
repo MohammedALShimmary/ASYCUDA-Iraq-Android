@@ -222,10 +222,10 @@ static void* ddxReadyThread(unused void* cookie) {
 
         if (!pid) {
             char DISPLAY[16] = "";
-            sprintf(DISPLAY, ":%s", display);
+            snprintf(DISPLAY, sizeof(DISPLAY), ":%s", display);
             setenv("DISPLAY", DISPLAY, 1);
 
-#define INHERIT_VAR(v) char *v = getenv("XSTARTUP_" #v); if (v && strlen(v)) setenv(#v, v, 1); unsetenv("XSTARTUP_" #v);
+#define INHERIT_VAR(v) char *v = getenv("XSTARTUP_" #v); if (v && v[0] != '\0') setenv(#v, v, 1); unsetenv("XSTARTUP_" #v);
             INHERIT_VAR(CLASSPATH)
             INHERIT_VAR(LD_LIBRARY_PATH)
             INHERIT_VAR(LD_PRELOAD)
@@ -238,8 +238,7 @@ static void* ddxReadyThread(unused void* cookie) {
             }
 
             execlp(xstartup, xstartup, NULL);
-            execlp("sh", "sh", "-c", xstartup, NULL);
-            dprintf(2, "Failed to start command `sh -c \"%s\"`: %s\n", xstartup, strerror(errno));
+            dprintf(2, "Failed to start command `%s`: %s\n", xstartup, strerror(errno));
             abort();
         } else {
             int status;
@@ -293,11 +292,11 @@ void ddxReady(void) {
     if (NoListenAll)
         return;
     if (!xstartupArgv) {
-        if (xstartup && !strlen(xstartup)) // allow overriding $TERMUX_X11_XSTARTUP with empty xstartup arg
+        if (xstartup && xstartup[0] == '\0') // allow overriding $TERMUX_X11_XSTARTUP with empty xstartup arg
             return;
-        if (!xstartup || !strlen(xstartup))
+        if (!xstartup || xstartup[0] == '\0')
             xstartup = getenv("TERMUX_X11_XSTARTUP");
-        if (!xstartup || !strlen(xstartup))
+        if (!xstartup || xstartup[0] == '\0')
             return;
     }
 
@@ -401,7 +400,7 @@ static RRModePtr lorieCvt(int width, int height, int framerate) {
     info = libxcvt_gen_mode_info(width, height, framerate, 0, 0);
 
     snprintf(name, sizeof name, "%dx%d", info->hdisplay, info->vdisplay);
-    modeinfo.nameLength = strlen(name);
+    modeinfo.nameLength = strnlen(name, sizeof(name));
     modeinfo.width      = info->hdisplay;
     modeinfo.height     = info->vdisplay;
     modeinfo.dotClock   = info->dot_clock * 1000.0;
@@ -718,7 +717,7 @@ static Bool lorieRandRInit(ScreenPtr pScreen) {
         || !(crtc = RRCrtcCreate(pScreen, NULL))
         || !RRCrtcGammaSetSize(crtc, 256)
         || !(output = RROutputCreate(pScreen, pvfb->root.name, sizeof(pvfb->root.name), NULL))
-        || (output->nameLength = strlen(output->name), FalseNoop())
+        || (output->nameLength = strnlen(output->name, sizeof(pvfb->root.name)), FalseNoop())
         || !RROutputSetClones(output, NULL, 0)
         || !RROutputSetModes(output, &mode, 1, 0)
         || !RROutputSetCrtcs(output, &crtc, 1)
@@ -795,12 +794,13 @@ void lorieConfigureNotify(int width, int height, int framerate, size_t name_size
 
     if (output && name) {
         // We should save this name in pvfb to make sure the name will be restored in the case if the server is being reset.
+        size_t copyLen = name_size < 1023 ? name_size : 1023;
         memset(pvfb->root.name, 0, 1024);
         memset(output->name, 0, 1024);
-        strncpy(pvfb->root.name, name, name_size < 1024 ? name_size : 1024);
-        strncpy(output->name, name, name_size < 1024 ? name_size : 1024);
+        memcpy(pvfb->root.name, name, copyLen);
+        memcpy(output->name, name, copyLen);
         output->name[1023] = '\0';
-        output->nameLength = strlen(output->name);
+        output->nameLength = strnlen(output->name, 1024);
     }
 
     if (output && width && height && (pScreen->width != width || pScreen->height != height || pvfb->root.framerate != framerate)) {

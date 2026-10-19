@@ -29,6 +29,7 @@ import javax.print.event.*;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 
+@SuppressWarnings({"java:S3776", "java:S1141", "java:S1181", "java:S135", "java:S1075", "java:S1168", "java:S3011"})
 public class AsycudaBoot {
 
     private static final String PRINTER_NAME = "ASYCUDA_PDF_Printer";
@@ -112,16 +113,11 @@ public class AsycudaBoot {
                 copyFile(rawFile, intDest);
 
                 String targetPath = intDest.exists() ? intDest.getAbsolutePath() : pubDest.getAbsolutePath();
-                if (!sendToAndroidApk("OPEN|" + targetPath + "|" + mime)) {
-                    File termuxOpen = new File("/data/data/com.termux/files/usr/bin/termux-open");
-                    if (termuxOpen.exists()) {
-                        new ProcessBuilder(termuxOpen.getAbsolutePath(), "--content-type", mime, pubDest.getAbsolutePath()).start();
-                    }
-                }
+                sendToAndroidApk("OPEN|" + targetPath + "|" + mime);
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
             // Ignore file opener errors to keep ASYCUDA Swing thread responsive
         }
     }

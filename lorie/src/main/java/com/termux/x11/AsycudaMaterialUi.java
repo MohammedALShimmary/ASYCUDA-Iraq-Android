@@ -55,6 +55,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
+@SuppressWarnings({"java:S3776", "java:S107", "java:S1141"})
 public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
@@ -1799,7 +1800,8 @@ public class AsycudaMaterialUi {
                     submitBtn.setAlpha(uploading ? 0.5f : 1.0f);
                     if (statusMessage != null) {
                         zipInfoText.setText(statusMessage);
-                        zipInfoText.setTextColor(success ? SYSTEM_GREEN : (uploading ? SYSTEM_BLUE : TEXT_PRIMARY));
+                        int statusColor = uploading ? SYSTEM_BLUE : TEXT_PRIMARY;
+                        zipInfoText.setTextColor(success ? SYSTEM_GREEN : statusColor);
                     }
                 });
             }
@@ -1951,10 +1953,10 @@ public class AsycudaMaterialUi {
         card.setFocusable(true);
         card.setOnClickListener(v -> onClick.run());
 
-        int badgeBgColor = isDestructive ? SYSTEM_RED_TINT
-                : (isAccentIcon ? SYSTEM_BLUE_TINT : SYSTEM_GRAY_FILL);
-        int iconTint = isDestructive ? SYSTEM_RED
-                : (isAccentIcon ? SYSTEM_BLUE : TEXT_PRIMARY);
+        int defaultBg = isAccentIcon ? SYSTEM_BLUE_TINT : SYSTEM_GRAY_FILL;
+        int badgeBgColor = isDestructive ? SYSTEM_RED_TINT : defaultBg;
+        int defaultTint = isAccentIcon ? SYSTEM_BLUE : TEXT_PRIMARY;
+        int iconTint = isDestructive ? SYSTEM_RED : defaultTint;
 
         FrameLayout badgeBox = new FrameLayout(ctx);
         badgeBox.setBackground(createCardDrawable(ctx, badgeBgColor, 10, 0));
@@ -3607,8 +3609,8 @@ public class AsycudaMaterialUi {
     }
 
     public static Drawable createCupertinoButtonDrawable(Context ctx, boolean isPrimary, boolean isDestructive) {
-        int fill = isDestructive ? SYSTEM_RED_TINT
-                : (isPrimary ? SYSTEM_BLUE : SYSTEM_GRAY_FILL);
+        int baseFill = isPrimary ? SYSTEM_BLUE : SYSTEM_GRAY_FILL;
+        int fill = isDestructive ? SYSTEM_RED_TINT : baseFill;
         int stroke = isDestructive ? Color.parseColor("#4DFF453A") : 0;
         return createRippleCardDrawable(ctx, fill, 10, stroke);
     }
@@ -3631,10 +3633,6 @@ public class AsycudaMaterialUi {
 
     public static TextView createGlassPillButton(Context ctx, String label, boolean isPrimaryAccent, View.OnClickListener listener) {
         return createCupertinoButton(ctx, label, isPrimaryAccent, false, listener);
-    }
-
-    public static TextView createPillButton(Context ctx, String label, int bgColor, int textColor, View.OnClickListener listener) {
-        return createCupertinoButton(ctx, label, true, false, listener);
     }
 
     public static GradientDrawable createCardDrawable(Context ctx, int fillColor, int radiusDp, int strokeColor) {

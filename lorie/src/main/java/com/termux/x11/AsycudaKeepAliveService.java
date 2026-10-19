@@ -61,7 +61,9 @@ public class AsycudaKeepAliveService extends Service {
             if (mWakeLock != null && !mWakeLock.isHeld()) {
                 mWakeLock.acquire();
             }
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore wake lock acquisition error if restricted by device OEM
+        }
 
         try {
             if (mWifiLock == null) {
@@ -77,7 +79,9 @@ public class AsycudaKeepAliveService extends Service {
             if (mWifiLock != null && !mWifiLock.isHeld()) {
                 mWifiLock.acquire();
             }
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore Wi-Fi lock acquisition error if restricted by device OEM
+        }
     }
 
     private Notification buildForegroundNotification() {
@@ -122,10 +126,14 @@ public class AsycudaKeepAliveService extends Service {
     public void onDestroy() {
         try {
             if (mWakeLock != null && mWakeLock.isHeld()) mWakeLock.release();
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore wake lock release error
+        }
         try {
             if (mWifiLock != null && mWifiLock.isHeld()) mWifiLock.release();
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore Wi-Fi lock release error
+        }
         super.onDestroy();
     }
 

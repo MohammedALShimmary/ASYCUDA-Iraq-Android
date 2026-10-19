@@ -277,7 +277,7 @@ static void lorieHandleSelection(Atom target) {
 
         lorieConvertLF(prop->data,  filtered, prop->size);
         lorieLatin1ToUTF8((unsigned char*) utf8, (unsigned char*) filtered);
-        log(DEBUG, "Sending clipboard to clients (%zu bytes)\n", strlen(utf8));
+        log(DEBUG, "Sending clipboard to clients (%zu bytes)\n", strnlen(utf8, utf8Capacity));
         lorieSendClipboardData(utf8);
         free(filtered);
         free(utf8);
@@ -295,7 +295,7 @@ static void lorieHandleSelection(Atom target) {
             return lorieSendClipboardData("");
         lorieConvertLF(prop->data, filtered, prop->size);
 
-        log(DEBUG, "Sending clipboard to clients (%zu bytes)\n", strlen(filtered));
+        log(DEBUG, "Sending clipboard to clients (%zu bytes)\n", strnlen(filtered, capacity));
         lorieSendClipboardData(filtered);
         free(filtered);
     }
@@ -410,7 +410,7 @@ static int lorieConvertSelection(ClientPtr client, Atom selection, Atom target, 
 
                 rc = dixChangeWindowProperty(serverClient, pWin, realProperty,
                                              XA_STRING, 8, PropModeReplace,
-                                             strlen(latin1), latin1, TRUE);
+                                             strnlen(latin1, 1024 * 1024), latin1, TRUE);
 
                 free((void*) latin1);
 
@@ -419,7 +419,7 @@ static int lorieConvertSelection(ClientPtr client, Atom selection, Atom target, 
             } else if (target == xaUTF8_STRING) {
                 rc = dixChangeWindowProperty(serverClient, pWin, realProperty,
                                              xaUTF8_STRING, 8, PropModeReplace,
-                                             strlen(data), data, TRUE);
+                                             strnlen(data, 1024 * 1024), data, TRUE);
                 if (rc != Success)
                     return rc;
             } else {
