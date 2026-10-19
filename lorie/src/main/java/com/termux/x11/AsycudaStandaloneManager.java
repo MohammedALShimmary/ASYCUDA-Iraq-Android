@@ -957,7 +957,7 @@ public class AsycudaStandaloneManager {
             sb.append("127.0.0.1 localhost\n");
             sb.append("::1 localhost\n");
             try {
-                InetAddress mofAddr = InetAddress.getByName("asy.mof.gov.iq");
+                InetAddress mofAddr = InetAddress.getByName(ALLOWED_MOF_HOST);
                 if (mofAddr != null && mofAddr.getHostAddress() != null) {
                     sb.append(mofAddr.getHostAddress()).append(" asy.mof.gov.iq\n");
                 }
@@ -1308,6 +1308,7 @@ public class AsycudaStandaloneManager {
         return false;
     }
 
+    private static final String SCHEME_HTTPS = "https";
     private static final String ALLOWED_MOF_HOST = "asy.mof.gov.iq";
     private static final String PINNED_MOF_SOCODE_CERT_SHA256 =
             "5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d";
@@ -1326,7 +1327,7 @@ public class AsycudaStandaloneManager {
             URL resolved = trimmed.contains("://")
                     ? new URL(trimmed)
                     : new URL(base, trimmed.replaceFirst("^/+", ""));
-            if (!"https".equalsIgnoreCase(resolved.getProtocol())) {
+            if (!SCHEME_HTTPS.equalsIgnoreCase(resolved.getProtocol())) {
                 return null;
             }
             if (!ALLOWED_MOF_HOST.equalsIgnoreCase(resolved.getHost())) {
@@ -1416,7 +1417,7 @@ public class AsycudaStandaloneManager {
 
     private HttpURLConnection openMofConnection(String urlStr, SSLSocketFactory sslFactory, int connTimeout, int readTimeout) throws IOException {
         URL url = new URL(urlStr);
-        if (!"https".equalsIgnoreCase(url.getProtocol()) || !ALLOWED_MOF_HOST.equalsIgnoreCase(url.getHost())) {
+        if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol()) || !ALLOWED_MOF_HOST.equalsIgnoreCase(url.getHost())) {
             throw new SecurityException("Blocked connection to untrusted host: " + url.getHost());
         }
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();

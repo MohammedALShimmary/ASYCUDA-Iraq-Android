@@ -25,7 +25,7 @@ Every asset published on the [official `v3.8.0` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v3.8.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/ASYCUDA_Iraq_v3.8.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 38`) | `d46ba4d2444cdb974e5c2a6625d8d517b734f8f92c4caee708228fbb442ddbcd` |
+| [**`ASYCUDA_Iraq_v3.8.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/ASYCUDA_Iraq_v3.8.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 38`) | `3b141d5c17f4a52502d5037cdd87ac9bf44241db632b6c53cef84f27b9d79829` |
 | [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/asycuda-iraq.tar.xz) | Baseline ASYCUDA Iraq client bundle + open-source `java-bridge/` JARs | `ca3a5b787c4d0ba94fa533b00ebb0ce1bb845ceb96d6f1968fb360dfc7d0c7fe` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/runtime-arm64.tar.xz) | Embedded ARM64 glibc + OpenJDK 8 runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
