@@ -1715,6 +1715,19 @@ public class AsycudaMaterialUi {
         imgSub.setTextColor(TEXT_SECONDARY);
         imgSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         imgTextCol.addView(imgSub);
+
+        TextView imgPrivacyNote = new TextView(activity);
+        imgPrivacyNote.setText(tr(activity,
+                "Privacy Notice: Do not attach screenshots showing visible passwords, TINs, or confidential live customs declarations.",
+                "تنبيه الخصوصية: لا ترفق صوراً تُظهر كلمات مرور، أرقاماً ضريبية، أو بيانات تصاريح جمركية سرية.",
+                "ئاگاداری تایبەتمەندی: وێنەی شاشە هاوپێچ مەکە کە وشەی نهێنی، ژمارەی باج، یان زانیاری نهێنی گومرگی تێدابێت."));
+        imgPrivacyNote.setTextColor(Color.parseColor("#FFFF9F0A"));
+        imgPrivacyNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        LinearLayout.LayoutParams ipnLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ipnLp.topMargin = dp(activity, 3);
+        imgPrivacyNote.setLayoutParams(ipnLp);
+        imgTextCol.addView(imgPrivacyNote);
         imgCard.addView(imgTextCol);
 
         final File[] currentImageHolder = new File[] { null };

@@ -10,7 +10,17 @@
 
 Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
 
-[**Download Latest APK (v3.8.0)**](../../releases/latest) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/)
+[**Download Latest Release `v3.8.0` (`ASYCUDA_Iraq_v3.8.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.8.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/ASYCUDA_Iraq_v3.8.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/)
+
+---
+
+## Latest Official Release: [`v3.8.0` (`versionCode 38`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.8.0)
+
+| Release Asset | SHA-256 Checksum |
+| :--- | :--- |
+| [**`ASYCUDA_Iraq_v3.8.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/ASYCUDA_Iraq_v3.8.0.apk) | `d46ba4d2444cdb974e5c2a6625d8d517b734f8f92c4caee708228fbb442ddbcd` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/asycuda-iraq.tar.xz) | `ca3a5b787c4d0ba94fa533b00ebb0ce1bb845ceb96d6f1968fb360dfc7d0c7fe` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
 ---
 
@@ -19,14 +29,14 @@ Android client for the Iraqi General Commission of Customs (**ASYCUDA World** �
 - **Direct Installation**: Installs as a standard Android APK on 64-bit ARM (`arm64-v8a`) phones and tablets running Android 8.0 or newer.
 - **Unified Update Center & `SOClass` Alert Listener**:
   - Checks both GitHub for new app releases (with SHA-256 and APK signature verification) and `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` on startup and on demand.
-  - Dynamically syncs the full `<jar href="..."/>` list from `AWIQWorld.jnlp` (supporting any number of server packages and removing deprecated files).
+  - Dynamically syncs the full `<jar href="..."/>` list from `AWIQWorld.jnlp`, enforcing an explicit `https://asy.mof.gov.iq/aw/*.jar` allowlist and verifying that every downloaded JAR entry is cryptographically signed by UNCTAD/SOClass (`META-INF/SOCODE.RSA`, SHA-256 `5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d`).
   - Automatically detects ASYCUDA server `SOClass` update alerts (`"SOClass Client have to be updated"`) and opens the Update Center immediately.
 - **PDF Printing & File Manager**: Prints customs declarations, receipts, and assessment notices directly to PDF (`Download/Asycuda_Prints`) with single and multi-file sharing and deletion, and opens Android's native file picker when attaching documents.
 - **In-App Changelog ("What's New")**: Displays a localized release summary after every installation or update, also accessible anytime from the About screen.
 - **Multi-Language Interface**: Supports **English**, **Arabic (العربية)**, and **Kurdish (کوردی)** across the Control Center, settings, and dialogs.
 - **Display & Input Controls**: Includes touchpad cursor control, two-finger scrolling, pinch-to-zoom, live-preview sliders for window scaling and shortcut bar opacity, configurable auto-keyboard popup, and an on-screen shortcut bar (`TAB`, `CTRL`, `ESC`, arrow keys).
 - **Stable Background Connection**: Keeps the network session active when switching to other apps (such as WhatsApp, Authenticator, or PDF viewers).
-- **In-App Issue Reporting & Diagnostics**: Submit issue reports with screenshots and redacted runtime logs directly from the Control Center, or export diagnostic logs as a `.zip` file.
+- **In-App Issue Reporting & Diagnostics**: Submit voluntary issue reports with redacted in-memory runtime logs (assembled strictly in RAM and never written to disk) directly from the Control Center.
 
 ---
 
@@ -35,7 +45,7 @@ Android client for the Iraqi General Commission of Customs (**ASYCUDA World** �
 This project is open-source so that customs brokers, trade companies, and security auditors can inspect every line of code:
 
 - **Zero Credential Collection**: Usernames, passwords, and customs declaration data are never collected, stored, or routed through third-party servers. The embedded Java 8 runtime connects directly to `https://asy.mof.gov.iq` and `//asy.mof.gov.iq:2006/`.
-- **Verified TLS & Update Integrity**: Enforces full X.509 certificate chain verification (`Sectigo Root R46` / `ZeroSSL RSA DV SSL CA 2`) and RFC 2818 hostname verification for `asy.mof.gov.iq`, plus SHA-256 and APK signature checks on in-app updates.
+- **Verified TLS & Pinned Publisher Signatures**: Enforces full X.509 certificate chain verification (`Sectigo Root R46` / `ZeroSSL RSA DV SSL CA 2`) and RFC 2818 hostname verification for `asy.mof.gov.iq`, SHA-256 and APK signature checks on in-app APK updates, and pinned UNCTAD/SOClass X.509 signature verification (`SOCODE.RSA`) on every `AWIQWorld.jnlp` JAR.
 - **100% Open-Source Java Bridge (`java-bridge/`)**: All custom compatibility JARs (`00_bootpatch.jar`, `jars/00_boot.jar`, `jars/00_jnlp.jar`) that bridge ASYCUDA's desktop Swing/JNLP calls to Android are published with full `.java` source code and a reproducible build script in [`java-bridge/`](java-bridge/). Official Ministry of Finance `.jar` packages are never modified.
 - Read the complete security architecture and audit report in **[`SECURITY.md`](SECURITY.md)**.
 
@@ -43,7 +53,7 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ## Installation
 
-1. Download `ASYCUDA_Iraq_v3.8.0.apk` from the [Releases](../../releases/latest) page (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
+1. Download [`ASYCUDA_Iraq_v3.8.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.8.0/ASYCUDA_Iraq_v3.8.0.apk) from the [v3.8.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.8.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
 2. Open the APK on your Android phone or tablet to install it.
 3. On first launch, review and accept the Terms & Conditions, view the **What's New** summary, and grant file access when prompted so the app can save printed PDFs and attach declaration files.
 4. Wait ~10–15 seconds on the first run while the client unpacks its libraries and connects to the customs server.
@@ -60,7 +70,7 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ### المميزات:
 - **تثبيت مباشر**: يعمل مباشرة بعد تثبيت ملف `APK` دون الحاجة لأي تطبيقات أو إضافات خارجية.
-- **مركز التحديثات الذكي ومستمع تنبيهات `SOClass`**: يفحص ويحدث كلاً من إصدار التطبيق وملفات النظام (`AWIQWorld.jnlp`) من خادم وزارة المالية تلقائياً عند التشغيل، ويستجيب فوراً لتنبيهات تحديث `SOClass` الصادرة من الخادم.
+- **مركز التحديثات الذكي ومستمع تنبيهات `SOClass`**: يفحص ويحدث كلاً من إصدار التطبيق وملفات النظام (`AWIQWorld.jnlp`) من خادم وزارة المالية تلقائياً عند التشغيل مع التحقق من التوقيع الرقمي (`SOCODE.RSA`) لكل ملف، ويستجيب فوراً لتنبيهات تحديث `SOClass` الصادرة من الخادم.
 - **أمان وخصوصية موثقة**: اتصال مباشر ومشفر بخادم `asy.mof.gov.iq` دون جمع أو تخزين أي بيانات دخول أو تصاريح كمركية، مع نشر كامل الكود المصدري لملفات الربط في مجلد [`java-bridge/`](java-bridge/).
 - **سجل التغييرات داخل التطبيق**: عرض ملخص التحديثات والمزايا الجديدة تلقائياً بعد كل تحديث أو تثبيت.
 - **طباعة وإدارة ملفات PDF**: طباعة التصاريح والوصلات الكمركية مباشرة بصيغة `PDF` وحفظها في مجلد `Download/Asycuda_Prints` مع إمكانية مشاركتها أو حذفها (مفرداً أو بتحديد متعدد).
@@ -80,7 +90,7 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ### تایبەتمەندییەکان:
 - **دامەزراندنی ڕاستەوخۆ**: بە یەک پەڕگەی `APK` دادەمەزرێت بەبێ پێویستی بە هیچ بەرنامەیەکی دەرەکی.
-- **ناوەندی نوێکردنەوەی زیرەک و گوێگری `SOClass`**: پشکنین و نوێکردنەوەی بەرنامەکە و پەڕگەکانی سیستەم (`AWIQWorld.jnlp`) ڕاستەوخۆ لە سێرڤەری وەزارەتی دارایی، لەگەڵ کردنەوەی خۆکارانەی پەنجەرەی نوێکردنەوە لە کاتی ئاگادارکردنەوەی `SOClass`.
+- **ناوەندی نوێکردنەوەی زیرەک و گوێگری `SOClass`**: پشکنین و نوێکردنەوەی بەرنامەکە و پەڕگەکانی سیستەم (`AWIQWorld.jnlp`) ڕاستەوخۆ لە سێرڤەری وەزارەتی دارایی بە پشتڕاستکردنەوەی واژۆی ئەلیکترۆنی (`SOCODE.RSA`)، لەگەڵ کردنەوەی خۆکارانەی پەنجەرەی نوێکردنەوە لە کاتی ئاگادارکردنەوەی `SOClass`.
 - **ئاسایش و تایبەتمەندی پشتڕاستکراوە**: پەیوەندی ڕاستەوخۆ و پارێزراو لەگەڵ `asy.mof.gov.iq` بەبێ کۆکردنەوە یان هەڵگرتنی زانیارییەکانی چوونەژوورەوە، لەگەڵ بڵاوکردنەوەی تەواوی کۆدی سەرچاوەی پردی جاڤا لە [`java-bridge/`](java-bridge/).
 - **تۆماری گۆڕانکارییەکان لەناو بەرنامەدا**: پیشاندانی پوختەی نوێکارییەکان دوای هەر دامەزراندن یان نوێکردنەوەیەک.
 - **چاپکردن و بەڕێوەبردنی PDF**: چاپکردنی بەڵگەنامە و پسوولە گومرگییەکان بە شێوەی `PDF` لەناو فۆڵدەری `Download/Asycuda_Prints` لەگەڵ توانای هاوبەشکردن و سڕینەوە.
@@ -102,7 +112,7 @@ This application is an independent technical utility built to help customs broke
    ```bash
    ./java-bridge/build-bridge.sh
    ```
-2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [Releases](../../releases) page) into `lorie-app/src/main/assets/`.
+2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v3.8.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.8.0) page) into `lorie-app/src/main/assets/`.
 3. Build the APK with JDK 17 and Android SDK 34:
    ```bash
    ./gradlew :lorie-app:assembleDebug

@@ -1129,7 +1129,8 @@ public class AsycudaStandaloneManager {
                 final String href = remoteHrefs.get(i);
                 final String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
                 final String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
-                if (flatName.isEmpty() || flatName.startsWith("00_")) {
+                final String jarUrl = resolveTrustedMofJarUrl(href);
+                if (flatName.isEmpty() || flatName.startsWith("00_") || jarUrl == null) {
                     checkedCounter.incrementAndGet();
                     futures.add(null);
                     continue;
@@ -1137,7 +1138,6 @@ public class AsycudaStandaloneManager {
                 activeGovJarNames.add(flatName);
                 cpEntries.add("jars/" + flatName);
                 final File targetJar = new File(jarsDir, flatName);
-                final String jarUrl = href.startsWith("http") ? href : (MOF_CODEBASE_URL + href.replaceFirst("^/+", ""));
 
                 futures.add(pool.submit(() -> {
                     boolean needsDl = !targetJar.exists() || targetJar.length() == 0;
@@ -1175,7 +1175,8 @@ public class AsycudaStandaloneManager {
                 String href = remoteHrefs.get(i);
                 String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
                 String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
-                String jarUrl = href.startsWith("http") ? href : (MOF_CODEBASE_URL + href.replaceFirst("^/+", ""));
+                String jarUrl = resolveTrustedMofJarUrl(href);
+                if (jarUrl == null) continue;
                 File targetJar = new File(jarsDir, flatName);
                 try {
                     if (Boolean.TRUE.equals(fut.get())) {
@@ -1307,14 +1308,74 @@ public class AsycudaStandaloneManager {
         return false;
     }
 
+    private static final String ALLOWED_MOF_HOST = "asy.mof.gov.iq";
+    private static final String PINNED_MOF_SOCODE_CERT_SHA256 =
+            "5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d";
+
     /**
-     * Verifies that a downloaded JAR is a well-formed ZIP/JAR archive and enforces
-     * standard Java cryptographic signature verification (`JarFile(..., true)`) on all
-     * signed entries (`META-INF/*.SF`, `.RSA`, `.DSA`) before admitting the JAR to the classpath.
+     * Resolves a JNLP {@code <jar href="..."/>} reference strictly against {@code https://asy.mof.gov.iq/aw/}
+     * and enforces an explicit HTTPS hostname allowlist ({@code asy.mof.gov.iq}).
+     * Any non-HTTPS scheme, external hostname, or path traversal is rejected (returns {@code null}).
+     */
+    private static String resolveTrustedMofJarUrl(String href) {
+        if (href == null || href.trim().isEmpty()) return null;
+        String trimmed = href.trim();
+        if (trimmed.contains("..")) return null;
+        try {
+            URL base = new URL(MOF_CODEBASE_URL);
+            URL resolved = trimmed.contains("://")
+                    ? new URL(trimmed)
+                    : new URL(base, trimmed.replaceFirst("^/+", ""));
+            if (!"https".equalsIgnoreCase(resolved.getProtocol())) {
+                return null;
+            }
+            if (!ALLOWED_MOF_HOST.equalsIgnoreCase(resolved.getHost())) {
+                return null;
+            }
+            String path = resolved.getPath();
+            if (path == null || !path.startsWith("/aw/") || !path.endsWith(".jar")) {
+                return null;
+            }
+            return resolved.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Verifies that a downloaded JAR is a well-formed ZIP/JAR archive, enforces Java cryptographic
+     * signature verification ({@code JarFile(..., true)}) on all entries, and requires that both
+     * the {@code META-INF/SOCODE.RSA} PKCS#7 block and every non-{@code META-INF/} entry in the archive
+     * are cryptographically signed by the pinned UNCTAD/SOClass X.509 code-signing certificate
+     * ({@code SHA-256: 5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d}).
      */
     private static boolean verifyDownloadedJarIntegrity(File jarFile) {
         if (jarFile == null || !jarFile.exists() || jarFile.length() < 22) return false;
         try (java.util.jar.JarFile jf = new java.util.jar.JarFile(jarFile, true)) {
+            java.util.jar.JarEntry rsaEntry = jf.getJarEntry("META-INF/SOCODE.RSA");
+            java.util.jar.JarEntry sfEntry = jf.getJarEntry("META-INF/SOCODE.SF");
+            if (rsaEntry == null || sfEntry == null) {
+                return false;
+            }
+
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            boolean pkcs7MatchedPinnedSigner = false;
+            try (InputStream rsaIn = jf.getInputStream(rsaEntry)) {
+                java.util.Collection<? extends Certificate> pkcs7Certs = cf.generateCertificates(rsaIn);
+                if (pkcs7Certs != null) {
+                    for (Certificate c : pkcs7Certs) {
+                        if (PINNED_MOF_SOCODE_CERT_SHA256.equalsIgnoreCase(sha256Hex(sha256, c.getEncoded()))) {
+                            pkcs7MatchedPinnedSigner = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!pkcs7MatchedPinnedSigner) {
+                return false;
+            }
+
             Enumeration<java.util.jar.JarEntry> entries = jf.entries();
             int entryCount = 0;
             byte[] buf = new byte[16384];
@@ -1326,16 +1387,40 @@ public class AsycudaStandaloneManager {
                         // Draining the entry stream triggers JarVerifier digest & signature validation
                     }
                 }
+                String name = je.getName();
+                if (!je.isDirectory() && !name.startsWith("META-INF/")) {
+                    Certificate[] entryCerts = je.getCertificates();
+                    if (entryCerts == null || entryCerts.length == 0) {
+                        return false;
+                    }
+                    if (!PINNED_MOF_SOCODE_CERT_SHA256.equalsIgnoreCase(sha256Hex(sha256, entryCerts[0].getEncoded()))) {
+                        return false;
+                    }
+                }
             }
             return entryCount > 0;
-        } catch (SecurityException | IOException invalidJar) {
+        } catch (Exception invalidJar) {
             return false;
         }
     }
 
+    private static String sha256Hex(MessageDigest sha256, byte[] data) {
+        sha256.reset();
+        byte[] digest = sha256.digest(data);
+        StringBuilder hex = new StringBuilder(digest.length * 2);
+        for (byte b : digest) {
+            hex.append(String.format(Locale.US, "%02x", b & 0xFF));
+        }
+        return hex.toString();
+    }
+
     private HttpURLConnection openMofConnection(String urlStr, SSLSocketFactory sslFactory, int connTimeout, int readTimeout) throws IOException {
         URL url = new URL(urlStr);
+        if (!"https".equalsIgnoreCase(url.getProtocol()) || !ALLOWED_MOF_HOST.equalsIgnoreCase(url.getHost())) {
+            throw new SecurityException("Blocked connection to untrusted host: " + url.getHost());
+        }
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(false);
         if (conn instanceof HttpsURLConnection && sslFactory != null) {
             HttpsURLConnection https = (HttpsURLConnection) conn;
             https.setSSLSocketFactory(sslFactory);
