@@ -76,7 +76,7 @@ static jclass FindClassOrDie(JNIEnv *env, const char* name) {
     jclass clazz = env->FindClass(name);
     if (!clazz) {
         char buffer[1024] = {0};
-        sprintf(buffer, "class %s not found", name);
+        snprintf(buffer, sizeof(buffer), "class %s not found", name);
         log(ERROR, "%s", buffer);
         env->FatalError(buffer);
         return nullptr;
@@ -89,7 +89,7 @@ static jmethodID FindMethodOrDie(JNIEnv *env, jclass clazz, const char* name, co
     jmethodID method = isStatic ? env->GetStaticMethodID(clazz, name, signature) : env->GetMethodID(clazz, name, signature);
     if (!method) {
         char buffer[1024] = {0};
-        sprintf(buffer, "method %s %s not found", name, signature);
+        snprintf(buffer, sizeof(buffer), "method %s %s not found", name, signature);
         log(ERROR, "%s", buffer);
         env->FatalError(buffer);
         return nullptr;
@@ -225,9 +225,10 @@ int LorieViewResources::xcallback(int fd, int events) {
                     }
                     read(connFd, clipboard, e.clipboardSend.count);
                     clipboard[e.clipboardSend.count] = 0;
-                    log(DEBUG, "Clipboard content (%zu symbols) is %s", strlen(clipboard), clipboard);
+                    size_t clipLen = strnlen(clipboard, e.clipboardSend.count);
+                    log(DEBUG, "Clipboard content (%zu symbols) is %s", clipLen, clipboard);
                     jmethodID id = env->GetMethodID(env->GetObjectClass(thiz), "setClipboardText","(Ljava/lang/String;)V");
-                    jobject bb = env->NewDirectByteBuffer(clipboard, strlen(clipboard));
+                    jobject bb = env->NewDirectByteBuffer(clipboard, clipLen);
                     jobject charset = env->CallStaticObjectMethod(Charset.self, Charset.forName, env->NewStringUTF("UTF-8"));
                     jobject cb = env->CallObjectMethod(charset, Charset.decode, bb);
                     env->DeleteLocalRef(bb);
@@ -301,7 +302,8 @@ void LorieViewResources::connect(jint fd) {
         log(DEBUG, "disconnected");
     }
 
-    if ((connFd = fd) != -1) {
+    connFd = fd;
+    if (fd != -1) {
         ALooper_addFd(ALooper_forThread(), fd, 0, ALOOPER_EVENT_INPUT | ALOOPER_EVENT_ERROR | ALOOPER_EVENT_HANGUP,
                       +[](int fd, int events, void* data) -> int { return ((LorieViewResources*) data)->xcallback(fd, events); }, this);
 
@@ -327,7 +329,7 @@ static void startLogcat(JNIEnv *env, __unused jclass clazz, __unused jlong ptr, 
             dup2(fd, 2);
             prctl(PR_SET_PDEATHSIG, SIGTERM);
             char buf[64] = {0};
-            sprintf(buf, "--pid=%d", getppid());
+            snprintf(buf, sizeof(buf), "--pid=%d", getppid());
             execl("/system/bin/logcat", "logcat", buf, NULL);
             log(ERROR, "exec logcat: %s", strerror(errno));
             env->FatalError("Exiting");
@@ -380,20 +382,28 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
     if (!strcmp(__progname, "com.termux.x11")) {
         // Redirects stderr to logcat.
         pthread_create([]{ static pthread_t t; return &t; }(), nullptr, +[](__unused void* cookie) -> void* {
-            FILE *fp;
             int p[2];
-            size_t len;
+            size_t len = 0;
             char *line = nullptr;
-            pipe(p);
+            if (pipe(p) != 0)
+                return nullptr;
 
-            fp = fdopen(p[0], "r");
+            FILE *fp = fdopen(p[0], "r");
+            if (!fp) {
+                close(p[0]);
+                close(p[1]);
+                return nullptr;
+            }
 
             dup2(p[1], 2);
             dup2(p[1], 1);
             while ((getline(&line, &len, fp)) != -1) {
-                log(DEBUG, "%s%s", line, (line[len - 1] == '\n') ? "" : "\n");
+                log(DEBUG, "%s%s", line, (len > 0 && line[len - 1] == '\n') ? "" : "\n");
             }
 
+            free(line);
+            fclose(fp);
+            close(p[1]);
             return nullptr;
         }, nullptr);
     }
@@ -483,9 +493,10 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
                 auto* r = (LorieViewResources*) ptr;
                 if (r && r->connFd != -1) {
                     const char *name = (!jname || width <= 0 || height <= 0) ? nullptr : env->GetStringUTFChars(jname, JNI_FALSE);
-                    sendEvent(r, .screenSize = { .t = EVENT_SCREEN_SIZE, .width = (uint16_t) width, .height = (uint16_t) height, .framerate = (uint16_t) framerate, .name_size = (name ? strlen(name) : 0) });
+                    size_t nameLen = (name && jname) ? (size_t) env->GetStringUTFLength(jname) : 0;
+                    sendEvent(r, .screenSize = { .t = EVENT_SCREEN_SIZE, .width = (uint16_t) width, .height = (uint16_t) height, .framerate = (uint16_t) framerate, .name_size = (uint16_t) nameLen });
                     if (name) {
-                        write(r->connFd, name, strlen(name));
+                        write(r->connFd, name, nameLen);
                         env->ReleaseStringUTFChars(jname, name);
                     }
                 }

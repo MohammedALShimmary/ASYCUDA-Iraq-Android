@@ -554,11 +554,11 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
                 }
             }
 
-            requireContext().sendBroadcast(new Intent(ACTION_PREFERENCES_CHANGED) {{
-                putExtra("key", key);
-                putExtra("fromBroadcast", true);
-                setPackage(requireContext().getPackageName());
-            }});
+            Intent broadcast = new Intent(ACTION_PREFERENCES_CHANGED);
+            broadcast.putExtra("key", key);
+            broadcast.putExtra("fromBroadcast", true);
+            broadcast.setPackage(requireContext().getPackageName());
+            requireContext().sendBroadcast(broadcast);
 
             return true;
         }

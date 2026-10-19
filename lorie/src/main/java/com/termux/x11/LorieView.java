@@ -286,10 +286,10 @@ public class LorieView extends SurfaceView implements InputStub {
 
         @Override public void surfaceChanged(@NonNull SurfaceHolder holder, int f, int width, int height) {
             LorieView.this.surfaceChanged(mNativeContext, holder.getSurface());
-            width = getMeasuredWidth();
-            height = getMeasuredHeight();
+            int measuredW = getMeasuredWidth();
+            int measuredH = getMeasuredHeight();
 
-            Log.d("SurfaceChangedListener", "Surface was changed: " + width + "x" + height);
+            Log.d("SurfaceChangedListener", "Surface was changed: " + measuredW + "x" + measuredH);
             updateViewport();
         }
 

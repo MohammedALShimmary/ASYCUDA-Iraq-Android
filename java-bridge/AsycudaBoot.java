@@ -5,6 +5,9 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.print.*;
 import java.io.*;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -27,9 +31,25 @@ import javax.swing.text.JTextComponent;
 
 public class AsycudaBoot {
 
+    private static final String PRINTER_NAME = "ASYCUDA_PDF_Printer";
+    private static final String DEFAULT_TMP_DIR = "/data/data/iq.asycuda/files/tmp";
+    private static final String DOWNLOAD_FILES_DIR = "/storage/emulated/0/Download/Asycuda_Files";
+    private static final String DOWNLOAD_PRINTS_DIR = "/storage/emulated/0/Download/Asycuda_Prints";
+    private static final String PDF_MIME = "application/pdf";
+    private static final String JPG_MIME = "image/jpeg";
+    private static final String PNG_MIME = "image/png";
+
+    private static final Object FILE_PROCESS_LOCK = new Object();
     private static final ThreadLocal<Boolean> IN_CHECK = new ThreadLocal<Boolean>();
     private static final Map<String, Long> RECENT_HASHES = new ConcurrentHashMap<String, Long>();
     private static final Map<String, Long> SEEN_PATHS = new ConcurrentHashMap<String, Long>();
+    private static final AtomicBoolean SOCLASS_ALERT_SENT = new AtomicBoolean(false);
+    private static volatile Object wrappedRejectHandler = null;
+    private static volatile long lastMousePressTime = 0L;
+
+    private AsycudaBoot() {
+        // Utility entrypoint class
+    }
 
     public static void handleDesktopAction(final String action, final String target) {
         new Thread(new Runnable() {
@@ -44,79 +64,108 @@ public class AsycudaBoot {
         }, "Asycuda-Opener").start();
     }
 
-    public static synchronized void processAndOpenFile(File rawFile) {
+    public static void processAndOpenFile(File rawFile) {
         try {
             if (rawFile == null || !rawFile.exists() || !rawFile.isFile()) return;
             String origName = rawFile.getName();
             if (origName.startsWith("Resource") && origName.endsWith(".so")) return;
             if (origName.endsWith(".part") || origName.endsWith(".lck") || origName.endsWith(".tmp")) return;
 
-            long s1 = rawFile.length();
-            if (s1 <= 0) return;
-            Thread.sleep(150);
-            long s2 = rawFile.length();
-            if (s1 != s2) {
-                for (int i = 0; i < 10; i++) {
-                    s1 = s2;
-                    Thread.sleep(150);
-                    s2 = rawFile.length();
-                    if (s1 == s2 && s2 > 0) break;
+            if (!waitForStableFileSize(rawFile)) return;
+
+            synchronized (FILE_PROCESS_LOCK) {
+                String pathKey = rawFile.getAbsolutePath() + "_" + rawFile.lastModified() + "_" + rawFile.length();
+                SEEN_PATHS.put(pathKey, System.currentTimeMillis());
+
+                String sha256 = computeSha256(rawFile);
+                long now = System.currentTimeMillis();
+                Long lastTime = RECENT_HASHES.get(sha256);
+                if (lastTime != null && (now - lastTime) < 15000L) {
+                    return;
+                }
+                RECENT_HASHES.put(sha256, now);
+
+                String[] typeInfo = detectExtensionAndMime(rawFile);
+                String realExt = typeInfo[0];
+                String mime = typeInfo[1];
+
+                String baseNoExt = origName;
+                int dot = origName.lastIndexOf('.');
+                if (dot > 0) baseNoExt = origName.substring(0, dot);
+                String cleanBase = baseNoExt.replaceAll("[^a-zA-Z0-9._-]", "_");
+                String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+                String finalName = stamp + "_" + cleanBase + "." + realExt;
+
+                File pubDir = new File(DOWNLOAD_PRINTS_DIR);
+                if (!pubDir.exists() && !pubDir.mkdirs()) {
+                    // Continue with internal directory fallback
+                }
+                File pubDest = new File(pubDir, finalName);
+                copyFile(rawFile, pubDest);
+
+                String internalPrints = System.getProperty("asycuda.prints.dir", "/data/data/iq.asycuda/files/prints");
+                File intDir = new File(internalPrints);
+                if (!intDir.exists() && !intDir.mkdirs()) {
+                    // Directory may already exist
+                }
+                File intDest = new File(intDir, finalName);
+                copyFile(rawFile, intDest);
+
+                String targetPath = intDest.exists() ? intDest.getAbsolutePath() : pubDest.getAbsolutePath();
+                if (!sendToAndroidApk("OPEN|" + targetPath + "|" + mime)) {
+                    File termuxOpen = new File("/data/data/com.termux/files/usr/bin/termux-open");
+                    if (termuxOpen.exists()) {
+                        new ProcessBuilder(termuxOpen.getAbsolutePath(), "--content-type", mime, pubDest.getAbsolutePath()).start();
+                    }
                 }
             }
-            if (rawFile.length() <= 0) return;
-
-            String pathKey = rawFile.getAbsolutePath() + "_" + rawFile.lastModified() + "_" + rawFile.length();
-            SEEN_PATHS.put(pathKey, System.currentTimeMillis());
-
-            String md5 = computeMd5(rawFile);
-            long now = System.currentTimeMillis();
-            Long lastTime = RECENT_HASHES.get(md5);
-            if (lastTime != null && (now - lastTime) < 15000L) {
-                return;
-            }
-            RECENT_HASHES.put(md5, now);
-
-            String[] typeInfo = detectExtensionAndMime(rawFile);
-            String realExt = typeInfo[0];
-            String mime = typeInfo[1];
-
-            String baseNoExt = origName;
-            int dot = origName.lastIndexOf('.');
-            if (dot > 0) baseNoExt = origName.substring(0, dot);
-            String cleanBase = baseNoExt.replaceAll("[^a-zA-Z0-9._-]", "_");
-            String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String finalName = stamp + "_" + cleanBase + "." + realExt;
-
-            File pubDir = new File("/storage/emulated/0/Download/Asycuda_Prints");
-            pubDir.mkdirs();
-            File pubDest = new File(pubDir, finalName);
-            copyFile(rawFile, pubDest);
-
-            String internalPrints = System.getProperty("asycuda.prints.dir", "/data/data/iq.asycuda/files/prints");
-            File intDir = new File(internalPrints);
-            intDir.mkdirs();
-            File intDest = new File(intDir, finalName);
-            copyFile(rawFile, intDest);
-
-            String targetPath = intDest.exists() ? intDest.getAbsolutePath() : pubDest.getAbsolutePath();
-            if (!sendToAndroidApk("OPEN|" + targetPath + "|" + mime)) {
-                // Fallback if running inside Termux Upgrade 2
-                File termuxOpen = new File("/data/data/com.termux/files/usr/bin/termux-open");
-                if (termuxOpen.exists()) {
-                    new ProcessBuilder(termuxOpen.getAbsolutePath(), "--content-type", mime, pubDest.getAbsolutePath()).start();
-                }
-            }
-        } catch (Throwable ignored) {}
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        } catch (Throwable ignored) {
+            // Ignore file opener errors to keep ASYCUDA Swing thread responsive
+        }
     }
 
-    private static boolean sendToAndroidApk(String msg) {
+    private static boolean waitForStableFileSize(File rawFile) throws InterruptedException {
+        long s1 = rawFile.length();
+        if (s1 <= 0) return false;
+        Thread.sleep(150);
+        long s2 = rawFile.length();
+        if (s1 != s2) {
+            for (int i = 0; i < 10; i++) {
+                s1 = s2;
+                Thread.sleep(150);
+                s2 = rawFile.length();
+                if (s1 == s2 && s2 > 0) break;
+            }
+        }
+        return rawFile.length() > 0;
+    }
+
+    public static boolean sendToAndroidApk(String msg) {
         try (Socket s = new Socket("127.0.0.1", 47891);
              OutputStream out = s.getOutputStream()) {
-            out.write((msg + "\n").getBytes(StandardCharsets.UTF_8));
+            String token = System.getProperty("asycuda.bridge.token", "");
+            String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
+            out.write((wirePayload + "\n").getBytes(StandardCharsets.UTF_8));
             out.flush();
             return true;
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    public static void notifySoClassUpdateRequired(final String reason) {
+        if (SOCLASS_ALERT_SENT.compareAndSet(false, true)) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String cleanReason = (reason != null && !reason.trim().isEmpty())
+                            ? reason.trim().replace('\n', ' ').replace('\r', ' ')
+                            : "SOClass Client have to be updated.";
+                    sendToAndroidApk("SOCLASS_UPDATE|" + cleanReason);
+                }
+            }, "Asycuda-SOClassAlert").start();
         }
     }
 
@@ -125,22 +174,24 @@ public class AsycudaBoot {
         String ext = "bin";
         int dot = name.lastIndexOf('.');
         if (dot > 0 && dot < name.length() - 1) {
-            ext = name.substring(dot + 1).toLowerCase();
+            ext = name.substring(dot + 1).toLowerCase(Locale.US);
         }
         byte[] head = new byte[2048];
         int n = 0;
         try (FileInputStream fis = new FileInputStream(f)) {
             n = fis.read(head);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // Fallback to extension-based detection if header read fails
+        }
 
         if (n >= 4 && head[0] == '%' && head[1] == 'P' && head[2] == 'D' && head[3] == 'F') {
-            return new String[] { "pdf", "application/pdf" };
+            return new String[] { "pdf", PDF_MIME };
         }
         if (n >= 3 && (head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8 && (head[2] & 0xFF) == 0xFF) {
-            return new String[] { "jpg", "image/jpeg" };
+            return new String[] { "jpg", JPG_MIME };
         }
         if (n >= 4 && (head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G') {
-            return new String[] { "png", "image/png" };
+            return new String[] { "png", PNG_MIME };
         }
         if (n >= 4 && ((head[0] == 'I' && head[1] == 'I' && head[2] == 42 && head[3] == 0) ||
                        (head[0] == 'M' && head[1] == 'M' && head[2] == 0 && head[3] == 42))) {
@@ -164,13 +215,13 @@ public class AsycudaBoot {
             return new String[] { "zip", "application/zip" };
         }
         if (n >= 5) {
-            String start = new String(head, 0, Math.min(n, 256), StandardCharsets.UTF_8).trim().toLowerCase();
+            String start = new String(head, 0, Math.min(n, 256), StandardCharsets.UTF_8).trim().toLowerCase(Locale.US);
             if (start.startsWith("<?xml")) return new String[] { "xml", "text/xml" };
             if (start.startsWith("<!doctype html") || start.startsWith("<html")) return new String[] { "html", "text/html" };
         }
-        if ("pdf".equals(ext)) return new String[] { "pdf", "application/pdf" };
-        if ("jpg".equals(ext) || "jpeg".equals(ext)) return new String[] { "jpg", "image/jpeg" };
-        if ("png".equals(ext)) return new String[] { "png", "image/png" };
+        if ("pdf".equals(ext)) return new String[] { "pdf", PDF_MIME };
+        if ("jpg".equals(ext) || "jpeg".equals(ext)) return new String[] { "jpg", JPG_MIME };
+        if ("png".equals(ext)) return new String[] { "png", PNG_MIME };
         return new String[] { ext, "application/octet-stream" };
     }
 
@@ -183,9 +234,9 @@ public class AsycudaBoot {
         }
     }
 
-    private static String computeMd5(File f) {
+    private static String computeSha256(File f) {
         try (FileInputStream in = new FileInputStream(f)) {
-            MessageDigest md = MessageDigest.getInstance("MD5");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] buf = new byte[16384];
             int len;
             while ((len = in.read(buf)) > 0) md.update(buf, 0, len);
@@ -200,8 +251,10 @@ public class AsycudaBoot {
 
     // Pure-Java Pageable/Printable -> Multi-Page PDF 1.4 Generator (Zero Ghostscript needed!)
     public static File renderPageableToPdf(Pageable pageable) throws Exception {
-        File tmpDir = new File(System.getProperty("java.io.tmpdir", "/data/data/iq.asycuda/files/tmp"));
-        tmpDir.mkdirs();
+        File tmpDir = new File(System.getProperty("java.io.tmpdir", DEFAULT_TMP_DIR));
+        if (!tmpDir.exists() && !tmpDir.mkdirs()) {
+            // Directory already exists or will be handled by FileOutputStream
+        }
         File pdfFile = new File(tmpDir, "Print_" + System.currentTimeMillis() + ".pdf");
 
         List<byte[]> pageJpegs = new ArrayList<byte[]>();
@@ -289,7 +342,10 @@ public class AsycudaBoot {
                 int cntObj = 5 + i * 3;
                 int[] d = dims.get(i);
                 byte[] jpg = jpegs.get(i);
-                int wPt = d[0], hPt = d[1], wPx = d[2], hPx = d[3];
+                int wPt = d[0];
+                int hPt = d[1];
+                int wPx = d[2];
+                int hPx = d[3];
 
                 // Page Object
                 offsets.add((long) buf.size());
@@ -340,7 +396,7 @@ public class AsycudaBoot {
 
         @Override
         public String getName() {
-            return "ASYCUDA_PDF_Printer";
+            return PRINTER_NAME;
         }
 
         @Override
@@ -348,10 +404,10 @@ public class AsycudaBoot {
             return new DocPrintJob() {
                 @Override public PrintService getPrintService() { return DirectPdfPrintService.this; }
                 @Override public PrintJobAttributeSet getAttributes() { return new HashPrintJobAttributeSet(); }
-                @Override public void addPrintJobListener(PrintJobListener l) {}
-                @Override public void removePrintJobListener(PrintJobListener l) {}
-                @Override public void addPrintJobAttributeListener(PrintJobAttributeListener l, PrintJobAttributeSet a) {}
-                @Override public void removePrintJobAttributeListener(PrintJobAttributeListener l) {}
+                @Override public void addPrintJobListener(PrintJobListener l) { /* No-op */ }
+                @Override public void removePrintJobListener(PrintJobListener l) { /* No-op */ }
+                @Override public void addPrintJobAttributeListener(PrintJobAttributeListener l, PrintJobAttributeSet a) { /* No-op */ }
+                @Override public void removePrintJobAttributeListener(PrintJobAttributeListener l) { /* No-op */ }
 
                 @Override
                 public void print(Doc doc, PrintRequestAttributeSet attributes) throws PrintException {
@@ -371,8 +427,10 @@ public class AsycudaBoot {
                             File pdf = renderPageableToPdf(pg);
                             if (pdf != null) processAndOpenFile(pdf);
                         } else if (data instanceof InputStream) {
-                            File tmpDir = new File(System.getProperty("java.io.tmpdir", "/data/data/iq.asycuda/files/tmp"));
-                            tmpDir.mkdirs();
+                            File tmpDir = new File(System.getProperty("java.io.tmpdir", DEFAULT_TMP_DIR));
+                            if (!tmpDir.exists() && !tmpDir.mkdirs()) {
+                                // Ignore mkdirs result if directory already exists
+                            }
                             File f = new File(tmpDir, "PrintStream_" + System.currentTimeMillis() + ".pdf");
                             try (InputStream in = (InputStream) data; FileOutputStream out = new FileOutputStream(f)) {
                                 byte[] b = new byte[16384];
@@ -388,18 +446,18 @@ public class AsycudaBoot {
             };
         }
 
-        @Override public void addPrintServiceAttributeListener(PrintServiceAttributeListener l) {}
-        @Override public void removePrintServiceAttributeListener(PrintServiceAttributeListener l) {}
+        @Override public void addPrintServiceAttributeListener(PrintServiceAttributeListener l) { /* No-op */ }
+        @Override public void removePrintServiceAttributeListener(PrintServiceAttributeListener l) { /* No-op */ }
         @Override public PrintServiceAttributeSet getAttributes() {
             PrintServiceAttributeSet set = new HashPrintServiceAttributeSet();
-            set.add(new PrinterName("ASYCUDA_PDF_Printer", null));
+            set.add(new PrinterName(PRINTER_NAME, null));
             return set;
         }
         @Override public <T extends PrintServiceAttribute> T getAttribute(Class<T> category) {
-            if (category == PrinterName.class) return category.cast(new PrinterName("ASYCUDA_PDF_Printer", null));
+            if (category == PrinterName.class) return category.cast(new PrinterName(PRINTER_NAME, null));
             return null;
         }
-        @Override public DocFlavor[] getSupportedDocFlavors() { return FLAVORS; }
+        @Override public DocFlavor[] getSupportedDocFlavors() { return FLAVORS.clone(); }
         @Override public boolean isDocFlavorSupported(DocFlavor flavor) { return true; }
         @Override public Class<?>[] getSupportedAttributeCategories() {
             return new Class<?>[] {
@@ -412,7 +470,7 @@ public class AsycudaBoot {
         }
         @Override public boolean isAttributeCategorySupported(Class<? extends Attribute> category) { return true; }
         @Override public Object getDefaultAttributeValue(Class<? extends Attribute> category) {
-            if (category == PrinterName.class) return new PrinterName("ASYCUDA_PDF_Printer", null);
+            if (category == PrinterName.class) return new PrinterName(PRINTER_NAME, null);
             if (category == javax.print.attribute.standard.Media.class) return javax.print.attribute.standard.MediaSizeName.ISO_A4;
             if (category == javax.print.attribute.standard.MediaPrintableArea.class) {
                 return new javax.print.attribute.standard.MediaPrintableArea(
@@ -454,9 +512,6 @@ public class AsycudaBoot {
         @Override public ServiceUIFactory getServiceUIFactory() { return null; }
     }
 
-    
-    private static volatile long lastMousePressTime = 0L;
-
     private static boolean isEditableInput(Component c) {
         Component cur = c;
         for (int i = 0; i < 4 && cur != null; i++) {
@@ -486,6 +541,83 @@ public class AsycudaBoot {
         }, "Asycuda-IME").start();
     }
 
+    private static void checkForSoClassUpdateAlert(Container root) {
+        if (root == null) return;
+        try {
+            if (root instanceof Dialog) {
+                String title = ((Dialog) root).getTitle();
+                if (isSoClassUpdateText(title)) {
+                    notifySoClassUpdateRequired(title);
+                    return;
+                }
+            }
+            for (Component c : root.getComponents()) {
+                if (c instanceof JLabel) {
+                    String txt = ((JLabel) c).getText();
+                    if (isSoClassUpdateText(txt)) {
+                        notifySoClassUpdateRequired(txt);
+                        return;
+                    }
+                } else if (c instanceof JOptionPane) {
+                    Object msg = ((JOptionPane) c).getMessage();
+                    if (msg != null && isSoClassUpdateText(String.valueOf(msg))) {
+                        notifySoClassUpdateRequired(String.valueOf(msg));
+                        return;
+                    }
+                } else if (c instanceof JTextComponent) {
+                    String txt = ((JTextComponent) c).getText();
+                    if (isSoClassUpdateText(txt)) {
+                        notifySoClassUpdateRequired(txt);
+                        return;
+                    }
+                }
+                if (c instanceof Container) {
+                    checkForSoClassUpdateAlert((Container) c);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Ignore component inspection errors
+        }
+    }
+
+    private static boolean isSoClassUpdateText(String text) {
+        if (text == null || text.isEmpty()) return false;
+        String lower = text.toLowerCase(Locale.US);
+        return (lower.contains("soclass") && (lower.contains("update") || lower.contains("shutdown")))
+                || lower.contains("soclass client have to be updated")
+                || lower.contains("client have to be updated");
+    }
+
+    private static void installSoClassRejectHandlerHook() {
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) cl = ClassLoader.getSystemClassLoader();
+            Class<?> ctlClass = Class.forName("so.rmi.transport.client.ClientTransportLayer", false, cl);
+            Class<?> rhInterface = Class.forName("so.rmi.transport.RejectHandler", false, cl);
+            Method getMethod = ctlClass.getMethod("getRejectHandler");
+            final Object current = getMethod.invoke(null);
+            if (current != null && current != wrappedRejectHandler && !Proxy.isProxyClass(current.getClass())) {
+                Method setMethod = ctlClass.getMethod("setRejectHandler", rhInterface);
+                Object proxy = Proxy.newProxyInstance(
+                        rhInterface.getClassLoader(),
+                        new Class<?>[] { rhInterface },
+                        new InvocationHandler() {
+                            @Override
+                            public Object invoke(Object proxyObj, Method method, Object[] args) throws Throwable {
+                                if ("reject".equals(method.getName())) {
+                                    notifySoClassUpdateRequired("SOClass Client have to be updated. It will be shutdown now.");
+                                }
+                                return method.invoke(current, args);
+                            }
+                        });
+                setMethod.invoke(null, proxy);
+                wrappedRejectHandler = proxy;
+            }
+        } catch (Throwable ignored) {
+            // Class may not be loaded until login/session initialization
+        }
+    }
+
     private static void startWindowManagerAndFileWatcher() {
         Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
             @Override
@@ -510,17 +642,19 @@ public class AsycudaBoot {
                         }
                     } else if (event instanceof FocusEvent) {
                         FocusEvent fe = (FocusEvent) event;
-                        if (fe.getID() == FocusEvent.FOCUS_GAINED && fe.getComponent() != null) {
-                            if ((System.currentTimeMillis() - lastMousePressTime) < 650L && isEditableInput(fe.getComponent())) {
-                                triggerAndroidKeyboard();
-                            }
+                        if (fe.getID() == FocusEvent.FOCUS_GAINED && fe.getComponent() != null
+                                && (System.currentTimeMillis() - lastMousePressTime) < 650L
+                                && isEditableInput(fe.getComponent())) {
+                            triggerAndroidKeyboard();
                         }
                     }
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                    // Ignore UI event listener exceptions
+                }
             }
         }, AWTEvent.MOUSE_EVENT_MASK | AWTEvent.FOCUS_EVENT_MASK);
 
-        // 1. Pure-Java Window Manager (Auto-maximize main ASYCUDA frame & focus dialogs without openbox)
+        // 1. Pure-Java Window Manager (Auto-maximize main ASYCUDA frame, focus dialogs & detect SOClass alerts)
         Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
             @Override
             public void eventDispatched(AWTEvent event) {
@@ -539,6 +673,7 @@ public class AsycudaBoot {
                                         f.setBounds(0, 0, scr.width, scr.height);
                                     }
                                 } else if (w instanceof Dialog) {
+                                    checkForSoClassUpdateAlert(w);
                                     redirectFileChooserToDownloads(w);
                                     if (w.getX() <= 0 && w.getY() <= 0) {
                                         w.setLocationRelativeTo(w.getOwner());
@@ -546,25 +681,33 @@ public class AsycudaBoot {
                                 }
                                 w.toFront();
                                 w.requestFocus();
-                            } catch (Throwable ignored) {}
+                            } catch (Throwable ignored) {
+                                // Ignore window layout adjustment errors
+                            }
                         }
                     });
                 }
             }
         }, AWTEvent.WINDOW_EVENT_MASK);
 
-        // 2. Background Daemon Thread: Watch tmp/ and auto-rename .so downloads in Asycuda_Files/
+        // 2. Background Daemon Thread: Watch tmp/, auto-rename .so downloads, and hook SOClass RejectHandler
         Thread watcher = new Thread(new Runnable() {
             @Override
             public void run() {
-                File tmpDir = new File(System.getProperty("java.io.tmpdir", "/data/data/iq.asycuda/files/tmp"));
-                File dlDir = new File("/storage/emulated/0/Download/Asycuda_Files");
-                while (true) {
+                File tmpDir = new File(System.getProperty("java.io.tmpdir", DEFAULT_TMP_DIR));
+                File dlDir = new File(DOWNLOAD_FILES_DIR);
+                while (!Thread.currentThread().isInterrupted()) {
                     try {
+                        installSoClassRejectHandlerHook();
                         scanTmpDir(tmpDir, 0);
                         scanDownloadsForSo(dlDir);
                         Thread.sleep(250);
-                    } catch (Throwable ignored) {}
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Throwable ignored) {
+                        // Continue watching on transient I/O errors
+                    }
                 }
             }
         }, "Asycuda-FileDaemon");
@@ -574,8 +717,10 @@ public class AsycudaBoot {
 
     private static void redirectFileChooserToDownloads(Container root) {
         if (root == null) return;
-        File dlDir = new File("/storage/emulated/0/Download/Asycuda_Files");
-        if (!dlDir.exists()) dlDir.mkdirs();
+        File dlDir = new File(DOWNLOAD_FILES_DIR);
+        if (!dlDir.exists() && !dlDir.mkdirs()) {
+            // Directory already exists or will be created on demand
+        }
         if (root instanceof FileDialog) {
             FileDialog fd = (FileDialog) root;
             String cur = fd.getDirectory();
@@ -634,9 +779,16 @@ public class AsycudaBoot {
                     if (!"so".equals(ext) && !"bin".equals(ext)) {
                         String base = f.getName().substring(0, f.getName().length() - 3);
                         File renamed = new File(f.getParentFile(), base + "." + ext);
-                        f.renameTo(renamed);
+                        if (!f.renameTo(renamed)) {
+                            // Keep original file if rename is not permitted
+                        }
                     }
-                } catch (Throwable ignored) {}
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (Throwable ignored) {
+                    // Ignore individual file inspection failures
+                }
             }
         }
     }
@@ -664,7 +816,9 @@ public class AsycudaBoot {
                         s.setReceiveBufferSize(1024 * 1024);
                         s.setSendBufferSize(1024 * 1024);
                         s.setTrafficClass(0x10 | 0x08);
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                        // Socket options are best-effort
+                    }
                     return s;
                 }
 
@@ -673,14 +827,16 @@ public class AsycudaBoot {
                     return defaultFactory.createServerSocket(port);
                 }
             });
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // RMI socket factory may already be set
+        }
     }
 
     public static void main(String[] args) throws Exception {
         installHighSpeedNetworkTuning();
         System.setSecurityManager(new SecurityManager() {
-            @Override public void checkPermission(Permission perm) {}
-            @Override public void checkPermission(Permission perm, Object context) {}
+            @Override public void checkPermission(Permission perm) { /* Allow JNLP client runtime permissions */ }
+            @Override public void checkPermission(Permission perm, Object context) { /* Allow JNLP client runtime permissions */ }
             @Override public void checkWrite(String file) {
                 if (Boolean.TRUE.equals(IN_CHECK.get())) return;
                 if (file != null && file.contains("/tmp/")) {
@@ -689,8 +845,12 @@ public class AsycudaBoot {
                         File f = new File(file);
                         File parent = f.getParentFile();
                         if (parent != null) {
-                            if (parent.isFile()) parent.delete();
-                            if (!parent.exists()) parent.mkdirs();
+                            if (parent.isFile() && !parent.delete()) {
+                                // Ignore if unable to delete stale file
+                            }
+                            if (!parent.exists() && !parent.mkdirs()) {
+                                // Ignore if directory already exists
+                            }
                         }
                     } finally {
                         IN_CHECK.remove();
@@ -715,9 +875,12 @@ public class AsycudaBoot {
                     return pdfPrinter;
                 }
             });
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // Continue if default print service provider is already registered
+        }
 
         startWindowManagerAndFileWatcher();
-        so.kernel.client.DesktopMain.main(args);
+        Class<?> desktopMain = Class.forName("so.kernel.client.DesktopMain");
+        desktopMain.getMethod("main", String[].class).invoke(null, (Object) args);
     }
 }

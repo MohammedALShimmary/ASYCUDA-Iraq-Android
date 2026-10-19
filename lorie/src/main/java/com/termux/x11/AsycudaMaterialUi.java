@@ -60,9 +60,35 @@ public class AsycudaMaterialUi {
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
     public static final String CURRENT_POLICY_VERSION = "1.1-2026.10";
+    public static final int CURRENT_CHANGELOG_VERSION = 38;
+    private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
     private static final String KEY_ASSIST_KEYS = "assist_keys_enabled";
+
+    private static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
+    private static final String KU_DONE = "تەواو";
+    private static final String AR_ON = "مفعّل";
+    private static final String KU_ON = "چالاک";
+    private static final String AR_OFF = "متوقف";
+    private static final String KU_OFF = "ناچالاک";
+    private static final String KEY_FROM_BROADCAST = "fromBroadcast";
+    private static final String MODE_SCALED = "scaled";
+    private static final String MODE_EXACT = "exact";
+    private static final String MODE_CUSTOM = "custom";
+    private static final String TIMEOUT_NEVER = "never";
+    private static final String ACTION_DOUBLE_BACK_EXIT = "double_back_exit";
+    private static final String KEY_ACCEPTED = "accepted";
+    private static final String KEY_POLICY_VERSION = "policy_version";
+    private static final String KEY_CLOUD_SYNCED = "cloud_synced";
+    private static final String KEY_CONSENT_ID = "consent_id";
+    private static final String KEY_SIGNATORY_NAME = "signatory_name";
+    private static final String KEY_COMPANY_NAME = "company_name";
+    private static final String KEY_APP_VERSION = "app_version";
+    private static final String KEY_ACCEPTED_UTC = "accepted_at_utc";
+    private static final String KEY_ACCEPTED_LOCAL = "accepted_at_local";
+    private static final String KEY_DEVICE_HASH = "device_hash";
+    private static final String KEY_SHA256_SIG = "sha256_signature";
 
     // Dark Mode Palette
     public static final int SURFACE_SHEET         = Color.parseColor("#F21C1C1E");
@@ -163,7 +189,9 @@ public class AsycudaMaterialUi {
             if (activity.prefs != null) {
                 return activity.prefs.showAdditionalKbd.get() && activity.prefs.additionalKbdVisible.get();
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // Fallback to SharedPreferences if activity prefs are uninitialized
+        }
         return activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(KEY_ASSIST_KEYS, true);
     }
@@ -180,7 +208,9 @@ public class AsycudaMaterialUi {
                 activity.prefs.additionalKbdVisible.put(enabled);
             }
             activity.toggleExtraKeys(enabled, true);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // Ignore toolbar toggle error if view hierarchy is not ready
+        }
     }
 
     public static boolean isRtl(Context ctx) {
@@ -223,8 +253,24 @@ public class AsycudaMaterialUi {
             if (pi != null && pi.versionName != null && !pi.versionName.isEmpty()) {
                 return "v" + pi.versionName;
             }
-        } catch (Throwable ignored) {}
-        return "v3.7.0";
+        } catch (Throwable ignored) {
+            // Fallback to current release version label
+        }
+        return "v3.8.0";
+    }
+
+    public static boolean shouldShowWhatsNew(Context ctx) {
+        if (ctx == null) return false;
+        SharedPreferences sp = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sp.getInt(KEY_LAST_CHANGELOG_VER, 0) < CURRENT_CHANGELOG_VERSION;
+    }
+
+    public static void markWhatsNewSeen(Context ctx) {
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_LAST_CHANGELOG_VER, CURRENT_CHANGELOG_VERSION)
+                .apply();
     }
 
     public static void showControlCenter(MainActivity activity, MenuActionCallback cb) {
@@ -254,7 +300,7 @@ public class AsycudaMaterialUi {
                 "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView subtitle = new TextView(activity);
@@ -276,7 +322,7 @@ public class AsycudaMaterialUi {
         header.addView(langPill);
 
         TextView closeBtn = createCupertinoButton(activity,
-                tr(activity, "Done", "تم", "تەواو"),
+                tr(activity, "Done", "تم", KU_DONE),
                 true, false, v -> dialog.dismiss());
         header.addView(closeBtn);
         root.addView(header);
@@ -303,7 +349,7 @@ public class AsycudaMaterialUi {
                 autoKbd
                         ? tr(activity, "Automatically opens when tapping input fields", "يظهر الكيبورد تلقائياً عند النقر على حقول الإدخال", "خۆکارانە دەکرێتەوە لە کاتی داگرتنی خانەکانی نووسین")
                         : tr(activity, "Disabled (press Back button to open manually)", "متوقف حالياً (اضغط زر الرجوع لإظهاره يدوياً)", "ناچالاکە (دوگمەی گەڕانەوە دابگرە بۆ کردنەوەی)"),
-                autoKbd ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                autoKbd ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 autoKbd, false, () -> {
                     boolean next = !isAutoKeyboardEnabled(activity);
                     setAutoKeyboardEnabled(activity, next);
@@ -318,7 +364,7 @@ public class AsycudaMaterialUi {
                 assistKeys
                         ? tr(activity, "Shows top bar with TAB, CTRL, ESC, F-keys & arrows", "يعرض شريط أزرار TAB و CTRL و ESC والأسهم في الأعلى", "شریتی سەرەوە بۆ TAB و CTRL و ESC و تیرەکان پیشان دەدات")
                         : tr(activity, "Shortcut bar is hidden for maximum screen space", "شريط الاختصارات مخفي حالياً لتوفير مساحة أكبر للشاشة", "شریتی قەدبڕەکان شاردراوەتەوە بۆ پانتایی زیاتری شاشە"),
-                assistKeys ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                assistKeys ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 assistKeys, false, () -> {
                     boolean next = !isAssistKeysEnabled(activity);
                     setAssistKeysEnabled(activity, next);
@@ -430,7 +476,7 @@ public class AsycudaMaterialUi {
                 "ڕێکخستنی شاشە و کۆنترۆڵ"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView subtitle = new TextView(activity);
@@ -444,7 +490,7 @@ public class AsycudaMaterialUi {
         header.addView(titleCol);
 
         header.addView(createCupertinoButton(activity,
-                tr(activity, "Done", "تم", "تەواو"),
+                tr(activity, "Done", "تم", KU_DONE),
                 true, false, v -> dialog.dismiss()));
         root.addView(header);
         root.addView(createHairlineDivider(activity));
@@ -463,11 +509,11 @@ public class AsycudaMaterialUi {
         Runnable applyChanges = () -> {
             try {
                 Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
-                broadcast.putExtra("fromBroadcast", true);
+                broadcast.putExtra(KEY_FROM_BROADCAST, true);
                 broadcast.setPackage(activity.getPackageName());
                 activity.sendBroadcast(broadcast);
                 activity.onPreferencesChangedCallback();
-            } catch (Throwable ignored) {}
+            } catch (Exception ignored) { /* Best-effort UI operation */ }
             dialog.dismiss();
             showDisplaySettingsModal(activity, cb);
         };
@@ -508,7 +554,7 @@ public class AsycudaMaterialUi {
         body.addView(createSectionHeader(activity,
                 tr(activity, "DISPLAY RESOLUTION & SCALING", "دقة العرض وتكبير النوافذ", "وردی شاشە و قەبارەی پەنجەرەکان")));
 
-        String curResMode = prefs != null ? prefs.displayResolutionMode.get() : "scaled";
+        String curResMode = prefs != null ? prefs.displayResolutionMode.get() : MODE_SCALED;
         LinearLayout resRow = new LinearLayout(activity);
         resRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams rrLp = new LinearLayout.LayoutParams(
@@ -518,8 +564,8 @@ public class AsycudaMaterialUi {
 
         addSegmentedChoice(activity, resRow,
                 tr(activity, "Scaled", "مقياسي", "پێوانەکراو"),
-                "scaled".equals(curResMode), () -> {
-                    if (prefs != null) prefs.displayResolutionMode.put("scaled");
+                MODE_SCALED.equals(curResMode), () -> {
+                    if (prefs != null) prefs.displayResolutionMode.put(MODE_SCALED);
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, resRow,
@@ -530,19 +576,19 @@ public class AsycudaMaterialUi {
                 });
         addSegmentedChoice(activity, resRow,
                 tr(activity, "Exact", "ثابتة", "دیاریکراو"),
-                "exact".equals(curResMode), () -> {
-                    if (prefs != null) prefs.displayResolutionMode.put("exact");
+                MODE_EXACT.equals(curResMode), () -> {
+                    if (prefs != null) prefs.displayResolutionMode.put(MODE_EXACT);
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, resRow,
                 tr(activity, "Custom", "مخصصة", "تایبەت"),
-                "custom".equals(curResMode), () -> {
-                    if (prefs != null) prefs.displayResolutionMode.put("custom");
+                MODE_CUSTOM.equals(curResMode), () -> {
+                    if (prefs != null) prefs.displayResolutionMode.put(MODE_CUSTOM);
                     applyChanges.run();
                 });
         body.addView(resRow);
 
-        if ("scaled".equals(curResMode) && prefs != null) {
+        if (MODE_SCALED.equals(curResMode) && prefs != null) {
             int curScale = Math.max(60, Math.min(200, prefs.displayScale.get()));
             final long[] lastScaleTick = new long[] { 0 };
             LinearLayout scaleSlider = createLivePreviewSliderCard(
@@ -554,7 +600,7 @@ public class AsycudaMaterialUi {
                     60, 200, curScale,
                     new LiveSliderCallback() {
                         @Override
-                        public void onStartPreview() {}
+                        public void onStartPreview() { /* No-op before drag */ }
 
                         @Override
                         public void onLiveProgress(int value) {
@@ -565,7 +611,7 @@ public class AsycudaMaterialUi {
                                 try {
                                     activity.getLorieView().reloadPreferences(prefs);
                                     activity.getLorieView().triggerCallback();
-                                } catch (Throwable ignored) {}
+                                } catch (Exception ignored) { /* Best-effort UI operation */ }
                             }
                         }
 
@@ -574,15 +620,15 @@ public class AsycudaMaterialUi {
                             prefs.get().edit().putInt("displayScale", finalValue).apply();
                             try {
                                 Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
-                                broadcast.putExtra("fromBroadcast", true);
+                                broadcast.putExtra(KEY_FROM_BROADCAST, true);
                                 broadcast.setPackage(activity.getPackageName());
                                 activity.sendBroadcast(broadcast);
                                 activity.onPreferencesChangedCallback();
-                            } catch (Throwable ignored) {}
+                            } catch (Exception ignored) { /* Best-effort UI operation */ }
                         }
                     });
             body.addView(scaleSlider);
-        } else if ("exact".equals(curResMode) && prefs != null) {
+        } else if (MODE_EXACT.equals(curResMode) && prefs != null) {
             String curExact = prefs.displayResolutionExact.get();
             LinearLayout exactRow = new LinearLayout(activity);
             exactRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -599,7 +645,7 @@ public class AsycudaMaterialUi {
                 });
             }
             body.addView(exactRow);
-        } else if ("custom".equals(curResMode) && prefs != null) {
+        } else if (MODE_CUSTOM.equals(curResMode) && prefs != null) {
             LinearLayout customRow = new LinearLayout(activity);
             customRow.setOrientation(LinearLayout.HORIZONTAL);
             customRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -697,7 +743,7 @@ public class AsycudaMaterialUi {
                                     pager.bringToFront();
                                 }
                             }
-                        } catch (Throwable ignored) {}
+                        } catch (Exception ignored) { /* Best-effort UI operation */ }
                     }
 
                     @Override
@@ -707,7 +753,7 @@ public class AsycudaMaterialUi {
                         }
                         try {
                             activity.getTerminalToolbarViewPager().setAlpha(value / 100.0f);
-                        } catch (Throwable ignored) {}
+                        } catch (Exception ignored) { /* Best-effort UI operation */ }
                     }
 
                     @Override
@@ -724,11 +770,11 @@ public class AsycudaMaterialUi {
                                 }
                             }
                             Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
-                            broadcast.putExtra("fromBroadcast", true);
+                            broadcast.putExtra(KEY_FROM_BROADCAST, true);
                             broadcast.setPackage(activity.getPackageName());
                             activity.sendBroadcast(broadcast);
                             activity.onPreferencesChangedCallback();
-                        } catch (Throwable ignored) {}
+                        } catch (Exception ignored) { /* Best-effort UI operation */ }
                     }
                 });
         body.addView(opacitySlider);
@@ -737,7 +783,7 @@ public class AsycudaMaterialUi {
         body.addView(createSectionHeader(activity,
                 tr(activity, "KEEP SCREEN AWAKE (IDLE TIMEOUT)", "إبقاء الشاشة قيد التشغيل أثناء العمل", "هێشتنەوەی شاشە بە کراوەیی لە کاتی کارکردن")));
 
-        String curTimeout = prefs != null ? prefs.screenIdleTimeout.get() : "never";
+        String curTimeout = prefs != null ? prefs.screenIdleTimeout.get() : TIMEOUT_NEVER;
         LinearLayout timeoutRow = new LinearLayout(activity);
         timeoutRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams tmLp = new LinearLayout.LayoutParams(
@@ -747,8 +793,8 @@ public class AsycudaMaterialUi {
 
         addSegmentedChoice(activity, timeoutRow,
                 tr(activity, "Always On", "دائماً قيد التشغيل", "هەمیشە کراوە"),
-                "never".equals(curTimeout), () -> {
-                    if (prefs != null) prefs.screenIdleTimeout.put("never");
+                TIMEOUT_NEVER.equals(curTimeout), () -> {
+                    if (prefs != null) prefs.screenIdleTimeout.put(TIMEOUT_NEVER);
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, timeoutRow,
@@ -774,7 +820,7 @@ public class AsycudaMaterialUi {
         body.addView(createSectionHeader(activity,
                 tr(activity, "ANDROID BACK BUTTON ACTION", "وظيفة زر الرجوع في الهاتف", "کرداری دوگمەی گەڕانەوەی مۆبایل")));
 
-        String curBack = prefs != null ? prefs.backButtonAction.get() : "double_back_exit";
+        String curBack = prefs != null ? prefs.backButtonAction.get() : ACTION_DOUBLE_BACK_EXIT;
         LinearLayout backRow = new LinearLayout(activity);
         backRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams bkLp = new LinearLayout.LayoutParams(
@@ -784,8 +830,8 @@ public class AsycudaMaterialUi {
 
         addSegmentedChoice(activity, backRow,
                 tr(activity, "Double-Press to Exit", "ضغطتين للخروج", "دوو جار داگرتن بۆ دەرچوون"),
-                "double_back_exit".equals(curBack), () -> {
-                    if (prefs != null) prefs.backButtonAction.put("double_back_exit");
+                ACTION_DOUBLE_BACK_EXIT.equals(curBack), () -> {
+                    if (prefs != null) prefs.backButtonAction.put(ACTION_DOUBLE_BACK_EXIT);
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, backRow,
@@ -801,7 +847,7 @@ public class AsycudaMaterialUi {
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, backRow,
-                tr(activity, "Disabled", "بدون إجراء", "ناچالاک"),
+                tr(activity, "Disabled", "بدون إجراء", KU_OFF),
                 "no action".equals(curBack), () -> {
                     if (prefs != null) prefs.backButtonAction.put("no action");
                     applyChanges.run();
@@ -821,7 +867,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "Reserve Space for Shortcut Bar", "تخصيص مساحة مستقلة لشريط الاختصارات", "تەرخانکردنی شوێن بۆ شریتی قەدبڕەکان"),
                 tr(activity, "Shift ASYCUDA window below the shortcut bar so menus never overlap", "إزاحة نافذة النظام أسفل شريط الاختصارات لمنع تغطية القوائم العلوية", "داگرتنی پەنجەرەی سیستەم لە ژێر شریتەکە بۆ ئەوەی لیستەکان دانەپۆشێت"),
-                adjustHeightEK ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                adjustHeightEK ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 adjustHeightEK, false, () -> {
                     if (prefs != null) prefs.adjustHeightForEK.put(!adjustHeightEK);
                     applyChanges.run();
@@ -831,7 +877,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_display,
                 tr(activity, "Fullscreen Mode", "وضع ملء الشاشة", "دۆخی شاشەی پڕ"),
                 tr(activity, "Hide Android status and navigation bars while working", "إخفاء شريط الحالة وأزرار التنقل الخاصة بالهاتف أثناء العمل", "شاردنەوەی شریتی سەرەوە و خوارەوەی سیستەم لە کاتی کارکردن"),
-                isFullscreen ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                isFullscreen ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 isFullscreen, false, () -> {
                     if (prefs != null) prefs.fullscreen.put(!isFullscreen);
                     applyChanges.run();
@@ -841,7 +887,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_display,
                 tr(activity, "Avoid Camera Cutout (Notch)", "تجنب ثقب الكاميرا الأمامية", "دوورکەوتنەوە لە شوێنی کامێرای پێشەوە"),
                 tr(activity, "Keep the workspace clear of the front camera cutout area", "منع تداخل نافذة النظام مع منطقة الكاميرا الأمامية للهاتف", "ڕێگری لە تێکەڵبوونی پەنجەرەی سیستەم لەگەڵ کامێرای پێشەوە"),
-                hideCutout ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                hideCutout ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 hideCutout, false, () -> {
                     if (prefs != null) prefs.hideCutout.put(!hideCutout);
                     applyChanges.run();
@@ -851,7 +897,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_display,
                 tr(activity, "Stretch to Fill Screen", "تمديد العرض لملء الشاشة", "کشاندنی دیمەن بۆ پڕکردنەوەی شاشە"),
                 tr(activity, "Expand desktop display across the full screen aspect ratio", "تمديد عرض سطح المكتب ليغطي كامل أبعاد الشاشة", "فراوانکردنی پەنجەرەی سیستەم بۆ پڕکردنەوەی تەواوی شاشەکە"),
-                isStretch ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                isStretch ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 isStretch, false, () -> {
                     if (prefs != null) prefs.displayStretch.put(!isStretch);
                     applyChanges.run();
@@ -861,7 +907,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "On-Screen Mouse Buttons", "أزرار الماوس العائمة", "دوگمە سەرئاوکەوتووەکانی ماوس"),
                 tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأيمن العائمة على الشاشة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست لەسەر شاشە"),
-                mouseHelper ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                mouseHelper ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 mouseHelper, false, () -> {
                     if (prefs != null) prefs.showMouseHelper.put(!mouseHelper);
                     applyChanges.run();
@@ -871,7 +917,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "Tap to Move Cursor", "النقر لتحريك مؤشر الماوس", "داگرتن بۆ گواستنەوەی نیشاندەری ماوس"),
                 tr(activity, "Jump cursor directly to tapped position in Trackpad mode", "نقل مؤشر الماوس مباشرة إلى موضع اللمس في وضع لوحة اللمس", "گواستنەوەی ڕاستەوخۆی نیشاندەری ماوس بۆ شوێنی داگرتن"),
-                tapToMove ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                tapToMove ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 tapToMove, false, () -> {
                     if (prefs != null) prefs.tapToMove.put(!tapToMove);
                     applyChanges.run();
@@ -881,7 +927,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_keyboard,
                 tr(activity, "Resize Window When Keyboard Opens", "تحجيم النافذة عند ظهور الكيبورد", "گۆڕینی قەبارەی پەنجەرە لەگەڵ تەختەکلیل"),
                 tr(activity, "Adjust desktop height above the on-screen keyboard", "تعديل ارتفاع الشاشة تلقائياً فوق لوحة المفاتيح عند الكتابة", "ڕێکخستنی بەرزی شاشە لە سەرووی تەختەکلیل لە کاتی نووسین"),
-                adjustForKbd ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                adjustForKbd ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 adjustForKbd, false, () -> {
                     if (prefs != null) prefs.Reseed.put(!adjustForKbd);
                     applyChanges.run();
@@ -891,7 +937,7 @@ public class AsycudaMaterialUi {
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_documents,
                 tr(activity, "Automatic Clipboard Sync", "المزامنة التلقائية للحافظة", "هاوکاتکردنی خۆکاری کلیپبۆرد"),
                 tr(activity, "Copy and paste text seamlessly between Android and ASYCUDA", "نسخ ولصق النصوص مباشرة بين تطبيقات الهاتف ونظام أسيكودا", "کۆپی و پەیستکردنی دەق لە نێوان مۆبایل و سیستەمی ئەسیکۆدا"),
-                clipSync ? tr(activity, "ON", "مفعّل", "چالاک") : tr(activity, "OFF", "متوقف", "ناچالاک"),
+                clipSync ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 clipSync, false, () -> {
                     if (prefs != null) prefs.clipboardEnable.put(!clipSync);
                     applyChanges.run();
@@ -949,7 +995,7 @@ public class AsycudaMaterialUi {
         valueBadge.setText(clampedCur + "%");
         valueBadge.setTextColor(SYSTEM_BLUE);
         valueBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        valueBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        valueBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         valueBadge.setPadding(dp(activity, 10), dp(activity, 3), dp(activity, 10), dp(activity, 3));
         valueBadge.setBackground(createCardDrawable(activity, SYSTEM_BLUE_TINT, 8, 0));
         topRow.addView(valueBadge);
@@ -1019,7 +1065,7 @@ public class AsycudaMaterialUi {
                     try {
                         wlp.setBlurBehindRadius(0);
                         w.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-                    } catch (Throwable ignored) {}
+                    } catch (Exception ignored) { /* Best-effort UI operation */ }
                 }
                 w.setAttributes(wlp);
             }
@@ -1048,7 +1094,7 @@ public class AsycudaMaterialUi {
                     try {
                         w.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
                         wlp.setBlurBehindRadius(dp(activity, 28));
-                    } catch (Throwable ignored) {}
+                    } catch (Exception ignored) { /* Best-effort UI operation */ }
                 }
                 w.setAttributes(wlp);
             }
@@ -1099,7 +1145,7 @@ public class AsycudaMaterialUi {
         btn.setText(label);
         btn.setTextColor(selected ? TEXT_PRIMARY : TEXT_SECONDARY);
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        btn.setTypeface(Typeface.create("sans-serif-medium", selected ? Typeface.BOLD : Typeface.NORMAL));
+        btn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, selected ? Typeface.BOLD : Typeface.NORMAL));
         btn.setGravity(Gravity.CENTER);
         btn.setPadding(dp(ctx, 8), dp(ctx, 9), dp(ctx, 8), dp(ctx, 9));
         btn.setBackground(createRippleCardDrawable(ctx,
@@ -1142,7 +1188,7 @@ public class AsycudaMaterialUi {
                 "پشکنینی نوێکردنەوەکان"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView sub = new TextView(activity);
@@ -1179,7 +1225,7 @@ public class AsycudaMaterialUi {
                 "گەڕان بۆ وەشانی نوێ..."));
         appStatus.setTextColor(TEXT_PRIMARY);
         appStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        appStatus.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        appStatus.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         appCard.addView(appStatus);
 
         TextView appNotes = new TextView(activity);
@@ -1232,7 +1278,7 @@ public class AsycudaMaterialUi {
                 "پەیوەندیکردن بە سێرڤەری وەزارەتی دارایی..."));
         mofStatus.setTextColor(TEXT_PRIMARY);
         mofStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        mofStatus.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        mofStatus.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         mofCard.addView(mofStatus);
 
         TextView mofDetail = new TextView(activity);
@@ -1345,7 +1391,7 @@ public class AsycudaMaterialUi {
                         actionBtn.setBackground(createCupertinoButtonDrawable(activity, true, false));
                         actionBtn.setAlpha(1.0f);
                         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                            try { dialog.dismiss(); } catch (Throwable ignored) {}
+                            try { dialog.dismiss(); } catch (Exception ignored) { /* Best-effort UI operation */ }
                             if (onRestartNow != null) onRestartNow.run();
                         }, 1200);
                     } else {
@@ -1515,7 +1561,7 @@ public class AsycudaMaterialUi {
                 "ناردنی ڕاپۆرتی کێشەی تەکنیکی"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView subtitle = new TextView(activity);
@@ -1598,7 +1644,7 @@ public class AsycudaMaterialUi {
                 "وێنەی شاشە یان هەڵەکە (ئارەزوومەندانە)"));
         imgTitle.setTextColor(TEXT_PRIMARY);
         imgTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        imgTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        imgTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         imgTextCol.addView(imgTitle);
 
         TextView imgSub = new TextView(activity);
@@ -1735,7 +1781,7 @@ public class AsycudaMaterialUi {
                                 thumbView.setImageBitmap(bmp);
                                 thumbView.setVisibility(View.VISIBLE);
                             }
-                        } catch (Throwable ignored) {}
+                        } catch (Exception ignored) { /* Best-effort UI operation */ }
                         long kb = Math.max(1, imageFile.length() / 1024);
                         imgSub.setText(displayName + " (" + kb + " KB)");
                         imgSub.setTextColor(SYSTEM_GREEN);
@@ -1784,12 +1830,12 @@ public class AsycudaMaterialUi {
         title.setText(tr(activity, "Interface Language", "لغة واجهة التطبيق", "زمانی ڕووکاری بەرنامە"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
 
         header.addView(createCupertinoButton(activity,
-                tr(activity, "Done", "تم", "تەواو"),
+                tr(activity, "Done", "تم", KU_DONE),
                 false, false, v -> dialog.dismiss()));
         root.addView(header);
         root.addView(createHairlineDivider(activity));
@@ -1866,7 +1912,7 @@ public class AsycudaMaterialUi {
         t.setText(titleText);
         t.setTextColor(TEXT_PRIMARY);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        t.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         textCol.addView(t);
 
         TextView s = new TextView(ctx);
@@ -1878,11 +1924,11 @@ public class AsycudaMaterialUi {
 
         TextView badge = new TextView(ctx);
         badge.setText(isSelected
-                ? tr(ctx, "Active", "مفعّل", "هەڵبژێردراو")
+                ? tr(ctx, "Active", AR_ON, "هەڵبژێردراو")
                 : code.toUpperCase(Locale.US));
         badge.setTextColor(isSelected ? SYSTEM_BLUE : TEXT_SECONDARY);
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        badge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        badge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         row.addView(badge);
 
         parent.addView(row);
@@ -1930,7 +1976,7 @@ public class AsycudaMaterialUi {
         t.setText(titleText);
         t.setTextColor(isDestructive ? SYSTEM_RED : TEXT_PRIMARY);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        t.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         textCol.addView(t);
 
         TextView d = new TextView(ctx);
@@ -1947,7 +1993,7 @@ public class AsycudaMaterialUi {
             boolean isOn = isAccentIcon;
             pill.setTextColor(isOn ? SYSTEM_GREEN : TEXT_SECONDARY);
             pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-            pill.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            pill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
             pill.setPadding(dp(ctx, 8), dp(ctx, 3), dp(ctx, 8), dp(ctx, 3));
             pill.setBackground(createCardDrawable(ctx,
                     isOn ? SYSTEM_GREEN_TINT : SURFACE_INSET_CARD,
@@ -1996,7 +2042,7 @@ public class AsycudaMaterialUi {
                 "پەڕگەکانی PDF و بەڵگەنامە چاپکراوەکان"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
 
@@ -2009,7 +2055,7 @@ public class AsycudaMaterialUi {
             header.addView(selectAllBtn);
 
             header.addView(createCupertinoButton(activity,
-                    tr(activity, "Done", "تم", "تەواو"),
+                    tr(activity, "Done", "تم", KU_DONE),
                     false, false, v -> dialog.dismiss()));
             root.addView(header);
             root.addView(createHairlineDivider(activity));
@@ -2029,7 +2075,7 @@ public class AsycudaMaterialUi {
             TextView selectedCountView = new TextView(activity);
             selectedCountView.setTextColor(TEXT_PRIMARY);
             selectedCountView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-            selectedCountView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            selectedCountView.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
             selectedCountView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             batchBar.addView(selectedCountView);
 
@@ -2132,7 +2178,7 @@ public class AsycudaMaterialUi {
                 checkBtn.setGravity(Gravity.CENTER);
                 checkBtn.setTextColor(TEXT_PRIMARY);
                 checkBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-                checkBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                checkBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
                 checkBtn.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 8, SEPARATOR_HAIRLINE));
                 LinearLayout.LayoutParams chkLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
                 chkLp.setMarginEnd(dp(activity, 10));
@@ -2158,7 +2204,7 @@ public class AsycudaMaterialUi {
                 nameView.setText(f.getName());
                 nameView.setTextColor(TEXT_PRIMARY);
                 nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-                nameView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                nameView.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
                 infoCol.addView(nameView);
 
                 long kb = Math.max(1, f.length() / 1024);
@@ -2208,7 +2254,7 @@ public class AsycudaMaterialUi {
             root.addView(scroll);
         } else {
             header.addView(createCupertinoButton(activity,
-                    tr(activity, "Done", "تم", "تەواو"),
+                    tr(activity, "Done", "تم", KU_DONE),
                     false, false, v -> dialog.dismiss()));
             root.addView(header);
             root.addView(createHairlineDivider(activity));
@@ -2264,12 +2310,12 @@ public class AsycudaMaterialUi {
                 "دەربارەی بەرنامە و مۆڵەتە سەرچاوە کراوەکان"));
         topTitle.setTextColor(TEXT_PRIMARY);
         topTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        topTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        topTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         topTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         topBar.addView(topTitle);
 
         topBar.addView(createCupertinoButton(activity,
-                tr(activity, "Done", "تم", "تەواو"),
+                tr(activity, "Done", "تم", KU_DONE),
                 false, false, v -> dialog.dismiss()));
         root.addView(topBar);
         root.addView(createHairlineDivider(activity));
@@ -2315,14 +2361,14 @@ public class AsycudaMaterialUi {
                 "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
         appTitle.setTextColor(TEXT_PRIMARY);
         appTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
-        appTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        appTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         heroTextCol.addView(appTitle);
 
         TextView verPill = new TextView(activity);
         verPill.setText("Release " + getAppVersionLabel(activity) + "  |  Standalone ARM64 Desktop Client");
         verPill.setTextColor(SYSTEM_BLUE);
         verPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        verPill.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        verPill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         heroTextCol.addView(verPill);
         heroTop.addView(heroTextCol);
         heroCard.addView(heroTop);
@@ -2338,7 +2384,62 @@ public class AsycudaMaterialUi {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         descLp.topMargin = dp(activity, 10);
         heroCard.addView(appDesc, descLp);
+
+        TextView whatsNewBtn = createCupertinoButton(activity,
+                tr(activity, "What's New in " + getAppVersionLabel(activity) + " (Changelog)",
+                        "ما الجديد في الإصدار " + getAppVersionLabel(activity) + " (سجل التحديثات)",
+                        "چی نوێ هەیە لە وەشانی " + getAppVersionLabel(activity)),
+                false, false, v -> showWhatsNewModal(activity, null));
+        LinearLayout.LayoutParams wnLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        wnLp.topMargin = dp(activity, 10);
+        whatsNewBtn.setLayoutParams(wnLp);
+        heroCard.addView(whatsNewBtn);
         content.addView(heroCard);
+
+        // 1.5 Security & Privacy Compliance Card (SonarQube Cloud / Snyk / OWASP MASVS)
+        LinearLayout secCard = new LinearLayout(activity);
+        secCard.setOrientation(LinearLayout.VERTICAL);
+        secCard.setPadding(pad, pad, pad, pad);
+        secCard.setBackground(createCardDrawable(activity,
+                SURFACE_GROUPED_CARD, 14, Color.parseColor("#4430D158")));
+        secCard.setLayoutParams(cardLp);
+
+        secCard.addView(createSectionHeader(activity,
+                tr(activity, "SECURITY, PRIVACY & OPEN-SOURCE VERIFICATION",
+                        "توثيق الأمان والخصوصية والفحص البرمجي",
+                        "پشتڕاستکردنەوەی ئاسایش و تایبەتمەندی")));
+
+        TextView secBadge = new TextView(activity);
+        secBadge.setText(tr(activity,
+                "✓ Audited by SonarQube Cloud & Snyk  •  Zero Credential Collection",
+                "✓ مفحوص عبر SonarQube Cloud و Snyk  •  صفر جمع لبيانات الدخول",
+                "✓ پشکێنراوە لەلایەن SonarQube Cloud و Snyk  •  سفر کۆکردنەوەی زانیاری نهێنی"));
+        secBadge.setTextColor(SYSTEM_GREEN);
+        secBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        secBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        secCard.addView(secBadge);
+
+        TextView secBody = new TextView(activity);
+        secBody.setText(tr(activity,
+                "• Zero Credential Interception: Your ASYCUDA username, password, and customs declarations are never read, stored, or transmitted by this wrapper.\n• 100% Open-Source Bridge: All custom Android compatibility classes (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) are published in full under java-bridge/ with reproducible build scripts.\n• Verified TLS & Package Signatures: Enforces X.509 certificate chain validation for asy.mof.gov.iq and SHA-256 + APK signature verification for updates.",
+                "• عدم جمع بيانات الدخول: لا يقوم التطبيق إطلاقاً بقراءة أو حفظ أو إرسال اسم المستخدم أو كلمة المرور أو التصاريح الكمركية الخاصة بك.\n• شفافية الكود المصدري 100%: جميع ملفات الجسر البرمجي (00_bootpatch.jar و 00_boot.jar و 00_jnlp.jar) منشورة بالكامل في مجلد java-bridge/ دون أي تعديل على ملفات وزارة المالية الرسمية.\n• اتصال مشفّر وموثّق: التحقق الكامل من شهادات الأمان الرقمية لخادم asy.mof.gov.iq والتوقيع الرقمي لتحديثات التطبيق.",
+                "• پاراستنی زانیاری چوونەژوورەوە: ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت بە هیچ شێوەیەک ناخوێندرێنەوە یان پاشەکەوت ناکرێن.\n• شەفافییەتی سەرچاوە کراوە ١٠٠٪: سەرجەم پەڕگەکانی پردی جاڤا لە فۆڵدەری java-bridge/ بە شێوەی سەرچاوە کراوە بڵاوکراونەتەوە بەبێ دەستکاریکردنی پەڕگە فەرمییەکانی وەزارەتی دارایی.\n• پەیوەندی پارێزراو: پشتڕاستکردنەوەی بڕوانامەی پاراستنی asy.mof.gov.iq و واژۆی دیجیتاڵی نوێکردنەوەکان."));
+        secBody.setTextColor(TEXT_SECONDARY);
+        secBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        sbLp.topMargin = dp(activity, 6);
+        sbLp.bottomMargin = dp(activity, 10);
+        secCard.addView(secBody, sbLp);
+
+        TextView secBtn = createCupertinoButton(activity,
+                tr(activity, "View Security Policy & Audit (SECURITY.md)",
+                        "عرض وثيقة الأمان والفحص (SECURITY.md)",
+                        "بینینی بەڵگەنامەی ئاسایش (SECURITY.md)"),
+                false, false, v -> cb.onOpenUrl("https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/blob/main/SECURITY.md"));
+        secCard.addView(secBtn);
+        content.addView(secCard);
 
         // 2. Developer Card
         LinearLayout devCard = new LinearLayout(activity);
@@ -2356,7 +2457,7 @@ public class AsycudaMaterialUi {
         devName.setText("Mohammed Ammar Hussein (Mohammed AL-Shimmary)");
         devName.setTextColor(TEXT_PRIMARY);
         devName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
-        devName.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        devName.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         devCard.addView(devName);
 
         TextView devRole = new TextView(activity);
@@ -2469,7 +2570,7 @@ public class AsycudaMaterialUi {
         badgeTitle.setText(getTermsAcceptanceBadgeTitle(activity));
         badgeTitle.setTextColor(accepted ? SYSTEM_GREEN : SYSTEM_BLUE);
         badgeTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        badgeTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        badgeTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         badgeTopRow.addView(badgeTitle);
         consentBadge.addView(badgeTopRow);
 
@@ -2500,24 +2601,147 @@ public class AsycudaMaterialUi {
         dialog.show();
     }
 
+    /**
+     * Post-install / post-update In-App Changelog Modal ("What's New in v3.8.0").
+     */
+    public static void showWhatsNewModal(MainActivity activity, Runnable onContinue) {
+        Dialog dialog = createModalDialog(activity, 0.88f, 660, onContinue == null);
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+
+        ImageView logo = new ImageView(activity);
+        logo.setImageResource(R.drawable.ic_asycuda_logo);
+        LinearLayout.LayoutParams lgLp = new LinearLayout.LayoutParams(dp(activity, 34), dp(activity, 34));
+        lgLp.setMarginEnd(dp(activity, 10));
+        header.addView(logo, lgLp);
+
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "What's New in Release " + getAppVersionLabel(activity),
+                "ما الجديد في التحديث " + getAppVersionLabel(activity),
+                "چی نوێ هەیە لە وەشانی " + getAppVersionLabel(activity)));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        titleCol.addView(title);
+
+        TextView subtitle = new TextView(activity);
+        subtitle.setText(tr(activity,
+                "Security Hardening, Open-Source Bridge Transparency & Smart SOClass Updater",
+                "تعزيز الأمان، الشفافية الكاملة للكود المصدري، والتحديث الذكي لملفات SOClass",
+                "بەهێزکردنی ئاسایش، شەفافییەتی سەرچاوە کراوە و نوێکەرەوەی زیرەکی SOClass"));
+        subtitle.setTextColor(SYSTEM_BLUE);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        titleCol.addView(subtitle);
+        header.addView(titleCol);
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scLp.topMargin = dp(activity, 10);
+        scLp.bottomMargin = dp(activity, 10);
+        scroll.setLayoutParams(scLp);
+
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        int p = dp(activity, 14);
+        card.setPadding(p, dp(activity, 12), p, dp(activity, 8));
+        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "1. Verified SSL/TLS & Cryptographic Update Protection",
+                        "1. توثيق شهادات الأمان (SSL/TLS) وحماية التحديثات",
+                        "١. پشتڕاستکردنەوەی بڕوانامەی پاراستن (SSL/TLS) و نوێکردنەوەکان"),
+                tr(activity,
+                        "Enforces strict X.509 certificate chain verification for asy.mof.gov.iq using the official Sectigo/ZeroSSL CA chain, verifies SHA-256 checksums and Android package signatures before installing app updates, and secures local X11/JVM communication with per-session authentication tokens.",
+                        "تفعيل التحقق الصارم من شهادات الأمان الرقمية لخادم وزارة المالية (asy.mof.gov.iq)، والتحقق من البصمة الرقمية (SHA-256) والتوقيع الرسمي للتطبيق قبل تثبيت أي تحديث، وتأمين قناة الاتصال الداخلية برموز تحقق مشفرة لكل جلسة.",
+                        "چالاککردنی پشکنینی وردی بڕوانامەی پاراستنی سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq)، و پشتڕاستکردنەوەی واژۆی دیجیتاڵی و SHA-256 پێش دامەزراندنی هەر نوێکردنەوەیەک."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "2. 100% Open-Source Java Bridge Transparency",
+                        "2. الشفافية الكاملة لملفات الجسر البرمجي (Java Bridge)",
+                        "٢. شەفافییەتی تەواوی پەڕگەکانی پردی جاڤا (Java Bridge)"),
+                tr(activity,
+                        "Published the complete Java source code and reproducible build scripts (java-bridge/) for all three Android bridge archives (00_bootpatch.jar, 00_boot.jar, and 00_jnlp.jar). Official Ministry of Finance JARs are never modified, and zero login credentials are ever collected.",
+                        "نشر الكود المصدري الكامل وأدوات البناء القياسية (في مجلد java-bridge/) لجميع ملفات التوافق الثلاثة (00_bootpatch.jar و 00_boot.jar و 00_jnlp.jar)، مع ضمان عدم المساس بملفات النظام الرسمية وعدم جمع أي بيانات دخول.",
+                        "بڵاوکردنەوەی تەواوی کۆدی سەرچاوە بۆ هەرسێ پەڕگەی پردی جاڤا لە فۆڵدەری java-bridge/، بەبێ هیچ دەستکارییەک لە پەڕگە فەرمییەکانی وەزارەتی دارایی."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "3. Automatic SOClass Alert Listener & Dynamic JNLP Sync",
+                        "3. الاستجابة التلقائية لتنبيهات SOClass والمزامنة الديناميكية",
+                        "٣. وەڵامدانەوەی خۆکاری ئاگادارکردنەوەی SOClass و هاوکاتکردنی پەڕگەکان"),
+                tr(activity,
+                        "Listens for ASYCUDA server SOClass update alerts (\"SOClass Client have to be updated\") and automatically opens the Update Center. Dynamically syncs the exact file list from AWIQWorld.jnlp (supporting any number of new or removed government JARs) and checks for app updates on launch.",
+                        "الاستماع التلقائي لتنبيهات خادم أسيكودا عند طلب تحديث ملفات (SOClass) وفتح نافذة التحديث فوراً، مع قراءة قائمة الملفات الرسمية من AWIQWorld.jnlp بشكل ديناميكي مهما تغير عدد الحزم في التحديثات المستقبلية.",
+                        "گوێگرتنی خۆکار بۆ ئاگادارکردنەوەکانی نوێکردنەوەی SOClass لە ڕاژەی ئەسیکۆدا و کردنەوەی ڕاستەوخۆی پەنجەرەی نوێکردنەوە، لەگەڵ هاوکاتکردنی لیستی پەڕگە فەرمییەکانی AWIQWorld.jnlp."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "4. Audited by SonarQube Cloud & Snyk",
+                        "4. الفحص المستمر عبر SonarQube Cloud و Snyk",
+                        "٤. پشکنینی بەردەوام لە ڕێگەی SonarQube Cloud و Snyk"),
+                tr(activity,
+                        "Resolved static analysis security hotspots, native C/C++ buffer bounds checks, and Java resource lifecycle issues verified by SonarQube Cloud and Snyk.",
+                        "معالجة كافة الملاحظات الأمنية والبرمجية في كود الجافا ومكتبات C/C++ الأصلية وتوثيق الفحص عبر منصتي SonarQube Cloud و Snyk.",
+                        "چارەسەرکردنی سەرجەم تێبینییە ئەمنی و تەکنیکییەکان بە پشتڕاستکردنەوەی SonarQube Cloud و Snyk."));
+
+        scroll.addView(card);
+        root.addView(scroll);
+
+        TextView continueBtn = createCupertinoButton(activity,
+                tr(activity, "Continue to ASYCUDA", "متابعة إلى النظام", "بەردەوامبوون بۆ سیستەم"),
+                true, false, v -> {
+                    markWhatsNewSeen(activity);
+                    dialog.dismiss();
+                    if (onContinue != null) onContinue.run();
+                });
+        continueBtn.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        continueBtn.setLayoutParams(btnLp);
+        root.addView(continueBtn);
+
+        dialog.setOnCancelListener(d -> {
+            markWhatsNewSeen(activity);
+            if (onContinue != null) onContinue.run();
+        });
+
+        dialog.setContentView(root);
+        dialog.show();
+    }
+
     public static boolean hasAcceptedTerms(Context ctx) {
         if (ctx == null) return false;
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        return sp.getBoolean("accepted", false)
-                && CURRENT_POLICY_VERSION.equals(sp.getString("policy_version", ""));
+        return sp.getBoolean(KEY_ACCEPTED, false)
+                && CURRENT_POLICY_VERSION.equals(sp.getString(KEY_POLICY_VERSION, ""));
     }
 
     public static boolean isTermsCloudSynced(Context ctx) {
         if (ctx == null) return false;
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        return sp.getBoolean("cloud_synced", false);
+        return sp.getBoolean(KEY_CLOUD_SYNCED, false);
     }
 
     public static void markTermsCloudSynced(Context ctx) {
         if (ctx == null) return;
         ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
-                .putBoolean("cloud_synced", true)
+                .putBoolean(KEY_CLOUD_SYNCED, true)
                 .apply();
     }
 
@@ -2534,7 +2758,7 @@ public class AsycudaMaterialUi {
                     }
                 }
             }
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) { /* Best-effort UI operation */ }
         return null;
     }
 
@@ -2671,7 +2895,7 @@ public class AsycudaMaterialUi {
             String androidId = "";
             try {
                 androidId = Settings.Secure.getString(ctx.getContentResolver(), Settings.Secure.ANDROID_ID);
-            } catch (Throwable ignored) {}
+            } catch (Exception ignored) { /* Best-effort UI operation */ }
             if (androidId == null) androidId = "unknown";
 
             String appVer = getAppVersionLabel(ctx);
@@ -2698,41 +2922,41 @@ public class AsycudaMaterialUi {
 
             SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
             sp.edit()
-                    .putBoolean("accepted", true)
-                    .putBoolean("cloud_synced", false)
-                    .putString("consent_id", consentId)
-                    .putString("signatory_name", cleanName)
-                    .putString("company_name", cleanCompany)
-                    .putString("policy_version", CURRENT_POLICY_VERSION)
-                    .putString("app_version", appVer)
-                    .putString("accepted_at_utc", utcIso)
-                    .putString("accepted_at_local", localStr)
+                    .putBoolean(KEY_ACCEPTED, true)
+                    .putBoolean(KEY_CLOUD_SYNCED, false)
+                    .putString(KEY_CONSENT_ID, consentId)
+                    .putString(KEY_SIGNATORY_NAME, cleanName)
+                    .putString(KEY_COMPANY_NAME, cleanCompany)
+                    .putString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION)
+                    .putString(KEY_APP_VERSION, appVer)
+                    .putString(KEY_ACCEPTED_UTC, utcIso)
+                    .putString(KEY_ACCEPTED_LOCAL, localStr)
                     .putString("device_model", deviceModel)
-                    .putString("device_hash", deviceHash)
-                    .putString("sha256_signature", fullHash)
+                    .putString(KEY_DEVICE_HASH, deviceHash)
+                    .putString(KEY_SHA256_SIG, fullHash)
                     .putString("locale", getAppLanguage(ctx))
                     .apply();
 
             receipt.put("status", "ACCEPTED");
-            receipt.put("consent_id", consentId);
-            receipt.put("signatory_name", cleanName);
-            receipt.put("company_name", cleanCompany);
-            receipt.put("policy_version", CURRENT_POLICY_VERSION);
-            receipt.put("app_version", appVer);
-            receipt.put("accepted_at_utc", utcIso);
-            receipt.put("accepted_at_local", localStr);
+            receipt.put(KEY_CONSENT_ID, consentId);
+            receipt.put(KEY_SIGNATORY_NAME, cleanName);
+            receipt.put(KEY_COMPANY_NAME, cleanCompany);
+            receipt.put(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION);
+            receipt.put(KEY_APP_VERSION, appVer);
+            receipt.put(KEY_ACCEPTED_UTC, utcIso);
+            receipt.put(KEY_ACCEPTED_LOCAL, localStr);
             receipt.put("device_model", deviceModel);
             receipt.put("android_version", "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
-            receipt.put("device_hash", deviceHash);
+            receipt.put(KEY_DEVICE_HASH, deviceHash);
             receipt.put("locale", getAppLanguage(ctx));
-            receipt.put("sha256_signature", fullHash);
+            receipt.put(KEY_SHA256_SIG, fullHash);
 
             File receiptFile = new File(ctx.getFilesDir(), "legal_consent_receipt.json");
             try (FileOutputStream fos = new FileOutputStream(receiptFile)) {
                 fos.write(receipt.toString(2).getBytes(StandardCharsets.UTF_8));
                 fos.getFD().sync();
             }
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) { /* Best-effort UI operation */ }
         return receipt;
     }
 
@@ -2751,16 +2975,16 @@ public class AsycudaMaterialUi {
 
     public static String getTermsAcceptanceBadgeSubtitle(Context ctx) {
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        if (!sp.getBoolean("accepted", false)) {
+        if (!sp.getBoolean(KEY_ACCEPTED, false)) {
             return tr(ctx,
                     "User agreement will be recorded on initial launch.",
                     "سيتم توثيق موافقة المستخدم عند بدء التشغيل.",
                     "ڕەزامەندی بەکارهێنەر لە کاتی دەستپێکردندا تۆمار دەکرێت.");
         }
-        String sigName = sp.getString("signatory_name", "");
-        String compName = sp.getString("company_name", "");
-        String localDate = sp.getString("accepted_at_local", "");
-        String consentId = sp.getString("consent_id", "IRQ-VERIFIED");
+        String sigName = sp.getString(KEY_SIGNATORY_NAME, "");
+        String compName = sp.getString(KEY_COMPANY_NAME, "");
+        String localDate = sp.getString(KEY_ACCEPTED_LOCAL, "");
+        String consentId = sp.getString(KEY_CONSENT_ID, "IRQ-VERIFIED");
         String who = (!sigName.isEmpty() && !compName.isEmpty())
                 ? (sigName + " (" + compName + ")  •  ")
                 : "";
@@ -2772,18 +2996,18 @@ public class AsycudaMaterialUi {
 
     public static String getTermsConsentSummaryForDiagnostics(Context ctx) {
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        if (!sp.getBoolean("accepted", false)) {
+        if (!sp.getBoolean(KEY_ACCEPTED, false)) {
             return "TermsAccepted: false";
         }
         return "TermsAccepted: true\n"
-                + "ConsentReceiptID: " + sp.getString("consent_id", "") + "\n"
-                + "SignatoryName: " + sp.getString("signatory_name", "") + "\n"
-                + "CompanyName: " + sp.getString("company_name", "") + "\n"
-                + "PolicyVersion: " + sp.getString("policy_version", "") + "\n"
-                + "AcceptedAtUTC: " + sp.getString("accepted_at_utc", "") + "\n"
-                + "AcceptedAppVersion: " + sp.getString("app_version", "") + "\n"
-                + "DeviceHash: " + sp.getString("device_hash", "") + "\n"
-                + "ReceiptSHA256: " + sp.getString("sha256_signature", "");
+                + "ConsentReceiptID: " + sp.getString(KEY_CONSENT_ID, "") + "\n"
+                + "SignatoryName: " + sp.getString(KEY_SIGNATORY_NAME, "") + "\n"
+                + "CompanyName: " + sp.getString(KEY_COMPANY_NAME, "") + "\n"
+                + "PolicyVersion: " + sp.getString(KEY_POLICY_VERSION, "") + "\n"
+                + "AcceptedAtUTC: " + sp.getString(KEY_ACCEPTED_UTC, "") + "\n"
+                + "AcceptedAppVersion: " + sp.getString(KEY_APP_VERSION, "") + "\n"
+                + "DeviceHash: " + sp.getString(KEY_DEVICE_HASH, "") + "\n"
+                + "ReceiptSHA256: " + sp.getString(KEY_SHA256_SIG, "");
     }
 
     public interface TermsAcceptedHandler {
@@ -2802,8 +3026,8 @@ public class AsycudaMaterialUi {
         LinearLayout root = createDialogContainer(activity);
 
         SharedPreferences existingPrefs = activity.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        String savedName = existingPrefs.getString("signatory_name", "");
-        String savedCompany = existingPrefs.getString("company_name", "");
+        String savedName = existingPrefs.getString(KEY_SIGNATORY_NAME, "");
+        String savedCompany = existingPrefs.getString(KEY_COMPANY_NAME, "");
 
         // Header Row with Logo + Title + Language Switcher Pills
         LinearLayout header = new LinearLayout(activity);
@@ -2828,7 +3052,7 @@ public class AsycudaMaterialUi {
                 "مەرج و ڕێساکان و سیاسەتی یاسایی"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView subtitle = new TextView(activity);
@@ -2856,7 +3080,7 @@ public class AsycudaMaterialUi {
             lBtn.setText(l[1]);
             lBtn.setTextColor(sel ? TEXT_PRIMARY : TEXT_SECONDARY);
             lBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-            lBtn.setTypeface(Typeface.create("sans-serif-medium", sel ? Typeface.BOLD : Typeface.NORMAL));
+            lBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, sel ? Typeface.BOLD : Typeface.NORMAL));
             lBtn.setPadding(dp(activity, 9), dp(activity, 5), dp(activity, 9), dp(activity, 5));
             lBtn.setBackground(createRippleCardDrawable(activity,
                     sel ? SYSTEM_BLUE : SURFACE_GROUPED_CARD, 8, sel ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
@@ -2925,13 +3149,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "4. Signatory Authority, Data Privacy & Consent Audit Record",
-                        "4. صفة المستخدم، سياسة الخصوصية وتوثيق الموافقة",
-                        "٤. دەسەڵاتی بەکارهێنەر، سیاسەتی تایبەتمەندی و تۆمارکردنی ڕەزامەندی"),
+                        "4. Signatory Authority, Data Privacy & Consent Audit Record (Sentry)",
+                        "4. صفة المستخدم، سياسة الخصوصية وتوثيق الموافقة (Sentry)",
+                        "٤. دەسەڵاتی بەکارهێنەر، سیاسەتی تایبەتمەندی و تۆمارکردنی ڕەزامەندی (Sentry)"),
                 tr(activity,
-                        "Your ASYCUDA login credentials and customs declarations remain strictly between your device and the official Ministry of Finance server. By registering your name and organization below, you confirm that the information provided is accurate and that you are authorized to accept these terms on behalf of yourself and the organization or brokerage you represent. Entering false identification constitutes a breach of these terms and does not waive or limit the Limitation of Liability in Section 3. A timestamped digital consent receipt (Policy v" + CURRENT_POLICY_VERSION + ") is recorded on your device and in our compliance log.",
-                        "تبقى بيانات الدخول والتصاريح الكمركية الخاصة بك حصرياً بين جهازك وخادم وزارة المالية الرسمي. بتسجيل اسمك واسم شركتك أو مكتبك أدناه، فإنك تقر بصحة البيانات المدخلة وبأنك مخوّل بالموافقة على هذه الشروط بالأصالة عن نفسك وبالنيابة عن الشركة أو المكتب الذي تمثله. إن إدخال بيانات غير صحيحة يُعد إخلالاً بشروط الاستخدام ولا يترتب عليه بأي حال سقوط أو تقييد إخلاء المسؤولية المنصوص عليه في البند (3). يتم حفظ إيصال موافقة رقمي موثّق بالتاريخ والوقت ورقم النسخة على جهازك وفي سجل التوثيق.",
-                        "زانیاری چوونەژوورەوە و مامەڵە گومرگییەکانت تەنها لە نێوان ئامێرەکەت و سێرڤەری فەرمی وەزارەتی داراییدا دەمێنێتەوە. بە تۆمارکردنی ناو و کۆمپانیاکەت لە خوارەوە، پشتڕاستی دەکەیتەوە کە زانیارییەکان ڕاستن و ڕێگەپێدراویت بۆ پەسەندکردنی ئەم مەرجانە بە ناوی خۆت و کۆمپانیاکەتەوە. تۆمارکردنی زانیاری ناڕاست پێشێلکردنی مەرجەکانە و بەرپرسیارێتی یاسایی بڕگەی (٣) هەڵناوەشێنێتەوە."));
+                        "Your ASYCUDA login credentials and customs declarations remain strictly between your device and the official Ministry of Finance server. By registering your name and organization below, you confirm that the information provided is accurate and that you are authorized to accept these terms on behalf of yourself and the organization or brokerage you represent. Entering false identification constitutes a breach of these terms and does not waive or limit the Limitation of Liability in Section 3. A timestamped digital consent receipt (Policy v" + CURRENT_POLICY_VERSION + ", including signatory name, company name, device model, and SHA-256 signature) is recorded on your device and transmitted over HTTPS to our compliance and crash diagnostics processor (Sentry).",
+                        "تبقى بيانات الدخول والتصاريح الكمركية الخاصة بك حصرياً بين جهازك وخادم وزارة المالية الرسمي. بتسجيل اسمك واسم شركتك أو مكتبك أدناه، فإنك تقر بصحة البيانات المدخلة وبأنك مخوّل بالموافقة على هذه الشروط بالأصالة عن نفسك وبالنيابة عن الشركة أو المكتب الذي تمثله. إن إدخال بيانات غير صحيحة يُعد إخلالاً بشروط الاستخدام ولا يترتب عليه بأي حال سقوط أو تقييد إخلاء المسؤولية المنصوص عليه في البند (3). يتم حفظ إيصال موافقة رقمي موثّق بالتاريخ والوقت ورقم النسخة على جهازك وإرساله عبر اتصال مشفّر (HTTPS) إلى سجل التوثيق والتشخيص البرمجي (Sentry).",
+                        "زانیاری چوونەژوورەوە و مامەڵە گومرگییەکانت تەنها لە نێوان ئامێرەکەت و سێرڤەری فەرمی وەزارەتی داراییدا دەمێنێتەوە. بە تۆمارکردنی ناو و کۆمپانیاکەت لە خوارەوە، پشتڕاستی دەکەیتەوە کە زانیارییەکان ڕاستن و ڕێگەپێدراویت بۆ پەسەندکردنی ئەم مەرجانە بە ناوی خۆت و کۆمپانیاکەتەوە. تۆمارکردنی زانیاری ناڕاست پێشێلکردنی مەرجەکانە و بەرپرسیارێتی یاسایی بڕگەی (٣) هەڵناوەشێنێتەوە. پسوولەی ڕەزامەندی لەسەر ئامێرەکەت و لە سیستەمی تۆمارکردن و پشکنینی (Sentry) تۆمار دەکرێت."));
 
         scrollContent.addView(bodyCard);
 
@@ -2952,7 +3176,7 @@ public class AsycudaMaterialUi {
                 "زانیاری بەکارهێنەر و کۆمپانیا یان نووسینگە (پێویستە)"));
         regTitle.setTextColor(SYSTEM_BLUE);
         regTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        regTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        regTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         regCard.addView(regTitle);
 
         // Full Name + Company Name side-by-side in landscape so both fit comfortably
@@ -2977,7 +3201,7 @@ public class AsycudaMaterialUi {
                 "ناوی تەواو (ناوی یەکەم و دووەم) *"));
         nameLbl.setTextColor(TEXT_PRIMARY);
         nameLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        nameLbl.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        nameLbl.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         nameCol.addView(nameLbl);
 
         EditText nameInput = new EditText(activity);
@@ -3013,7 +3237,7 @@ public class AsycudaMaterialUi {
                 "ناوی کۆمپانیا یان نووسینگەی گومرگی *"));
         compLbl.setTextColor(TEXT_PRIMARY);
         compLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        compLbl.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        compLbl.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         compCol.addView(compLbl);
 
         EditText compInput = new EditText(activity);
@@ -3042,7 +3266,7 @@ public class AsycudaMaterialUi {
         errorBanner.setVisibility(View.GONE);
         errorBanner.setTextColor(Color.parseColor("#FFFF6961"));
         errorBanner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        errorBanner.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        errorBanner.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         LinearLayout.LayoutParams errLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         errLp.topMargin = dp(activity, 6);
@@ -3083,7 +3307,7 @@ public class AsycudaMaterialUi {
                 "ڕاستی ناو و زانیاری کۆمپانیاکەم لە سەرەوە پشتڕاست دەکەمەوە، و ڕازیم بە مەرج و ڕێساکان و بەرپرسیارێتی یاسایی بە ناوی خۆم و لایەنەکەمەوە."));
         checkLabel.setTextColor(TEXT_PRIMARY);
         checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        checkLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        checkLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         checkLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         checkCard.addView(checkLabel);
         root.addView(checkCard);
@@ -3167,7 +3391,7 @@ public class AsycudaMaterialUi {
         h.setText(heading);
         h.setTextColor(TEXT_PRIMARY);
         h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        h.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        h.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         parent.addView(h);
 
         TextView b = new TextView(ctx);
@@ -3203,7 +3427,7 @@ public class AsycudaMaterialUi {
         pName.setText(project);
         pName.setTextColor(TEXT_PRIMARY);
         pName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        pName.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        pName.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         pName.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         titleRow.addView(pName);
 
@@ -3211,7 +3435,7 @@ public class AsycudaMaterialUi {
         licBadge.setText(license);
         licBadge.setTextColor(SYSTEM_BLUE);
         licBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
-        licBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        licBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         licBadge.setPadding(dp(ctx, 8), dp(ctx, 2), dp(ctx, 8), dp(ctx, 2));
         licBadge.setBackground(createCardDrawable(ctx,
                 SYSTEM_BLUE_TINT, 8, 0));
@@ -3257,7 +3481,7 @@ public class AsycudaMaterialUi {
         tv.setText(text);
         tv.setTextColor(TEXT_SECONDARY);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        tv.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         tv.setLetterSpacing(0.06f);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3324,7 +3548,7 @@ public class AsycudaMaterialUi {
                 try {
                     w.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
                     wlp.setBlurBehindRadius(dp(activity, 28));
-                } catch (Throwable ignored) {}
+                } catch (Exception ignored) { /* Best-effort UI operation */ }
             }
             w.setAttributes(wlp);
         }
@@ -3394,7 +3618,7 @@ public class AsycudaMaterialUi {
         tv.setText(label);
         tv.setTextColor(isDestructive ? SYSTEM_RED : TEXT_PRIMARY);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        tv.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         tv.setPadding(dp(ctx, 14), dp(ctx, 8), dp(ctx, 14), dp(ctx, 8));
         tv.setBackground(createCupertinoButtonDrawable(ctx, isPrimary, isDestructive));
         tv.setClickable(true);

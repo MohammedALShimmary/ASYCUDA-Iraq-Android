@@ -559,12 +559,13 @@ public class TouchInputHandler {
             case "exit":
             case "toggle soft keyboard":
             case "toggle additional key bar":
-            case "release pointer and keyboard capture":
-                return PendingIntent.getBroadcast(ctx, requestCode, new Intent(MainActivity.ACTION_CUSTOM) {{
-                    putExtra("what", name);
-                    putExtra(CmdEntryPoint.EXTRA_DOCUMENT_TAG, ((MainActivity) ctx).getTag());
-                    setPackage(ctx.getPackageName());
-                }}, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            case "release pointer and keyboard capture": {
+                Intent broadcast = new Intent(MainActivity.ACTION_CUSTOM);
+                broadcast.putExtra("what", name);
+                broadcast.putExtra(CmdEntryPoint.EXTRA_DOCUMENT_TAG, ((MainActivity) ctx).getTag());
+                broadcast.setPackage(ctx.getPackageName());
+                return PendingIntent.getBroadcast(ctx, requestCode, broadcast, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            }
             default: return null;
         }
     }

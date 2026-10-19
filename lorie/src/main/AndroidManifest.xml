@@ -20,6 +20,7 @@
     <application
         android:name=".LorieApp"
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:requestLegacyExternalStorage="true"
         android:extractNativeLibs="true"
         tools:ignore="DataExtractionRules,GoogleAppIndexingWarning">

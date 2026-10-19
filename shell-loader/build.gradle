@@ -24,8 +24,12 @@ if (!gradle.startParameter.taskNames.isEmpty())
 configurations.configureEach { exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib" }
 
 def signingConfig = project(':lorie-app').android.signingConfigs.debug
-def keyStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType())
-keyStore.load(new FileInputStream(signingConfig.storeFile), signingConfig.keyPassword.toCharArray())
+def sigHash = 0
+if (signingConfig.storeFile != null && signingConfig.storeFile.exists() && signingConfig.keyPassword != null) {
+    def keyStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType())
+    keyStore.load(new FileInputStream(signingConfig.storeFile), signingConfig.keyPassword.toCharArray())
+    sigHash = Arrays.hashCode(keyStore.getCertificate(signingConfig.keyAlias).getEncoded())
+}
 
 ext.targetApplicationId = "com.termux.x11"
 ext.embeddedApplicationId = "com.termux"
@@ -33,7 +37,7 @@ ext.embeddedApplicationId = "com.termux"
 android.defaultConfig.buildConfigField "String", "APPLICATION_ID", "\"$targetApplicationId\""
 android.defaultConfig.buildConfigField "String", "EMBEDDED_APPLICATION_ID", "\"$embeddedApplicationId\""
 android.defaultConfig.buildConfigField "String", "logTag", "\"Termux:X11 loader\""
-android.defaultConfig.buildConfigField "int", "SIGNATURE", String.valueOf(Arrays.hashCode(keyStore.getCertificate(signingConfig.keyAlias).getEncoded()))
+android.defaultConfig.buildConfigField "int", "SIGNATURE", String.valueOf(sigHash)
 android.defaultConfig.buildConfigField "String", "CLASS_ID", "\"com.termux.x11.CmdEntryPoint\""
 android.defaultConfig.buildConfigField "String", "packageNotInstalledErrorText",
         """\"Termux:X11 application is not found.\\n\" +

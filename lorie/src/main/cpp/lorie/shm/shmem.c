@@ -28,7 +28,7 @@
 #include <sys/shm.h>
 
 #define DBG(...)
-#define ANDROID_SHMEM_SOCKNAME "/dev/shm/%08x"
+#define ANDROID_SHMEM_SOCKNAME "ashmem_%08x"
 #define ROUND_UP(N, S) ((((N) + (S) - 1) / (S)) * (S))
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -299,8 +299,8 @@ static int ashv_read_remote_segment(int shmid)
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	sprintf(&addr.sun_path[1], ANDROID_SHMEM_SOCKNAME, ashv_socket_id_from_shmid(shmid));
-	int addrlen = sizeof(addr.sun_family) + strlen(&addr.sun_path[1]) + 1;
+	snprintf(&addr.sun_path[1], sizeof(addr.sun_path) - 1, ANDROID_SHMEM_SOCKNAME, ashv_socket_id_from_shmid(shmid));
+	int addrlen = sizeof(addr.sun_family) + strnlen(&addr.sun_path[1], sizeof(addr.sun_path) - 1) + 1;
 
 	int recvsock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (recvsock == -1) {
@@ -386,8 +386,8 @@ int shmget(key_t key, size_t size, int flags)
 			memset (&addr, 0, sizeof(addr));
 			addr.sun_family = AF_UNIX;
 			ashv_local_socket_id = (getpid() + i) & 0xffff;
-			sprintf(&addr.sun_path[1], ANDROID_SHMEM_SOCKNAME, ashv_local_socket_id);
-			len = sizeof(addr.sun_family) + strlen(&addr.sun_path[1]) + 1;
+			snprintf(&addr.sun_path[1], sizeof(addr.sun_path) - 1, ANDROID_SHMEM_SOCKNAME, ashv_local_socket_id);
+			len = sizeof(addr.sun_family) + strnlen(&addr.sun_path[1], sizeof(addr.sun_path) - 1) + 1;
 			if (bind(sock, (struct sockaddr *)&addr, len) != 0) continue;
 			DBG("%s: bound UNIX socket %s in pid=%d", __PRETTY_FUNCTION__, addr.sun_path + 1, getpid());
 			break;
@@ -418,7 +418,9 @@ int shmget(key_t key, size_t size, int flags)
 		// (3) If connected and opened, done. If connection refused
 		//     take ownership of the key and create the symlink.
 		// (4) If no symlink, create it.
-		sprintf(symlink_path, "%s/ashv_key_%d", _PATH_TMP, key);
+		const char *tmp_dir = getenv("TMPDIR");
+		if (!tmp_dir || !tmp_dir[0]) tmp_dir = "/data/data/iq.asycuda/cache";
+		snprintf(symlink_path, sizeof(symlink_path), "%s/ashv_key_%d", tmp_dir, key);
 		char path_buffer[256];
 		char num_buffer[64];
 		while (true) {
@@ -448,7 +450,7 @@ int shmget(key_t key, size_t size, int flags)
 			if (shmid == -1) {
 				shmem_counter = (shmem_counter + 1) & 0x7fff;
 				shmid = ashv_shmid_from_counter(shmem_counter);
-				sprintf(num_buffer, "%d", shmid);
+				snprintf(num_buffer, sizeof(num_buffer), "%d", shmid);
 			}
 			if (symlink(num_buffer, symlink_path) == 0) break;
 		}
@@ -457,7 +459,7 @@ int shmget(key_t key, size_t size, int flags)
 
 	int idx = shmem_amount;
 	char buf[256];
-	sprintf(buf, ANDROID_SHMEM_SOCKNAME "-%d", ashv_local_socket_id, idx);
+	snprintf(buf, sizeof(buf), ANDROID_SHMEM_SOCKNAME "-%d", ashv_local_socket_id, idx);
 
 	shmem_amount++;
 	if (shmid == -1) {

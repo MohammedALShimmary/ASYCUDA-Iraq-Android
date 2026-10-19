@@ -296,13 +296,13 @@ public final class ExtraKeysView extends GridLayout {
     /** Get the default map that can be used for {@link #mSpecialButtons}. */
     @NonNull
     public Map<SpecialButton, SpecialButtonState> getDefaultSpecialButtons(ExtraKeysView extraKeysView) {
-        return new HashMap<>() {{
-            put(SpecialButton.CTRL, new SpecialButtonState(extraKeysView));
-            put(SpecialButton.ALT, new SpecialButtonState(extraKeysView));
-            put(SpecialButton.SHIFT, new SpecialButtonState(extraKeysView));
-            put(SpecialButton.META, new SpecialButtonState(extraKeysView));
-            put(SpecialButton.FN, new SpecialButtonState(extraKeysView));
-        }};
+        Map<SpecialButton, SpecialButtonState> map = new HashMap<>();
+        map.put(SpecialButton.CTRL, new SpecialButtonState(extraKeysView));
+        map.put(SpecialButton.ALT, new SpecialButtonState(extraKeysView));
+        map.put(SpecialButton.SHIFT, new SpecialButtonState(extraKeysView));
+        map.put(SpecialButton.META, new SpecialButtonState(extraKeysView));
+        map.put(SpecialButton.FN, new SpecialButtonState(extraKeysView));
+        return map;
     }
 
     /**

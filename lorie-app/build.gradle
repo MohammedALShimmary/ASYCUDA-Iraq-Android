@@ -17,29 +17,23 @@ android {
         applicationId "iq.asycuda"
         minSdkVersion 24
         targetSdkVersion 28
-        versionCode 37
-        versionName "3.7.0"
+        versionCode 38
+        versionName "3.8.0"
         ndk {
             abiFilters 'arm64-v8a'
         }
     }
 
     signingConfigs {
-        debug {
-            storeFile file(useReleaseKeystore ? 'asycuda_release.jks' : 'testkey_untrusted.jks')
-            keyAlias useReleaseKeystore ? 'asycuda_iraq' : 'alias'
-            storePassword useReleaseKeystore ? releaseStorePass : '123456'
-            keyPassword useReleaseKeystore ? releaseKeyPass : '123456'
-            v1SigningEnabled true
-            v2SigningEnabled true
-        }
         release {
-            storeFile file(useReleaseKeystore ? 'asycuda_release.jks' : 'testkey_untrusted.jks')
-            keyAlias useReleaseKeystore ? 'asycuda_iraq' : 'alias'
-            storePassword useReleaseKeystore ? releaseStorePass : '123456'
-            keyPassword useReleaseKeystore ? releaseKeyPass : '123456'
-            v1SigningEnabled true
-            v2SigningEnabled true
+            if (useReleaseKeystore) {
+                storeFile file('asycuda_release.jks')
+                keyAlias 'asycuda_iraq'
+                storePassword releaseStorePass
+                keyPassword releaseKeyPass
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
         }
     }
 
@@ -53,12 +47,16 @@ android {
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            if (useReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             shrinkResources false
         }
         release {
-            signingConfig signingConfigs.release
+            if (useReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             shrinkResources false
             debuggable false

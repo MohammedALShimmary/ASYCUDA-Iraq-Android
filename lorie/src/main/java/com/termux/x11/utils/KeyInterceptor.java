@@ -72,7 +72,9 @@ public class KeyInterceptor extends AccessibilityService {
             return;
 
         android.util.Log.d("KeyInterceptor", "disabling interception service");
-        self.setServiceInfo(new AccessibilityServiceInfo() {{ flags = DEFAULT; }});
+        AccessibilityServiceInfo disabledInfo = new AccessibilityServiceInfo();
+        disabledInfo.flags = AccessibilityServiceInfo.DEFAULT;
+        self.setServiceInfo(disabledInfo);
         self.enabled = false;
     }
 
@@ -87,7 +89,9 @@ public class KeyInterceptor extends AccessibilityService {
         if (shouldBeEnabled) {
             if (!self.enabled) {
                 android.util.Log.d("KeyInterceptor", "enabling interception service");
-                self.setServiceInfo(new AccessibilityServiceInfo() {{ flags = FLAG_REQUEST_FILTER_KEY_EVENTS; }});
+                AccessibilityServiceInfo enabledInfo = new AccessibilityServiceInfo();
+                enabledInfo.flags = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS;
+                self.setServiceInfo(enabledInfo);
                 self.enabled = true;
             }
         } else if (self.enabled)

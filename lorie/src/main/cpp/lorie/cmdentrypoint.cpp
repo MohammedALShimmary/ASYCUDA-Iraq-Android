@@ -93,8 +93,11 @@ static jboolean start(JNIEnv *env, jobject self, jobjectArray args) {
     for(int i=1; i<argc; i++) {
         auto js = (jstring) env->GetObjectArrayElement(args, i - 1);
         const char *pjc = env->GetStringUTFChars(js, JNI_FALSE);
-        argv[i] = (char *) calloc(strlen(pjc) + 1, sizeof(char)); //Extra char for the terminating NULL
-        strcpy((char *) argv[i], pjc);
+        size_t argLen = js ? (size_t) env->GetStringUTFLength(js) : 0;
+        argv[i] = (char *) calloc(argLen + 1, sizeof(char)); //Extra char for the terminating NULL
+        if (argv[i] && pjc) {
+            memcpy((char *) argv[i], pjc, argLen);
+        }
         env->ReleaseStringUTFChars(js, pjc);
     }
 
@@ -113,7 +116,7 @@ static jboolean start(JNIEnv *env, jobject self, jobjectArray args) {
         // Printing logs of local logcat.
         char pid[32] = {0};
         prctl(PR_SET_PDEATHSIG, SIGTERM);
-        sprintf(pid, "%d", getppid());
+        snprintf(pid, sizeof(pid), "%d", getppid());
         execlp("logcat", "logcat", "--pid", pid, nullptr);
     }
 
@@ -129,10 +132,8 @@ static jboolean start(JNIEnv *env, jobject self, jobjectArray args) {
         unsetenv("TMPDIR");
 
     if (!getenv("TMPDIR")) {
-        if (access("/tmp", F_OK) == 0)
-            setenv("TMPDIR", "/tmp", 1);
-        else if (access("/data/data/com.termux/files/usr/tmp", F_OK) == 0)
-            setenv("TMPDIR", "/data/data/com.termux/files/usr/tmp", 1);
+        if (access("/data/data/iq.asycuda/cache", F_OK) == 0)
+            setenv("TMPDIR", "/data/data/iq.asycuda/cache", 1);
     }
 
     if (!getenv("TMPDIR")) {
@@ -475,7 +476,7 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
 
 void lorieSendClipboardData(const char* data) {
     if (data && conn_fd != -1) {
-        size_t len = strlen(data);
+        size_t len = strnlen(data, 1024 * 1024);
         lorieEvent e = { .clipboardSend = { .t = EVENT_CLIPBOARD_SEND, .count = (uint32_t) len } };
         write(conn_fd, &e, sizeof(e));
         write(conn_fd, data, len);
@@ -571,7 +572,7 @@ static jobject getLogcatOutput(JNIEnv *env, __unused jobject cls) {
         pthread_t t;
         int p[2];
         pipe(p);
-        fchmod(p[1], 0777);
+        fchmod(p[1], 0600);
         pthread_create(&t, nullptr, +[](void *arg) -> void* {
             char buffer[4096];
             size_t len;

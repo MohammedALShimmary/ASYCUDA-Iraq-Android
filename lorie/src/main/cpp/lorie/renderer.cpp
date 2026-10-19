@@ -611,7 +611,8 @@ void Renderer::setWindow(JNIEnv *env, jobject jsfc) {
         ANativeWindow_release(pendingWin);
 
     pendingWin = newWin;
-    expectedW = expectedH = 0;
+    expectedH = 0;
+    expectedW = 0;
     windowChanged = TRUE;
 
     pthread_cond_signal(stateCond);
@@ -723,8 +724,12 @@ void Renderer::refreshContext() {
     eglSwapInterval(egl_display, 0);
 
     // We should redraw image at least once right after surface change
-    if (state)
-        state->surfaceAvailable = state->drawRequested = state->cursor.updated = win != defaultWin;
+    if (state) {
+        uint8_t hasWin = win != defaultWin;
+        state->cursor.updated = hasWin;
+        state->drawRequested = hasWin;
+        state->surfaceAvailable = hasWin;
+    }
 
     glViewport(0, 0, ANativeWindow_getWidth(win), ANativeWindow_getHeight(win));
     log("Xlorie: new surface applied: %p\n", sfc);
@@ -847,7 +852,7 @@ uint64_t Renderer::applyPendingGpuCopiesLocked() {
         }
 
         lastSerial = entry.serial;
-        state->gpuCopyQueue.readIndex++;
+        state->gpuCopyQueue.readIndex = state->gpuCopyQueue.readIndex + 1;
     }
 
     if (fboSetUp) {
@@ -1065,7 +1070,7 @@ void Renderer::redrawLocked(bool* waitingForBuffers) {
     fence = eglCreateSyncKHR(egl_display, EGL_SYNC_FENCE_KHR, nullptr);
     waitForFence(egl_display, fence, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR);
 
-    state->renderedFrames++;
+    state->renderedFrames = state->renderedFrames + 1;
 }
 
 bool Renderer::shouldWait(bool *waitingForBuffers) {
