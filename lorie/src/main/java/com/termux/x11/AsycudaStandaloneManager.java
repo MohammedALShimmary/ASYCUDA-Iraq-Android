@@ -139,6 +139,7 @@ public class AsycudaStandaloneManager {
     private static final String FILE_CLASSPATH = "classpath.txt";
     private static final String FILE_ASYCUDA_LOG = "asycuda.log";
     private static final String FILE_CONSENT_RECEIPT = "legal_consent_receipt.json";
+    private static final String REGEX_UNSAFE_FILENAME = "[^a-zA-Z0-9._-]";
 
     /**
      * Official Sectigo / ZeroSSL intermediate and cross-signed root CA certificates
@@ -1124,7 +1125,7 @@ public class AsycudaStandaloneManager {
             for (int i = 0; i < total; i++) {
                 final String href = remoteHrefs.get(i);
                 final String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
-                final String flatName = rawName.replaceAll("[^a-zA-Z0-9._-]", "");
+                final String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
                 if (flatName.isEmpty() || flatName.startsWith("00_")) {
                     checkedCounter.incrementAndGet();
                     futures.add(null);
@@ -1170,7 +1171,7 @@ public class AsycudaStandaloneManager {
                 if (fut == null) continue;
                 String href = remoteHrefs.get(i);
                 String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
-                String flatName = rawName.replaceAll("[^a-zA-Z0-9._-]", "");
+                String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
                 String jarUrl = href.startsWith("http") ? href : (MOF_CODEBASE_URL + href.replaceFirst("^/+", ""));
                 File targetJar = new File(jarsDir, flatName);
                 try {
@@ -1661,7 +1662,7 @@ public class AsycudaStandaloneManager {
 
     private File resolveSafeBridgeFile(Context ctx, String requestedPath) {
         if (requestedPath == null || requestedPath.isEmpty()) return null;
-        String baseName = new File(requestedPath).getName().replaceAll("[^a-zA-Z0-9._-]", "_");
+        String baseName = new File(requestedPath).getName().replaceAll(REGEX_UNSAFE_FILENAME, "_");
         if (baseName.isEmpty() || ".".equals(baseName) || "..".equals(baseName)) return null;
         File[] allowedDirs = new File[] {
             new File(ctx.getFilesDir(), DIR_PRINTS),
@@ -2092,7 +2093,7 @@ public class AsycudaStandaloneManager {
         try {
             File printsDir = new File(activity.getFilesDir(), DIR_PRINTS);
             ensureDir(printsDir);
-            File outApk = new File(printsDir, "ASYCUDA_Iraq_" + versionTag.replaceAll("[^a-zA-Z0-9._-]", "") + ".apk");
+            File outApk = new File(printsDir, "ASYCUDA_Iraq_" + versionTag.replaceAll(REGEX_UNSAFE_FILENAME, "") + ".apk");
 
             conn = (HttpURLConnection) new URL(apkUrl).openConnection();
             conn.setInstanceFollowRedirects(true);
