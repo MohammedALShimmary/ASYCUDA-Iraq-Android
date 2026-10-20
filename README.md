@@ -10,26 +10,26 @@
 
 Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
 
-[**Download Latest Release `v3.9.0` (`ASYCUDA_Iraq_v3.9.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/ASYCUDA_Iraq_v3.9.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Latest Release `v3.9.5` (`ASYCUDA_Iraq_v3.9.5.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Latest Official Release: [`v3.9.0` (`versionCode 39`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0)
+## Latest Official Release: [`v3.9.5` (`versionCode 40`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5)
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`ASYCUDA_Iraq_v3.9.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/ASYCUDA_Iraq_v3.9.0.apk) | `8c154a8eb9f18d8d612b4732439ce3a3ccd3c7eae8c1456bffe222fa03b28b25` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/asycuda-iraq.tar.xz) | `cf2e959e90d6d109a1dd12b970f385af5c194a0b3e6b27740846baa640f129b4` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | `36aba646d88f0424f1aec2c83b077fb3df2689ff0f91cd49d588dcf2cb967b7e` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | `31fd49b386f365a3c9874bcd8620e63363b93bbc97131d866fd42e25e51624ee` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
 ---
 
 ## Features
 
 - **Direct Installation & Zero Storage Permissions**: Installs as a standard Android APK on 64-bit ARM (`arm64-v8a`) phones and tablets running Android 8.0 or newer with **zero broad storage or accessibility permissions** (`MANAGE_EXTERNAL_STORAGE`, `READ/WRITE_EXTERNAL_STORAGE`, and `BIND_ACCESSIBILITY_SERVICE` removed).
-- **Encrypted Private App Vault & Native File Picker Bridge**:
-  - Prints customs declarations, receipts, and assessment notices directly to PDF inside the app's **Encrypted Private Vault** (`/data/data/iq.asycuda/files/prints` — inaccessible to any other app on your phone) with **Open**, **Share**, and **Delete** controls.
-  - Embeds an **"Import from Phone / استيراد ملف من الهاتف"** middleman button directly inside ASYCUDA's Java file chooser (`JFileChooser`) that opens Android's native system file picker (`Intent.ACTION_OPEN_DOCUMENT`) and imports the chosen file into `/data/data/iq.asycuda/files/workspace` without requiring storage permissions.
+- **Unified Encrypted Vault (File Manager) & Automatic File Picker Bridge**:
+  - Prints customs declarations, receipts, and assessment notices directly to PDF inside the app's **Encrypted Private Vault** (`/data/data/iq.asycuda/files/prints` — inaccessible to any other app on your phone) with full folder creation & navigation, **Copy**, **Move**, **Open**, **Share** (files only), and **Delete** controls via clean Apple-style icon toolbars.
+  - Automatically detects when ASYCUDA opens its Java file chooser (`JFileChooser`)—with zero modification to government JARs—and prompts you on Android to either import a new file from your phone into the Vault (`Intent.ACTION_OPEN_DOCUMENT`) or select an existing file from your Vault.
 - **Unified Update Center, Auto-Cleaned Update Cache & `SOClass` Alert Listener**:
   - Checks both GitHub for new app releases (with SHA-256 and APK signature verification, downloading into private `cache/updates/` and automatically deleting the `.apk` after installation) and `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` on startup and on demand.
   - Dynamically syncs the full `<jar href="..."/>` list from `AWIQWorld.jnlp`, enforcing an explicit `https://asy.mof.gov.iq/aw/*.jar` allowlist and verifying that every downloaded JAR entry is cryptographically signed by UNCTAD/SOClass (`META-INF/SOCODE.RSA`, SHA-256 `5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d`).
@@ -58,7 +58,7 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ## Installation
 
-1. Download [`ASYCUDA_Iraq_v3.9.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/ASYCUDA_Iraq_v3.9.0.apk) from the [v3.9.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
+1. Download [`ASYCUDA_Iraq_v3.9.5.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) from the [v3.9.5 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
 2. Open the APK on your Android phone or tablet to install it.
 3. On first launch, review the Terms & Conditions and Privacy Policy (you can tap **"Preview Sentry Receipt Before Sending"** to inspect the exact 8-field receipt), and view the **What's New** summary. Zero storage permissions are required!
 4. Wait ~10–15 seconds on the first run while the client unpacks its libraries and connects to the customs server.
@@ -112,7 +112,7 @@ This application is an independent technical utility built to help customs broke
    ```bash
    ./java-bridge/build-bridge.sh
    ```
-2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v3.9.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0) page) into `lorie-app/src/main/assets/`.
+2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v3.9.5 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5) page) into `lorie-app/src/main/assets/`.
 3. Build the APK with JDK 17 and Android SDK 34:
    ```bash
    ./gradlew :lorie-app:assembleDebug

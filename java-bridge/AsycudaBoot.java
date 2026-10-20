@@ -34,8 +34,8 @@ public class AsycudaBoot {
 
     private static final String PRINTER_NAME = "ASYCUDA_PDF_Printer";
     private static final String DEFAULT_TMP_DIR = "/data/data/iq.asycuda/files/tmp";
-    private static final String DEFAULT_WORKSPACE_DIR = "/data/data/iq.asycuda/files/workspace";
     private static final String DEFAULT_PRINTS_DIR = "/data/data/iq.asycuda/files/prints";
+    private static final String DEFAULT_WORKSPACE_DIR = DEFAULT_PRINTS_DIR;
     private static final String PDF_MIME = "application/pdf";
     private static final String JPG_MIME = "image/jpeg";
     private static final String PNG_MIME = "image/png";
@@ -47,6 +47,8 @@ public class AsycudaBoot {
     private static final AtomicBoolean SOCLASS_ALERT_SENT = new AtomicBoolean(false);
     private static volatile Object wrappedRejectHandler = null;
     private static volatile JFileChooser activeFileChooser = null;
+    private static volatile Dialog activeFileChooserDialog = null;
+    private static volatile long lastAutoPickTime = 0L;
     private static volatile long lastMousePressTime = 0L;
 
     private AsycudaBoot() {
@@ -74,8 +76,11 @@ public class AsycudaBoot {
         try {
             if (rawFile == null || !rawFile.exists() || !rawFile.isFile()) return;
             String origName = rawFile.getName();
+            String lowOrig = origName.toLowerCase(Locale.US);
             if (origName.startsWith("Resource") && origName.endsWith(".so")) return;
-            if (origName.endsWith(".part") || origName.endsWith(".lck") || origName.endsWith(".tmp")) return;
+            if (lowOrig.startsWith("soems") || lowOrig.endsWith("ems")) return;
+            if (lowOrig.startsWith("prn") && lowOrig.endsWith("xc")) return;
+            if (lowOrig.endsWith(".part") || lowOrig.endsWith(".lck") || lowOrig.endsWith(".tmp")) return;
 
             if (!waitForStableFileSize(rawFile)) return;
 
@@ -136,16 +141,13 @@ public class AsycudaBoot {
     }
 
     public static boolean sendToAndroidApk(String msg) {
-        java.net.InetSocketAddress loopbackAddr = new java.net.InetSocketAddress(
-                java.net.InetAddress.getLoopbackAddress(), 47891);
-        try (java.nio.channels.SocketChannel ch = java.nio.channels.SocketChannel.open(loopbackAddr)) {
-            String token = System.getProperty("asycuda.bridge.token", "");
-            String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
-            byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
-            java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(payloadBytes);
-            while (buf.hasRemaining()) {
-                ch.write(buf);
-            }
+        String token = System.getProperty("asycuda.bridge.token", "");
+        String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
+        byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
+        try (Socket sock = new Socket(java.net.InetAddress.getLoopbackAddress(), 47891);
+             OutputStream out = sock.getOutputStream()) {
+            out.write(payloadBytes);
+            out.flush();
             return true;
         } catch (Throwable t) {
             return false;
@@ -655,7 +657,9 @@ public class AsycudaBoot {
         Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
             @Override
             public void eventDispatched(AWTEvent event) {
-                if (event.getID() == WindowEvent.WINDOW_OPENED && event.getSource() instanceof Window) {
+                int id = event.getID();
+                if ((id == WindowEvent.WINDOW_OPENED || id == ComponentEvent.COMPONENT_SHOWN)
+                        && event.getSource() instanceof Window) {
                     final Window w = (Window) event.getSource();
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override
@@ -685,7 +689,7 @@ public class AsycudaBoot {
                     });
                 }
             }
-        }, AWTEvent.WINDOW_EVENT_MASK);
+        }, AWTEvent.WINDOW_EVENT_MASK | AWTEvent.COMPONENT_EVENT_MASK);
 
         // 2. Background Daemon Thread: Watch tmp/, auto-rename .so downloads, and hook SOClass RejectHandler
         Thread watcher = new Thread(new Runnable() {
@@ -699,7 +703,7 @@ public class AsycudaBoot {
                         scanTmpDir(tmpDir, 0);
                         scanDownloadsForSo(dlDir);
                         checkWorkspaceImportSignal(dlDir);
-                        Thread.sleep(250);
+                        Thread.sleep(200);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
@@ -713,8 +717,43 @@ public class AsycudaBoot {
         watcher.start();
     }
 
-    private static void checkWorkspaceImportSignal(File workspaceDir) {
+    private static void triggerAutomaticAndroidFilePicker(final File workspaceDir) {
+        long now = System.currentTimeMillis();
+        if ((now - lastAutoPickTime) < 1200L) {
+            return;
+        }
+        lastAutoPickTime = now;
+        if (workspaceDir != null && workspaceDir.exists()) {
+            File staleImport = new File(workspaceDir, ".last_imported");
+            if (staleImport.exists() && !staleImport.delete()) {
+                // Ignore best-effort cleanup
+            }
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                sendToAndroidApk("PICK_WORKSPACE_FILE");
+            }
+        }, "Asycuda-AutoPickBridge").start();
+    }
+
+    private static void populateFileChooserTextField(Container root, String fileName) {
+        if (root == null || fileName == null) return;
+        for (Component c : root.getComponents()) {
+            if (c instanceof JTextField) {
+                JTextField tf = (JTextField) c;
+                if (tf.isEditable() && tf.isEnabled()) {
+                    tf.setText(fileName);
+                }
+            } else if (c instanceof Container) {
+                populateFileChooserTextField((Container) c, fileName);
+            }
+        }
+    }
+
+    private static void checkWorkspaceImportSignal(final File workspaceDir) {
         if (workspaceDir == null || !workspaceDir.exists()) return;
+
         File marker = new File(workspaceDir, ".last_imported");
         if (!marker.exists()) return;
         String importedName = null;
@@ -730,20 +769,144 @@ public class AsycudaBoot {
         final File importedFile = new File(workspaceDir, importedName.trim());
         if (!importedFile.exists()) return;
         final JFileChooser fc = activeFileChooser;
+        final Dialog dlg = activeFileChooserDialog;
         if (fc != null) {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        if (fc.getFileFilter() != null && !fc.getFileFilter().accept(importedFile)) {
+                            fc.setFileFilter(fc.getAcceptAllFileFilter());
+                        }
                         fc.setCurrentDirectory(workspaceDir);
                         fc.rescanCurrentDirectory();
                         fc.setSelectedFile(importedFile);
+                        populateFileChooserTextField(fc, importedFile.getName());
                         fc.repaint();
+                        if (dlg != null && dlg.isShowing()) {
+                            dlg.toFront();
+                            dlg.requestFocus();
+                        }
+
+                        // Re-assert selection after async BasicDirectoryModel LoadFilesThread completes
+                        // without closing the Java JFileChooser so the user can confirm inside Java UI.
+                        javax.swing.Timer refreshTimer = new javax.swing.Timer(260, new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                try {
+                                    fc.rescanCurrentDirectory();
+                                    fc.setSelectedFile(importedFile);
+                                    populateFileChooserTextField(fc, importedFile.getName());
+                                    fc.repaint();
+                                } catch (Throwable ignored) {
+                                    // Ignore refresh error
+                                }
+                            }
+                        });
+                        refreshTimer.setRepeats(false);
+                        refreshTimer.start();
                     } catch (Throwable ignored) {
                         // Ignore Swing update errors
                     }
                 }
             });
+        }
+    }
+
+    private static final class VaultFileSystemView extends javax.swing.filechooser.FileSystemView {
+        private final File vaultRoot;
+        private final String vaultCanon;
+
+        VaultFileSystemView(File root) {
+            this.vaultRoot = root;
+            String canon;
+            try {
+                canon = root.getCanonicalPath();
+            } catch (IOException e) {
+                canon = root.getAbsolutePath();
+            }
+            this.vaultCanon = canon;
+        }
+
+        boolean isAllowed(File f) {
+            if (f == null) return false;
+            try {
+                String c = f.getCanonicalPath();
+                return c.equals(vaultCanon) || c.startsWith(vaultCanon + File.separator);
+            } catch (IOException e) {
+                String a = f.getAbsolutePath();
+                return a.equals(vaultCanon) || a.startsWith(vaultCanon + File.separator);
+            }
+        }
+
+        @Override
+        public File createNewFolder(File containingDir) throws IOException {
+            File base = isAllowed(containingDir) ? containingDir : vaultRoot;
+            File folder = new File(base, "NewFolder");
+            int i = 1;
+            while (folder.exists() && i < 100) {
+                folder = new File(base, "NewFolder_" + i++);
+            }
+            if (!folder.mkdirs() && !folder.exists()) {
+                throw new IOException("Unable to create folder");
+            }
+            return folder;
+        }
+
+        @Override
+        public File[] getRoots() {
+            return new File[] { vaultRoot };
+        }
+
+        @Override
+        public File getHomeDirectory() {
+            return vaultRoot;
+        }
+
+        @Override
+        public File getDefaultDirectory() {
+            return vaultRoot;
+        }
+
+        @Override
+        public boolean isRoot(File f) {
+            return f != null && (f.equals(vaultRoot) || !isAllowed(f));
+        }
+
+        @Override
+        public boolean isFileSystemRoot(File dir) {
+            return dir != null && (dir.equals(vaultRoot) || !isAllowed(dir));
+        }
+
+        @Override
+        public File getParentDirectory(File dir) {
+            if (dir == null || dir.equals(vaultRoot) || !isAllowed(dir)) {
+                return vaultRoot;
+            }
+            File parent = dir.getParentFile();
+            return (parent != null && isAllowed(parent)) ? parent : vaultRoot;
+        }
+
+        @Override
+        public File[] getFiles(File dir, boolean useFileHiding) {
+            File target = isAllowed(dir) ? dir : vaultRoot;
+            File[] list = target.listFiles();
+            if (list == null) return new File[0];
+            List<File> visible = new ArrayList<File>();
+            for (File f : list) {
+                if (!f.getName().startsWith(".")) {
+                    visible.add(f);
+                }
+            }
+            return visible.toArray(new File[0]);
+        }
+
+        @Override
+        public String getSystemDisplayName(File f) {
+            if (f != null && f.equals(vaultRoot)) {
+                return "ASYCUDA Vault (prints)";
+            }
+            return f != null ? f.getName() : "";
         }
     }
 
@@ -756,36 +919,70 @@ public class AsycudaBoot {
         if (root instanceof FileDialog) {
             FileDialog fd = (FileDialog) root;
             fd.setDirectory(dlDir.getAbsolutePath());
+            if (fd.getMode() == FileDialog.LOAD) {
+                triggerAutomaticAndroidFilePicker(dlDir);
+            }
             return;
         }
         for (Component c : root.getComponents()) {
             if (c instanceof JFileChooser) {
                 final JFileChooser fc = (JFileChooser) c;
                 activeFileChooser = fc;
-                fc.setCurrentDirectory(dlDir);
-                if (fc.getAccessory() == null) {
-                    JPanel acc = new JPanel(new BorderLayout(4, 4));
-                    acc.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-                    JButton importBtn = new JButton("<html><center><b>Import from Phone</b><br>استيراد ملف من الهاتف</center></html>");
-                    importBtn.setFocusPainted(false);
-                    importBtn.addActionListener(new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            new Thread(new Runnable() {
+                Window win = SwingUtilities.getWindowAncestor(fc);
+                if (win instanceof Dialog) {
+                    activeFileChooserDialog = (Dialog) win;
+                } else if (root instanceof Dialog) {
+                    activeFileChooserDialog = (Dialog) root;
+                }
+                if (!(fc.getFileSystemView() instanceof VaultFileSystemView)) {
+                    final VaultFileSystemView vaultView = new VaultFileSystemView(dlDir);
+                    fc.setFileSystemView(vaultView);
+                    fc.addPropertyChangeListener(JFileChooser.DIRECTORY_CHANGED_PROPERTY,
+                            new java.beans.PropertyChangeListener() {
                                 @Override
-                                public void run() {
-                                    sendToAndroidApk("PICK_WORKSPACE_FILE");
+                                public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                                    File cur = fc.getCurrentDirectory();
+                                    if (cur == null || !vaultView.isAllowed(cur)) {
+                                        SwingUtilities.invokeLater(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                fc.setCurrentDirectory(dlDir);
+                                            }
+                                        });
+                                    }
                                 }
-                            }, "Asycuda-PickBridge").start();
-                        }
-                    });
-                    acc.add(importBtn, BorderLayout.NORTH);
-                    fc.setAccessory(acc);
+                            });
+                }
+                fc.setCurrentDirectory(dlDir);
+                fc.rescanCurrentDirectory();
+                if (fc.getDialogType() != JFileChooser.SAVE_DIALOG) {
+                    triggerAutomaticAndroidFilePicker(dlDir);
                 }
             } else if (c instanceof Container) {
                 redirectFileChooserToDownloads((Container) c);
             }
         }
+    }
+
+    private static boolean isFileAlreadyInVault(File vaultDir, File candidate, String candidateSha256, int depth) {
+        if (vaultDir == null || !vaultDir.exists() || candidate == null || depth > 4) return false;
+        File[] list = vaultDir.listFiles();
+        if (list == null) return false;
+        long candLen = candidate.length();
+        for (File vf : list) {
+            if (vf.getName().startsWith(".")) continue;
+            if (vf.isDirectory()) {
+                if (isFileAlreadyInVault(vf, candidate, candidateSha256, depth + 1)) {
+                    return true;
+                }
+            } else if (vf.isFile() && vf.length() == candLen) {
+                if (vf.getName().equalsIgnoreCase(candidate.getName())
+                        || computeSha256(vf).equalsIgnoreCase(candidateSha256)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void scanTmpDir(File dir, int depth) {
@@ -795,15 +992,24 @@ public class AsycudaBoot {
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;
             if (f.isDirectory()) {
+                String dlow = f.getName().toLowerCase(Locale.US);
+                if ("soe.tmp".equals(dlow) || "son.tmp".equals(dlow)) continue;
                 scanTmpDir(f, depth + 1);
             } else {
                 String name = f.getName();
+                String low = name.toLowerCase(Locale.US);
                 if (name.startsWith("Resource") && name.endsWith(".so")) continue;
-                if (name.endsWith(".part") || name.endsWith(".lck") || name.endsWith(".tmp")) continue;
+                if (low.startsWith("soems") || low.endsWith("ems")) continue;
+                if (low.startsWith("prn") && low.endsWith("xc")) continue;
+                if (low.endsWith(".part") || low.endsWith(".lck") || low.endsWith(".tmp")) continue;
                 if (f.length() <= 0) continue;
                 String key = f.getAbsolutePath() + "_" + f.lastModified() + "_" + f.length();
                 if (!SEEN_PATHS.containsKey(key)) {
                     SEEN_PATHS.put(key, System.currentTimeMillis());
+                    String candHash = computeSha256(f);
+                    if (isFileAlreadyInVault(getWorkspaceDir(), f, candHash, 0)) {
+                        continue;
+                    }
                     processAndOpenFile(f);
                 }
             }

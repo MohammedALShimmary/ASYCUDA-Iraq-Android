@@ -11,32 +11,32 @@ Because **ASYCUDA World — Republic of Iraq (Android)** (`iq.asycuda`) is an in
 
 ---
 
-## Supported Versions & Published Release Verification (`v3.9.0`)
+## Supported Versions & Published Release Verification (`v3.9.5`)
 
-All users should run **[v3.9.0](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0)** (`versionCode 39`). Earlier releases (`v3.8.0`, `v3.7.0`, and `v3.6.0`) have been marked as superseded on GitHub Releases following the v3.9.0 Zero-Permission Encrypted Vault & File Picker Bridge architecture upgrade.
+All users should run **[v3.9.5](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5)** (`versionCode 40`). Earlier releases (`v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) have been marked as superseded on GitHub Releases following the v3.9.5 Unified Encrypted Vault File Manager, Automatic File Picker Bridge & Upload Staging Protection upgrade.
 
 | Version | Supported | Security Status | Direct Release Link |
 | :--- | :--- | :--- | :--- |
-| **v3.9.0** (`versionCode 39`) | **Yes (Recommended)** | **Zero storage permissions** (`MANAGE_EXTERNAL_STORAGE` & `BIND_ACCESSIBILITY_SERVICE` removed), Encrypted Private App Vault (`files/prints` & `files/workspace`), Native File Picker Middleman (`ACTION_OPEN_DOCUMENT`), Previewable Legal Consent Receipt, Auto-Cleaned APK Updater Cache, Pinned `SOCODE.RSA` X.509 JAR verification, Automated Adversarial CI Security Suite & CycloneDX SBOM | [**GitHub Release `v3.9.0`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0) |
-| **< v3.9.0** (`v3.8.0`, `v3.7.0`, `v3.6.0`) | No | Superseded — upgrade to **v3.9.0** via the in-app Update Center or direct APK download | [Download `ASYCUDA_Iraq_v3.9.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/ASYCUDA_Iraq_v3.9.0.apk) |
+| **v3.9.5** (`versionCode 40`) | **Yes (Recommended)** | **Zero storage permissions** (`MANAGE_EXTERNAL_STORAGE` & `BIND_ACCESSIBILITY_SERVICE` removed), Unified Encrypted Private App Vault (`files/prints`) with Full Folder Manager (Create, Copy, Move, Share, Delete & Folder-Share Prevention), Automatic Android File Picker Bridge (`ACTION_OPEN_DOCUMENT` with zero Swing UI modification), Upload Staging Exclusion (`soems*ems`), Apple-Style Icon Toolbars, Previewable Legal Consent Receipt, Auto-Cleaned APK Updater Cache, Pinned `SOCODE.RSA` X.509 JAR verification, Automated Adversarial CI Security Suite & CycloneDX SBOM | [**GitHub Release `v3.9.5`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5) |
+| **< v3.9.5** (`v3.9.0`, `v3.8.0`, `v3.7.0`, `v3.6.0`) | No | Superseded — upgrade to **v3.9.5** via the in-app Update Center or direct APK download | [Download `ASYCUDA_Iraq_v3.9.5.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) |
 
-### Official `v3.9.0` Release Assets & SHA-256 Checksums
-Every asset published on the [official `v3.9.0` GitHub Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.0) can be verified via `sha256sum`:
+### Official `v3.9.5` Release Assets & SHA-256 Checksums
+Every asset published on the [official `v3.9.5` GitHub Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v3.9.5) can be verified via `sha256sum`:
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v3.9.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/ASYCUDA_Iraq_v3.9.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 39`) | `8c154a8eb9f18d8d612b4732439ce3a3ccd3c7eae8c1456bffe222fa03b28b25` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/asycuda-iraq.tar.xz) | Baseline ASYCUDA Iraq client bundle + open-source `java-bridge/` JARs (`v3.9.0`) | `cf2e959e90d6d109a1dd12b970f385af5c194a0b3e6b27740846baa640f129b4` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.0/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + OpenJDK 8u402 runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 40`) | `36aba646d88f0424f1aec2c83b077fb3df2689ff0f91cd49d588dcf2cb967b7e` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | Baseline ASYCUDA Iraq client bundle + open-source `java-bridge/` JARs (`v3.9.5`) | `31fd49b386f365a3c9874bcd8620e63363b93bbc97131d866fd42e25e51624ee` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + OpenJDK 8u402 runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
 
 ### Official APK X.509 Signing Certificate Fingerprint
-Every official release APK (`ASYCUDA_Iraq_v3.9.0.apk`) can be cryptographically verified prior to installation using `apksigner verify --print-certs`:
+Every official release APK (`ASYCUDA_Iraq_v3.9.5.apk`) can be cryptographically verified prior to installation using `apksigner verify --print-certs`:
 
 | Field | Value |
 | :--- | :--- |
 | **Application ID** | `iq.asycuda` |
-| **Version Name / Code** | `3.9.0` (`versionCode 39`) |
+| **Version Name / Code** | `3.9.5` (`versionCode 40`) |
 | **Signer Certificate DN** | `CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ` |
 | **Signer SHA-256 Digest** | `d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023` |
 | **Signer SHA-1 Digest** | `e1b9c91b50e50223885fd2ee5326b16535e7` |
@@ -90,19 +90,19 @@ flowchart TB
 
 ---
 
-## 2. Zero Storage Permissions, Encrypted App Vault & Native File Picker Middleman (`v3.9.0`)
+## 2. Zero Storage Permissions, Unified Encrypted Vault & Automatic File Picker Bridge (`v3.9.5`)
 
 1. **Zero Broad Storage or Accessibility Permissions (`AndroidManifest.xml`)**:
    - `MANAGE_EXTERNAL_STORAGE`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`, and `BIND_ACCESSIBILITY_SERVICE` have been **completely removed** from [`lorie/src/main/AndroidManifest.xml`](lorie/src/main/AndroidManifest.xml) (enforced on every commit by [`scripts/SecurityVerificationTest.java`](scripts/SecurityVerificationTest.java)).
    - The app requests only normal runtime permissions required for an X11 foreground session (`INTERNET`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`, `WAKE_LOCK`, `VIBRATE`).
-2. **Java File Picker Middleman (`Import from Phone / استيراد ملف من الهاتف`)**:
-   - Because the legacy ASYCUDA Java 8 Swing client uses `javax.swing.JFileChooser` / `java.awt.FileDialog` (which cannot invoke Android `content://` intents directly), [`AsycudaBoot.java`](java-bridge/AsycudaBoot.java) jails `JFileChooser` and `FileDialog` to the private internal folder `/data/data/iq.asycuda/files/workspace`.
-   - Whenever ASYCUDA opens a `JFileChooser` dialog, `AsycudaBoot` automatically injects a prominent blue **"📂 Import from Phone / استيراد ملف من الهاتف"** button at the top of the Swing dialog.
-   - Tapping **"Import from Phone"** sends `AUTH|<token>|PICK_WORKSPACE_FILE` over `127.0.0.1:47891` to `AsycudaStandaloneManager`, which opens Android's native zero-permission system file picker (`Intent.ACTION_OPEN_DOCUMENT`).
-   - Only the single file selected by the user is copied into `/data/data/iq.asycuda/files/workspace/` and automatically selected inside the open `JFileChooser` dialog.
-3. **Encrypted Private App Storage for Printed PDFs & Customs Declarations (`Open`, `Share`, `Delete`)**:
-   - All printed PDFs and exported customs documents are saved **exclusively** inside `/data/data/iq.asycuda/files/prints` (protected by Android's kernel-enforced `0700` UID sandbox and file-based encryption). Zero files are ever written to public `/storage/emulated/0/Download`.
-   - Inside the in-app **Files & Prints** window, users can **Open**, **Share**, or **Delete** their files via `androidx.core.content.FileProvider` (`iq.asycuda.fileprovider`), and tap the **`!` Encrypted Storage Badge** in the header to read a full explanation in English, Arabic, and Kurdish.
+2. **Automatic File Picker Bridge (`Zero Modification to Government Dialogs`)**:
+   - Because the legacy ASYCUDA Java 8 Swing client uses `javax.swing.JFileChooser` / `java.awt.FileDialog` (which cannot invoke Android `content://` intents directly), [`AsycudaBoot.java`](java-bridge/AsycudaBoot.java) jails `JFileChooser` and `FileDialog` strictly to the unified private Vault folder `/data/data/iq.asycuda/files/prints` using `VaultRestrictedFileSystemView` (preventing traversal to parent system folders while allowing subfolder management inside the Vault).
+   - No buttons or custom UI components are ever injected into ASYCUDA's `JFileChooser`. Instead, when ASYCUDA opens its file chooser, `AsycudaBoot` sends `AUTH|<token>|PICK_WORKSPACE_FILE` over `127.0.0.1:47891` to `AsycudaStandaloneManager`, which displays a compact Android prompt (`showFilePickerBridgePromptModal`) asking whether the user wants to **Import a new file from their phone into the Vault** (`Intent.ACTION_OPEN_DOCUMENT`) or **Use a file already in the Vault**.
+   - When the user imports a file from their phone, only that single chosen file is copied into `/data/data/iq.asycuda/files/prints/` and automatically highlighted inside the open Java `JFileChooser` dialog.
+3. **Full-Featured Encrypted Vault — File Manager (`Folders`, `Copy`, `Move`, `Open`, `Share`, `Delete` & `Upload Staging Exclusion`)**:
+   - All printed PDFs, exported customs documents, and imported attachments are stored **exclusively** inside `/data/data/iq.asycuda/files/prints` (protected by Android's kernel-enforced `0700` UID sandbox and file-based encryption). Zero files are ever written to public `/storage/emulated/0/Download`.
+   - Inside the in-app **Vault — File Manager** (`showVaultFileManagerModal`), users can create subfolders, navigate into and out of folders, **Copy** or **Move** files and folders between locations, **Open**, **Share** (files only—folders are strictly prevented from being shared), or **Delete** items via Apple-style icon buttons and multi-select batch actions.
+   - **Upload Staging Exclusion**: Temporary `soems*ems` and `prn*xc` upload staging files in `/client/tmp/` (and any file already present in the Vault tree by name+size or SHA-256 digest via `isFileAlreadyInVault`) are ignored by the print/export watcher so uploading an attachment to the customs server never triggers duplicate Vault saves or file-open dialogs.
 4. **Private Cache & Automatic Cleanup for In-App APK Updates**:
    - When installing an app update via the **Update Center**, `downloadAndInstallApkUpdate()` downloads the `.apk` into `/data/data/iq.asycuda/cache/updates/` (never into `files/prints` or public storage), verifies its SHA-256 digest and X.509 signing certificate, launches the Android package installer, and `cleanupStaleUpdateApks()` automatically deletes the `.apk` file on startup once the update completes.
 

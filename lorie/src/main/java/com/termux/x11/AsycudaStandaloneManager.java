@@ -130,7 +130,8 @@ public class AsycudaStandaloneManager {
     private static final String JNLP_JAR_REL = "jars/00_jnlp.jar";
     private static final String BOOTPATCH_JAR_NAME = "00_bootpatch.jar";
     private static final String DIR_PRINTS = "prints";
-    private static final String DIR_WORKSPACE = "workspace";
+    private static final String DIR_WORKSPACE = DIR_PRINTS;
+    private static final String DIR_LEGACY_WORKSPACE = "workspace";
     private static final String DIR_UPDATES_CACHE = "updates";
     private static final String DIR_CLIENT = "client";
     private static final String HEADER_USER_AGENT = "User-Agent";
@@ -234,6 +235,8 @@ public class AsycudaStandaloneManager {
     private static volatile Process sJavaProcess = null;
     private static volatile MainActivity sCurrentActivity = null;
     private static volatile AsycudaMaterialUi.FeedbackModalController sActiveFeedbackController = null;
+    private static volatile File sVaultImportTargetDir = null;
+    private static volatile Runnable sOnVaultImportCallback = null;
     private static volatile boolean sTermsDialogShowing = false;
     private static volatile boolean sWhatsNewDialogShowing = false;
 
@@ -362,15 +365,29 @@ public class AsycudaStandaloneManager {
         new Thread(() -> {
             try {
                 String origName = queryUriDisplayName(activity, uri);
+                String mime = activity.getContentResolver().getType(uri);
                 String safeName = (origName != null && !origName.trim().isEmpty())
                         ? origName.trim().replaceAll(REGEX_UNSAFE_FILENAME, "_")
-                        : "imported_document_" + System.currentTimeMillis() + ".xml";
-                if (".".equals(safeName) || "..".equals(safeName)) {
-                    safeName = "imported_document_" + System.currentTimeMillis() + ".xml";
+                        : "document_" + System.currentTimeMillis();
+                if (".".equals(safeName) || "..".equals(safeName) || safeName.replace("_", "").isEmpty()) {
+                    safeName = "document_" + System.currentTimeMillis();
                 }
-                File workspaceDir = new File(activity.getFilesDir(), DIR_WORKSPACE);
-                ensureDir(workspaceDir);
-                File outFile = new File(workspaceDir, safeName);
+                if (!safeName.contains(".") && mime != null) {
+                    if (mime.contains("pdf")) safeName += ".pdf";
+                    else if (mime.contains("jpeg") || mime.contains("jpg")) safeName += ".jpg";
+                    else if (mime.contains("png")) safeName += ".png";
+                    else if (mime.contains("xml")) safeName += ".xml";
+                }
+                File vaultRoot = new File(activity.getFilesDir(), DIR_PRINTS);
+                ensureDir(vaultRoot);
+                File customDir = sVaultImportTargetDir;
+                Runnable uiRefreshCb = sOnVaultImportCallback;
+                sVaultImportTargetDir = null;
+                sOnVaultImportCallback = null;
+
+                File targetDir = (customDir != null && customDir.exists() && customDir.isDirectory()) ? customDir : vaultRoot;
+                ensureDir(targetDir);
+                File outFile = new File(targetDir, safeName);
                 try (InputStream in = activity.getContentResolver().openInputStream(uri);
                      FileOutputStream out = new FileOutputStream(outFile)) {
                     if (in == null) return;
@@ -381,8 +398,8 @@ public class AsycudaStandaloneManager {
                 }
                 setReadableOwnerOnly(outFile);
 
-                // Notify AsycudaBoot's JFileChooser middleman watcher via .last_imported marker
-                File marker = new File(workspaceDir, ".last_imported");
+                // Notify AsycudaBoot's JFileChooser middleman via .last_imported marker (refreshes Java list without closing it)
+                File marker = new File(vaultRoot, ".last_imported");
                 try (FileOutputStream mfos = new FileOutputStream(marker)) {
                     mfos.write(safeName.getBytes(StandardCharsets.UTF_8));
                     mfos.getFD().sync();
@@ -390,10 +407,20 @@ public class AsycudaStandaloneManager {
                 setReadableOwnerOnly(marker);
 
                 final String importedName = safeName;
-                UI.post(() -> Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                        "Imported into ASYCUDA Workspace: " + importedName,
-                        "تم استيراد الملف إلى مساحة عمل أسيكودا: " + importedName,
-                        "پەڕگەکە هاوردە کرا بۆ ناو ئەسیکۆدا: " + importedName), Toast.LENGTH_LONG).show());
+                UI.post(() -> {
+                    if (uiRefreshCb != null) {
+                        uiRefreshCb.run();
+                        Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                                "Imported to Vault: " + importedName,
+                                "تم استيراد الملف للخزنة: " + importedName,
+                                "هاوردە کرا بۆ قاسە: " + importedName), Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                                "Imported to Vault: " + importedName + " — select it in ASYCUDA and click Open",
+                                "تم استيراد الملف للخزنة: " + importedName + " — اختره في نافذة أسيكودا واضغط Open",
+                                "هاوردە کرا بۆ قاسە: " + importedName + " — لە پەنجەرەی ئەسیکۆدا دیاری بکە و Open دابگرە"), Toast.LENGTH_LONG).show();
+                    }
+                });
             } catch (Exception t) {
                 UI.post(() -> Toast.makeText(activity, "Import error: " + t.getMessage(), Toast.LENGTH_SHORT).show());
             }
@@ -787,7 +814,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v3_9_0");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v3_9_5");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -826,10 +853,35 @@ public class AsycudaStandaloneManager {
                 ensureFileCreated(runtimeMarker);
                 ensureFileCreated(bootPatchMarker);
             } else if (!bootPatchMarker.exists()) {
-                updateStatus("Applying v3.9.0 zero-permission vault & file picker bridge...");
+                updateStatus("Applying automatic Android file picker & unified vault bridge...");
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_8_0"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_0"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_1"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_2"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_3"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_4"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
+            }
+
+            // Migrate any files from legacy workspace folder into unified prints vault
+            File legacyWorkspace = new File(filesDir, DIR_LEGACY_WORKSPACE);
+            if (legacyWorkspace.exists() && !legacyWorkspace.equals(printsDir)) {
+                ensureDir(printsDir);
+                File[] legacyFiles = legacyWorkspace.listFiles();
+                if (legacyFiles != null) {
+                    for (File lf : legacyFiles) {
+                        if (lf.isFile() && !lf.getName().startsWith(".")) {
+                            File dest = new File(printsDir, lf.getName());
+                            if (!lf.renameTo(dest)) {
+                                deleteQuietly(lf);
+                            }
+                        } else {
+                            deleteRecursive(lf);
+                        }
+                    }
+                }
+                deleteRecursive(legacyWorkspace);
             }
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
@@ -1482,6 +1534,37 @@ public class AsycudaStandaloneManager {
         }
     }
 
+    private static void killOrphanedJvmProcesses() {
+        try {
+            int myPid = android.os.Process.myPid();
+            File procDir = new File("/proc");
+            File[] entries = procDir.listFiles();
+            if (entries == null) return;
+            for (File entry : entries) {
+                String name = entry.getName();
+                if (!name.matches("\\d+")) continue;
+                int pid = Integer.parseInt(name);
+                if (pid == myPid) continue;
+                File cmdline = new File(entry, "cmdline");
+                if (!cmdline.exists() || !cmdline.canRead()) continue;
+                try (FileInputStream fis = new FileInputStream(cmdline)) {
+                    byte[] buf = new byte[512];
+                    int n = fis.read(buf);
+                    if (n > 0) {
+                        String cmd = new String(buf, 0, n, StandardCharsets.UTF_8);
+                        if (cmd.contains("asycuda.running=1") || cmd.contains("AsycudaBoot")) {
+                            Os.kill(pid, android.system.OsConstants.SIGKILL);
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Ignore unreadable proc entry
+                }
+            }
+        } catch (Exception ignored) {
+            // Best-effort orphan cleanup
+        }
+    }
+
     private void launchAsycudaJvm(MainActivity activity) {
         File logFile;
         Process proc;
@@ -1491,6 +1574,7 @@ public class AsycudaStandaloneManager {
                     hideSplashDelayed(400);
                     return;
                 }
+                killOrphanedJvmProcesses();
 
                 File filesDir = new File("/data/data/" + activity.getPackageName() + "/files");
                 if (!filesDir.exists()) filesDir = activity.getFilesDir();
@@ -1760,19 +1844,13 @@ public class AsycudaStandaloneManager {
             }
         } else if (msg.startsWith("PICK_WORKSPACE_FILE")) {
             UI.post(() -> {
-                try {
-                    Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    pick.setType("*/*");
-                    pick.addCategory(Intent.CATEGORY_OPENABLE);
-                    act.startActivityForResult(Intent.createChooser(pick,
-                            AsycudaMaterialUi.tr(act,
-                                    "Import File into ASYCUDA Workspace",
-                                    "استيراد ملف من الهاتف إلى مساحة عمل أسيكودا",
-                                    "هاوردەکردنی پەڕگە لە مۆبایلەوە بۆ ناو ئەسیکۆدا")),
-                            REQ_PICK_WORKSPACE_FILE);
-                } catch (Exception t) {
-                    Toast.makeText(act, "Cannot open file picker: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+                List<File> vaultFiles = new ArrayList<>();
+                collectFiles(new File(act.getFilesDir(), DIR_PRINTS), vaultFiles);
+                AsycudaMaterialUi.showFilePickerBridgePromptModal(
+                        act,
+                        vaultFiles.size(),
+                        () -> launchSystemDocumentPicker(act),
+                        null);
             });
         } else if (msg.startsWith("SOCLASS_UPDATE|")) {
             UI.post(() -> {
@@ -1783,6 +1861,30 @@ public class AsycudaStandaloneManager {
                         Toast.LENGTH_LONG).show();
                 runUnifiedUpdateCheckModal(act);
             });
+        }
+    }
+
+    private void launchSystemDocumentPicker(MainActivity act) {
+        if (act == null || act.isFinishing()) return;
+        try {
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            pick.setType("*/*");
+            pick.addCategory(Intent.CATEGORY_OPENABLE);
+            act.startActivityForResult(pick, REQ_PICK_WORKSPACE_FILE);
+        } catch (Exception t) {
+            try {
+                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                fallback.setType("*/*");
+                fallback.addCategory(Intent.CATEGORY_OPENABLE);
+                act.startActivityForResult(Intent.createChooser(fallback,
+                        AsycudaMaterialUi.tr(act,
+                                "Select File for ASYCUDA Vault",
+                                "اختر ملفاً لإضافته إلى الخزنة المشفرة",
+                                "پەڕگەیەک هەڵبژێرە بۆ قاسەی نهێنی")),
+                        REQ_PICK_WORKSPACE_FILE);
+            } catch (Exception e2) {
+                Toast.makeText(act, "Cannot open file picker: " + e2.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -1868,22 +1970,17 @@ public class AsycudaStandaloneManager {
     private void deleteSelectedFiles(MainActivity activity, List<File> filesToDelete, AsycudaMaterialUi.MenuActionCallback cb) {
         if (filesToDelete == null || filesToDelete.isEmpty()) return;
         int deleted = 0;
-        File internalPrints = new File(activity.getFilesDir(), DIR_PRINTS);
-        File internalWorkspace = new File(activity.getFilesDir(), DIR_WORKSPACE);
 
         for (File f : filesToDelete) {
-            if (f == null) continue;
-            String name = f.getName();
-            boolean ok = f.delete();
-            deleteQuietly(new File(internalPrints, name));
-            deleteQuietly(new File(internalWorkspace, name));
-            if (ok) deleted++;
+            if (f == null || !f.exists()) continue;
+            deleteRecursive(f);
+            deleted++;
         }
 
         Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                "Deleted " + Math.max(1, deleted) + " file(s)",
-                "تم حذف " + Math.max(1, deleted) + " ملف",
-                Math.max(1, deleted) + " پەڕگە سڕایەوە"), Toast.LENGTH_SHORT).show();
+                "Deleted " + Math.max(1, deleted) + " item(s)",
+                "تم حذف " + Math.max(1, deleted) + " عنصر",
+                Math.max(1, deleted) + " دانە سڕایەوە"), Toast.LENGTH_SHORT).show();
 
         if (cb != null) {
             cb.onOpenFiles();
@@ -2076,6 +2173,13 @@ public class AsycudaStandaloneManager {
             @Override
             public void onDeleteFiles(List<File> files) {
                 deleteSelectedFiles(activity, files, this);
+            }
+
+            @Override
+            public void onImportFileToVault(File targetDir, Runnable onImported) {
+                sVaultImportTargetDir = targetDir;
+                sOnVaultImportCallback = onImported;
+                launchSystemDocumentPicker(activity);
             }
         };
     }

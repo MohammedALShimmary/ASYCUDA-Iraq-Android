@@ -45,6 +45,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -53,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -66,7 +68,7 @@ public class AsycudaMaterialUi {
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
     public static final String CURRENT_POLICY_VERSION = "1.2-2026.10";
-    public static final int CURRENT_CHANGELOG_VERSION = 39;
+    public static final int CURRENT_CHANGELOG_VERSION = 40;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
@@ -139,6 +141,7 @@ public class AsycudaMaterialUi {
         void onShareFile(File f);
         void onShareMultipleFiles(List<File> files);
         void onDeleteFiles(List<File> files);
+        default void onImportFileToVault(File targetDir, Runnable onImported) {}
     }
 
     public interface UpdateCenterController {
@@ -324,15 +327,16 @@ public class AsycudaMaterialUi {
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
-        TextView langPill = createCupertinoButton(activity, getCurrentLanguageDisplayName(activity), false, false, v -> {
-            dialog.dismiss();
-            showLanguageModal(activity, cb);
-        });
-        LinearLayout.LayoutParams langLp = (LinearLayout.LayoutParams) langPill.getLayoutParams();
+        View langBtn = createIconButton(activity, R.drawable.ic_menu_language,
+                getCurrentLanguageDisplayName(activity), false, false, v -> {
+                    dialog.dismiss();
+                    showLanguageModal(activity, cb);
+                });
+        LinearLayout.LayoutParams langLp = (LinearLayout.LayoutParams) langBtn.getLayoutParams();
         langLp.setMarginEnd(dp(activity, 8));
-        header.addView(langPill);
+        header.addView(langBtn);
 
-        TextView closeBtn = createCupertinoButton(activity,
+        View closeBtn = createIconButton(activity, R.drawable.ic_action_close,
                 tr(activity, "Done", "تم", KU_DONE),
                 true, false, v -> dialog.dismiss());
         header.addView(closeBtn);
@@ -392,9 +396,9 @@ public class AsycudaMaterialUi {
                     cb.onCheckUpdates();
                 });
 
-        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_documents,
-                tr(activity, "Printed PDFs & Exported Files", "ملفات PDF والمستندات المصدرة", "پەڕگەکانی PDF و بەڵگەنامە چاپکراوەکان"),
-                tr(activity, "View, share, or delete saved customs declarations", "فتح أو مشاركة أو حذف التصاريح والمستندات المحفوظة", "کردنەوە، هاوبەشکردن یان سڕینەوەی بەڵگەنامە پاشەکەوتکراوەکان"),
+        addMenuTileWithBadge(activity, grid, R.drawable.ic_folder,
+                tr(activity, "Vault (File Manager)", "الخزنة (مدير الملفات)", "قاسە (بەڕێوەبەری پەڕگەکان)"),
+                tr(activity, "Manage folders, import files, and view or share saved PDFs", "إدارة المجلدات واستيراد الملفات وفتح أو مشاركة المستندات", "بەڕێوەبردنی بوخچەکان، هاوردەکردنی پەڕگە و کردنەوەی PDF"),
                 null, false, false, () -> {
                     dialog.dismiss();
                     cb.onOpenFiles();
@@ -500,7 +504,7 @@ public class AsycudaMaterialUi {
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
-        header.addView(createCupertinoButton(activity,
+        header.addView(createIconButton(activity, R.drawable.ic_nav_back,
                 tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
                 false, false, v -> {
                     dialog.dismiss();
@@ -1215,6 +1219,15 @@ public class AsycudaMaterialUi {
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         titleCol.addView(sub);
         header.addView(titleCol);
+
+        // Top-bar icon action (replaces old bottom footer text button): disabled while checking
+        final FrameLayout actionBtn = createIconButton(activity, R.drawable.ic_menu_cloud_sync,
+                tr(activity, "Checking...", "جاري الفحص...", "پشکنین..."),
+                false, false, null);
+        actionBtn.setEnabled(false);
+        actionBtn.setAlpha(0.4f);
+        header.addView(actionBtn);
+
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
@@ -1326,22 +1339,6 @@ public class AsycudaMaterialUi {
         scroll.addView(scrollBody);
         root.addView(scroll);
 
-        LinearLayout footer = new LinearLayout(activity);
-        footer.setOrientation(LinearLayout.HORIZONTAL);
-        footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams footLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        footLp.topMargin = dp(activity, 14);
-        footer.setLayoutParams(footLp);
-
-        TextView actionBtn = createCupertinoButton(activity,
-                tr(activity, "Checking...", "جاري الفحص...", "پشکنین..."),
-                false, false, null);
-        actionBtn.setEnabled(false);
-        actionBtn.setAlpha(0.5f);
-        footer.addView(actionBtn);
-        root.addView(footer);
-
         dialog.setContentView(root);
         dialog.show();
 
@@ -1418,8 +1415,8 @@ public class AsycudaMaterialUi {
                                 "Updates downloaded. Restarting session...",
                                 "تم تحميل التحديثات. جاري إعادة تشغيل الجلسة...",
                                 "نوێکردنەوەکان دابەزێنران. دووبارە پێکردنەوەی دانیشتن..."));
-                        actionBtn.setText(tr(activity, "Restarting...", "جاري إعادة التشغيل...", "دووبارە پێکردنەوە..."));
-                        actionBtn.setBackground(createCupertinoButtonDrawable(activity, true, false));
+                        setIconButtonState(activity, actionBtn, R.drawable.ic_menu_restart,
+                                tr(activity, "Restarting...", "جاري إعادة التشغيل...", "دووبارە پێکردنەوە..."), true);
                         actionBtn.setAlpha(1.0f);
                         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                             if (apkDownloadActive[0]) return;
@@ -1444,10 +1441,12 @@ public class AsycudaMaterialUi {
                         }
                         actionBtn.setEnabled(true);
                         actionBtn.setAlpha(1.0f);
-                        actionBtn.setText(onCloseWhenUpToDate != null
-                                ? tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER)
-                                : tr(activity, "Continue", "متابعة", "بەردەوامبوون"));
-                        actionBtn.setBackground(createCupertinoButtonDrawable(activity, !appUpdatePending, false));
+                        setIconButtonState(activity, actionBtn,
+                                onCloseWhenUpToDate != null ? R.drawable.ic_nav_back : R.drawable.ic_action_check,
+                                onCloseWhenUpToDate != null
+                                        ? tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER)
+                                        : tr(activity, "Continue", "متابعة", "بەردەوامبوون"),
+                                !appUpdatePending && onCloseWhenUpToDate == null);
                         actionBtn.setOnClickListener(v -> {
                             dialog.dismiss();
                             if (updatedJarsCount > 0 && !apkDownloadActive[0] && onRestartNow != null) {
@@ -1626,7 +1625,8 @@ public class AsycudaMaterialUi {
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
-        TextView closeBtn = createCupertinoButton(activity,
+        View closeBtn = createIconButton(activity,
+                onBackToMenu != null ? R.drawable.ic_nav_back : R.drawable.ic_action_close,
                 onBackToMenu != null
                         ? tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER)
                         : tr(activity, "Cancel", "إلغاء", "پاشگەزبوونەوە"),
@@ -1733,7 +1733,7 @@ public class AsycudaMaterialUi {
         final File[] currentImageHolder = new File[] { null };
         final FeedbackModalController[] controllerRef = new FeedbackModalController[1];
 
-        TextView captureBtn = createCupertinoButton(activity,
+        View captureBtn = createIconButton(activity, R.drawable.ic_action_camera,
                 tr(activity, "Capture Screen", "التقاط الشاشة", "وێنەگرتنی شاشە"),
                 false, false, v -> {
                     if (handler != null && controllerRef[0] != null) {
@@ -1744,7 +1744,7 @@ public class AsycudaMaterialUi {
         capLp.setMarginEnd(dp(activity, 6));
         imgCard.addView(captureBtn);
 
-        TextView pickBtn = createCupertinoButton(activity,
+        View pickBtn = createIconButton(activity, R.drawable.ic_action_image,
                 tr(activity, "Choose Image", "اختيار صورة", "هەڵبژاردنی وێنە"),
                 false, false, v -> {
                     if (handler != null && controllerRef[0] != null) {
@@ -1753,7 +1753,7 @@ public class AsycudaMaterialUi {
                 });
         imgCard.addView(pickBtn);
 
-        TextView removeImgBtn = createCupertinoButton(activity,
+        View removeImgBtn = createIconButton(activity, R.drawable.ic_action_delete,
                 tr(activity, "Remove", "حذف", "لابردن"),
                 false, true, v -> {
                     currentImageHolder[0] = null;
@@ -1799,16 +1799,8 @@ public class AsycudaMaterialUi {
         scroll.addView(body);
         root.addView(scroll);
 
-        // Footer Button (Direct Sentry submission only — no local ZIP file export)
-        LinearLayout footer = new LinearLayout(activity);
-        footer.setOrientation(LinearLayout.HORIZONTAL);
-        footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams footLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        footLp.topMargin = dp(activity, 12);
-        footer.setLayoutParams(footLp);
-
-        TextView submitBtn = createCupertinoButton(activity,
+        // Top-bar Send icon (replaces old bottom footer "Submit Report" button)
+        final FrameLayout submitBtn = createIconButton(activity, R.drawable.ic_action_send,
                 tr(activity, "Submit Report", "إرسال البلاغ", "ناردنی ڕاپۆرت"),
                 true, false, null);
         submitBtn.setOnClickListener(v -> {
@@ -1825,8 +1817,9 @@ public class AsycudaMaterialUi {
                 handler.onSubmitToSentry(desc, currentImageHolder[0], controllerRef[0], dialog);
             }
         });
-        footer.addView(submitBtn);
-        root.addView(footer);
+        LinearLayout.LayoutParams sbLp = (LinearLayout.LayoutParams) submitBtn.getLayoutParams();
+        sbLp.setMarginEnd(dp(activity, 8));
+        header.addView(submitBtn, Math.max(0, header.indexOfChild(closeBtn)));
 
         controllerRef[0] = new FeedbackModalController() {
             @Override
@@ -1895,7 +1888,7 @@ public class AsycudaMaterialUi {
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
 
-        header.addView(createCupertinoButton(activity,
+        header.addView(createIconButton(activity, R.drawable.ic_nav_back,
                 tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
                 false, false, v -> {
                     dialog.dismiss();
@@ -2080,94 +2073,253 @@ public class AsycudaMaterialUi {
     }
 
     /**
-     * Printed PDFs & Exported Files Modal with Individual Delete + Multi-Select (Share & Delete).
+     * Vault — File Manager Modal with Full Folder Navigation, Folder Creation,
+     * File Import, Individual Open/Share/Delete Icons, and Multi-Select Batch Actions.
      */
-    public static void showFilesModal(MainActivity activity, List<File> files, MenuActionCallback cb) {
-        Dialog dialog = createModalDialog(activity, 0.88f, 680, true);
+    public static void showFilesModal(MainActivity activity, List<File> unusedLegacyFiles, MenuActionCallback cb) {
+        File vaultRoot = new File(activity.getFilesDir(), "prints");
+        if (!vaultRoot.exists() && !vaultRoot.mkdirs()) {
+            // Directory exists or created concurrently
+        }
+        showVaultFileManagerModal(activity, vaultRoot, vaultRoot, cb);
+    }
+
+    public static void showVaultFileManagerModal(MainActivity activity, File vaultRoot, File requestedDir, MenuActionCallback cb) {
+        if (activity == null || activity.isFinishing()) return;
+        if (!vaultRoot.exists() && !vaultRoot.mkdirs()) {
+            // Root exists
+        }
+        File currentDir = (requestedDir != null && requestedDir.exists() && requestedDir.isDirectory()
+                && isSubPathOrEqual(vaultRoot, requestedDir)) ? requestedDir : vaultRoot;
+        final boolean isAtRoot = currentDir.equals(vaultRoot);
+
+        File[] rawChildren = currentDir.listFiles();
+        final List<File> items = new ArrayList<>();
+        if (rawChildren != null) {
+            for (File f : rawChildren) {
+                String n = f.getName();
+                if (n.startsWith(".") || n.endsWith(".apk")) continue;
+                if (f.isDirectory() || (f.isFile() && f.length() > 0)) {
+                    items.add(f);
+                }
+            }
+        }
+        items.sort((a, b) -> {
+            if (a.isDirectory() != b.isDirectory()) {
+                return a.isDirectory() ? -1 : 1;
+            }
+            if (a.isDirectory()) {
+                return a.getName().compareToIgnoreCase(b.getName());
+            }
+            return Long.compare(b.lastModified(), a.lastModified());
+        });
+
+        Dialog dialog = createModalDialog(activity, 0.90f, 700, true);
         LinearLayout root = createDialogContainer(activity);
 
-        final Set<File> selectedFiles = new LinkedHashSet<>();
+        final Set<File> selectedItems = new LinkedHashSet<>();
 
+        // Top Bar with Title + Clean Apple Icon Buttons
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
 
         ImageView headerIcon = new ImageView(activity);
-        headerIcon.setImageResource(R.drawable.ic_menu_documents);
+        headerIcon.setImageResource(R.drawable.ic_folder);
         headerIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
         hiLp.setMarginEnd(dp(activity, 10));
         header.addView(headerIcon, hiLp);
 
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "Printed PDFs & Exported Files",
-                "ملفات PDF والمستندات المصدرة",
-                "پەڕگەکانی PDF و بەڵگەنامە چاپکراوەکان"));
+                "Vault — File Manager",
+                "الخزنة — مدير الملفات",
+                "قاسە — بەڕێوەبەری پەڕگەکان"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        header.addView(title);
+        titleCol.addView(title);
 
-        // Interactive Security / Encrypted Vault Info Badge (!)
+        TextView subPath = new TextView(activity);
+        String relPath = getRelativeVaultPath(vaultRoot, currentDir);
+        subPath.setText(isAtRoot
+                ? tr(activity, "Encrypted App Storage  •  /Vault", "التخزين المشفر للتطبيق  •  /الخزنة", "بیرگەی پارێزراو  •  /قاسە")
+                : "📁 /Vault/" + relPath);
+        subPath.setTextColor(isAtRoot ? TEXT_SECONDARY : SYSTEM_BLUE);
+        subPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        titleCol.addView(subPath);
+        header.addView(titleCol);
+
+        // 1. Encrypted Vault Info (!) Button
         TextView vaultInfoBadge = new TextView(activity);
         vaultInfoBadge.setText("!");
         vaultInfoBadge.setGravity(Gravity.CENTER);
         vaultInfoBadge.setTextColor(Color.WHITE);
-        vaultInfoBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        vaultInfoBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         vaultInfoBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        vaultInfoBadge.setBackground(createRippleCardDrawable(activity, SYSTEM_BLUE, 13, Color.parseColor("#88FFFFFF")));
-        LinearLayout.LayoutParams vibLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
+        vaultInfoBadge.setBackground(createRippleCardDrawable(activity, SYSTEM_BLUE_TINT, 11, SYSTEM_BLUE));
+        LinearLayout.LayoutParams vibLp = new LinearLayout.LayoutParams(dp(activity, 38), dp(activity, 38));
         vibLp.setMarginEnd(dp(activity, 8));
         vaultInfoBadge.setLayoutParams(vibLp);
         vaultInfoBadge.setOnClickListener(v -> showEncryptedVaultInfoModal(activity));
         header.addView(vaultInfoBadge);
 
-        dialog.setOnCancelListener(d -> showControlCenter(activity, cb));
+        // 2. Import File from Phone Icon Button
+        View importFileBtn = createIconButton(activity, R.drawable.ic_file_import,
+                tr(activity, "Import File from Phone", "استيراد ملف من الهاتف", "هاوردەکردنی پەڕگە لە مۆبایل"),
+                true, false, v -> {
+                    if (cb != null) {
+                        cb.onImportFileToVault(currentDir, () -> {
+                            try {
+                                if (dialog.isShowing()) dialog.dismiss();
+                            } catch (Exception ignored) { /* Best-effort UI operation */ }
+                            showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                        });
+                    }
+                });
+        LinearLayout.LayoutParams impLp = (LinearLayout.LayoutParams) importFileBtn.getLayoutParams();
+        impLp.setMarginEnd(dp(activity, 8));
+        header.addView(importFileBtn);
 
-        if (!files.isEmpty()) {
-            TextView selectAllBtn = createCupertinoButton(activity,
+        // 3. New Folder Icon Button
+        View newFolderBtn = createIconButton(activity, R.drawable.ic_folder_add,
+                tr(activity, "New Folder", "مجلد جديد", "بوخچەی نوێ"),
+                false, false, v -> showCreateFolderDialog(activity, currentDir, () -> {
+                    dialog.dismiss();
+                    showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                }));
+        LinearLayout.LayoutParams nfLp = (LinearLayout.LayoutParams) newFolderBtn.getLayoutParams();
+        nfLp.setMarginEnd(dp(activity, 8));
+        header.addView(newFolderBtn);
+
+        // 4. Select All Icon Button (when non-empty)
+        final View selectAllBtn;
+        if (!items.isEmpty()) {
+            selectAllBtn = createIconButton(activity, R.drawable.ic_select_all,
                     tr(activity, "Select All", "تحديد الكل", "دیاریکردنی هەموو"),
                     false, false, null);
             LinearLayout.LayoutParams saLp = (LinearLayout.LayoutParams) selectAllBtn.getLayoutParams();
             saLp.setMarginEnd(dp(activity, 8));
             header.addView(selectAllBtn);
+        } else {
+            selectAllBtn = null;
+        }
 
-            header.addView(createCupertinoButton(activity,
-                    tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
-                    false, false, v -> {
-                        dialog.dismiss();
-                        showControlCenter(activity, cb);
-                    }));
-            root.addView(header);
-            root.addView(createHairlineDivider(activity));
+        // 5. Back Icon Button (Navigates up to Parent Folder if in subfolder, or Control Center if at root)
+        Runnable navigateBackAction = () -> {
+            dialog.dismiss();
+            if (!isAtRoot) {
+                File parent = currentDir.getParentFile();
+                showVaultFileManagerModal(activity, vaultRoot, parent != null ? parent : vaultRoot, cb);
+            } else {
+                showControlCenter(activity, cb);
+            }
+        };
+        View backBtn = createIconButton(activity, R.drawable.ic_nav_back,
+                tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
+                false, false, v -> navigateBackAction.run());
+        header.addView(backBtn);
+        dialog.setOnCancelListener(d -> navigateBackAction.run());
 
-            // Multi-select batch action bar (shown when 1+ files are selected)
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        // Subfolder Navigation Bar (shown when inside a subfolder for one-tap return to parent folder)
+        if (!isAtRoot) {
+            LinearLayout pathBar = new LinearLayout(activity);
+            pathBar.setOrientation(LinearLayout.HORIZONTAL);
+            pathBar.setGravity(Gravity.CENTER_VERTICAL);
+            pathBar.setPadding(dp(activity, 12), dp(activity, 9), dp(activity, 12), dp(activity, 9));
+            pathBar.setBackground(createRippleCardDrawable(activity, SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
+            pathBar.setClickable(true);
+            pathBar.setFocusable(true);
+            pathBar.setOnClickListener(v -> navigateBackAction.run());
+            LinearLayout.LayoutParams pbLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            pbLp.topMargin = dp(activity, 10);
+            pathBar.setLayoutParams(pbLp);
+
+            ImageView upIcon = new ImageView(activity);
+            upIcon.setImageResource(R.drawable.ic_nav_back);
+            upIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+            LinearLayout.LayoutParams upLp = new LinearLayout.LayoutParams(dp(activity, 18), dp(activity, 18));
+            upLp.setMarginEnd(dp(activity, 8));
+            pathBar.addView(upIcon, upLp);
+
+            TextView upLabel = new TextView(activity);
+            upLabel.setText(tr(activity,
+                    "Up to parent folder  •  /Vault/" + relPath,
+                    "العودة للمجلد السابق  •  /Vault/" + relPath,
+                    "گەڕانەوە بۆ بوخچەی پێشوو  •  /Vault/" + relPath));
+            upLabel.setTextColor(SYSTEM_BLUE);
+            upLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            upLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            pathBar.addView(upLabel);
+            root.addView(pathBar);
+        }
+
+        if (!items.isEmpty()) {
+            // Multi-select batch action bar (shown when 1+ items are selected)
             LinearLayout batchBar = new LinearLayout(activity);
             batchBar.setOrientation(LinearLayout.HORIZONTAL);
             batchBar.setGravity(Gravity.CENTER_VERTICAL);
-            batchBar.setPadding(dp(activity, 12), dp(activity, 8), dp(activity, 12), dp(activity, 8));
-            batchBar.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
+            batchBar.setPadding(dp(activity, 14), dp(activity, 10), dp(activity, 14), dp(activity, 10));
+            batchBar.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 12, SYSTEM_BLUE));
             LinearLayout.LayoutParams bbLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            bbLp.topMargin = dp(activity, 8);
+            bbLp.topMargin = dp(activity, 10);
             batchBar.setLayoutParams(bbLp);
             batchBar.setVisibility(View.GONE);
 
             TextView selectedCountView = new TextView(activity);
             selectedCountView.setTextColor(TEXT_PRIMARY);
-            selectedCountView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            selectedCountView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
             selectedCountView.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
             selectedCountView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             batchBar.addView(selectedCountView);
 
-            TextView shareSelectedBtn = createCupertinoButton(activity,
+            View copySelectedBtn = createIconButton(activity, R.drawable.ic_action_copy,
+                    tr(activity, "Copy Selected", "نسخ المحدد", "کۆپیکردنی دیاریکراو"),
+                    false, false, v -> {
+                        if (selectedItems.isEmpty()) return;
+                        showCopyMoveDestinationDialog(activity, dialog, vaultRoot, currentDir,
+                                new ArrayList<>(selectedItems), true, cb);
+                    });
+            LinearLayout.LayoutParams csLp = (LinearLayout.LayoutParams) copySelectedBtn.getLayoutParams();
+            csLp.setMarginEnd(dp(activity, 8));
+            batchBar.addView(copySelectedBtn);
+
+            View moveSelectedBtn = createIconButton(activity, R.drawable.ic_action_move,
+                    tr(activity, "Move Selected", "نقل المحدد", "گواستنەوەی دیاریکراو"),
+                    false, false, v -> {
+                        if (selectedItems.isEmpty()) return;
+                        showCopyMoveDestinationDialog(activity, dialog, vaultRoot, currentDir,
+                                new ArrayList<>(selectedItems), false, cb);
+                    });
+            LinearLayout.LayoutParams msLp = (LinearLayout.LayoutParams) moveSelectedBtn.getLayoutParams();
+            msLp.setMarginEnd(dp(activity, 8));
+            batchBar.addView(moveSelectedBtn);
+
+            View shareSelectedBtn = createIconButton(activity, R.drawable.ic_action_share,
                     tr(activity, "Share Selected", "مشاركة المحدد", "هاوبەشکردنی دیاریکراو"),
                     true, false, v -> {
-                        if (selectedFiles.isEmpty()) return;
-                        List<File> toShare = new ArrayList<>(selectedFiles);
+                        List<File> toShare = new ArrayList<>();
+                        for (File sel : selectedItems) {
+                            if (sel.isFile()) toShare.add(sel);
+                        }
+                        if (toShare.isEmpty()) {
+                            Toast.makeText(activity, tr(activity,
+                                    "Folders cannot be shared — select files only",
+                                    "لا يمكن مشاركة المجلدات — حدد ملفات فقط",
+                                    "بوخچەکان هاوبەش ناکرێن — تەنها پەڕگە دیاری بکە"), Toast.LENGTH_SHORT).show();
+                            return;
+                        }
                         dialog.dismiss();
                         if (toShare.size() == 1) {
                             cb.onShareFile(toShare.get(0));
@@ -2179,21 +2331,28 @@ public class AsycudaMaterialUi {
             ssLp.setMarginEnd(dp(activity, 8));
             batchBar.addView(shareSelectedBtn);
 
-            TextView deleteSelectedBtn = createCupertinoButton(activity,
+            View deleteSelectedBtn = createIconButton(activity, R.drawable.ic_action_delete,
                     tr(activity, "Delete Selected", "حذف المحدد", "سڕینەوەی دیاریکراو"),
                     false, true, v -> {
-                        if (selectedFiles.isEmpty()) return;
-                        List<File> toDelete = new ArrayList<>(selectedFiles);
+                        if (selectedItems.isEmpty()) return;
+                        for (File sel : selectedItems) {
+                            deleteItemRecursive(sel);
+                        }
+                        Toast.makeText(activity, tr(activity,
+                                "Deleted " + selectedItems.size() + " item(s)",
+                                "تم حذف " + selectedItems.size() + " عنصر",
+                                selectedItems.size() + " دانە سڕایەوە"), Toast.LENGTH_SHORT).show();
                         dialog.dismiss();
-                        cb.onDeleteFiles(toDelete);
+                        showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
                     });
             batchBar.addView(deleteSelectedBtn);
             root.addView(batchBar);
 
             ScrollView scroll = new ScrollView(activity);
+            scroll.setFillViewport(true);
             LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            scrollLp.topMargin = dp(activity, 8);
+            scrollLp.topMargin = dp(activity, 10);
             scroll.setLayoutParams(scrollLp);
 
             LinearLayout listBox = new LinearLayout(activity);
@@ -2203,23 +2362,28 @@ public class AsycudaMaterialUi {
             final List<LinearLayout> rowCards = new ArrayList<>();
 
             Runnable updateBatchUi = () -> {
-                int count = selectedFiles.size();
+                int count = selectedItems.size();
                 if (count > 0) {
                     batchBar.setVisibility(View.VISIBLE);
                     selectedCountView.setText(tr(activity,
-                            count + " file(s) selected",
-                            "تم تحديد " + count + " ملف",
-                            count + " پەڕگە دیاریکراوە"));
+                            count + " selected",
+                            "تم تحديد " + count,
+                            count + " دیاریکراوە"));
+                    boolean hasSelectedFolder = false;
+                    for (File sel : selectedItems) {
+                        if (sel.isDirectory()) {
+                            hasSelectedFolder = true;
+                            break;
+                        }
+                    }
+                    // Folders cannot be shared: hide Share button whenever any folder is selected
+                    shareSelectedBtn.setVisibility(hasSelectedFolder ? View.GONE : View.VISIBLE);
                 } else {
                     batchBar.setVisibility(View.GONE);
                 }
-                boolean allSelected = count == files.size();
-                selectAllBtn.setText(allSelected
-                        ? tr(activity, "Clear Selection", "إلغاء التحديد", "لابردنی دیاریکردن")
-                        : tr(activity, "Select All", "تحديد الكل", "دیاریکردنی هەموو"));
-                for (int i = 0; i < files.size(); i++) {
-                    File itemFile = files.get(i);
-                    boolean sel = selectedFiles.contains(itemFile);
+                for (int i = 0; i < items.size(); i++) {
+                    File itemFile = items.get(i);
+                    boolean sel = selectedItems.contains(itemFile);
                     TextView chk = checkIndicators.get(i);
                     LinearLayout rowCard = rowCards.get(i);
                     chk.setText(sel ? "✓" : "");
@@ -2233,31 +2397,35 @@ public class AsycudaMaterialUi {
                 }
             };
 
-            selectAllBtn.setOnClickListener(v -> {
-                if (selectedFiles.size() == files.size()) {
-                    selectedFiles.clear();
-                } else {
-                    selectedFiles.addAll(files);
-                }
-                updateBatchUi.run();
-            });
+            if (selectAllBtn != null) {
+                selectAllBtn.setOnClickListener(v -> {
+                    if (selectedItems.size() == items.size()) {
+                        selectedItems.clear();
+                    } else {
+                        selectedItems.addAll(items);
+                    }
+                    updateBatchUi.run();
+                });
+            }
 
             SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
 
-            for (File f : files) {
+            for (File f : items) {
+                final boolean isDir = f.isDirectory();
                 LinearLayout row = new LinearLayout(activity);
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(Gravity.CENTER_VERTICAL);
-                int pad = dp(activity, 12);
-                row.setPadding(pad, dp(activity, 10), pad, dp(activity, 10));
+                int padH = dp(activity, 14);
+                int padV = dp(activity, 12);
+                row.setPadding(padH, padV, padH, padV);
                 row.setBackground(createCardDrawable(activity,
                         SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                rlp.bottomMargin = dp(activity, 8);
+                rlp.bottomMargin = dp(activity, 10);
                 row.setLayoutParams(rlp);
 
-                // Multi-select checkbox pill on the start side
+                // 1. Multi-select checkbox pill on the start side
                 TextView checkBtn = new TextView(activity);
                 checkBtn.setGravity(Gravity.CENTER);
                 checkBtn.setTextColor(TEXT_PRIMARY);
@@ -2269,63 +2437,133 @@ public class AsycudaMaterialUi {
                 checkBtn.setLayoutParams(chkLp);
 
                 View.OnClickListener toggleRowSelection = v -> {
-                    if (selectedFiles.contains(f)) {
-                        selectedFiles.remove(f);
+                    if (selectedItems.contains(f)) {
+                        selectedItems.remove(f);
                     } else {
-                        selectedFiles.add(f);
+                        selectedItems.add(f);
                     }
                     updateBatchUi.run();
                 };
                 checkBtn.setOnClickListener(toggleRowSelection);
                 row.addView(checkBtn);
 
+                // 2. Folder / File Icon Badge (38dp x 38dp)
+                FrameLayout typeBadge = new FrameLayout(activity);
+                typeBadge.setBackground(createCardDrawable(activity,
+                        isDir ? SYSTEM_BLUE_TINT : SYSTEM_GRAY_FILL, 10, 0));
+                LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(dp(activity, 38), dp(activity, 38));
+                tbLp.setMarginEnd(dp(activity, 12));
+                ImageView typeIcon = new ImageView(activity);
+                typeIcon.setImageResource(isDir ? R.drawable.ic_folder : R.drawable.ic_menu_documents);
+                typeIcon.setImageTintList(ColorStateList.valueOf(isDir ? SYSTEM_BLUE : TEXT_PRIMARY));
+                typeBadge.addView(typeIcon, new FrameLayout.LayoutParams(dp(activity, 20), dp(activity, 20), Gravity.CENTER));
+                row.addView(typeBadge, tbLp);
+
+                // 3. Name + Metadata Column (Spacious, single-line middle ellipsize so buttons never crowd)
                 LinearLayout infoCol = new LinearLayout(activity);
                 infoCol.setOrientation(LinearLayout.VERTICAL);
-                infoCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                infoCol.setOnClickListener(toggleRowSelection);
+                LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                infoLp.setMarginEnd(dp(activity, 10));
+                infoCol.setLayoutParams(infoLp);
+
+                View.OnClickListener primaryRowTap = isDir
+                        ? (v -> {
+                            dialog.dismiss();
+                            showVaultFileManagerModal(activity, vaultRoot, f, cb);
+                        })
+                        : toggleRowSelection;
+                typeBadge.setOnClickListener(primaryRowTap);
+                infoCol.setOnClickListener(primaryRowTap);
 
                 TextView nameView = new TextView(activity);
                 nameView.setText(f.getName());
                 nameView.setTextColor(TEXT_PRIMARY);
-                nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+                nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
                 nameView.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+                nameView.setSingleLine(true);
+                nameView.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
                 infoCol.addView(nameView);
 
-                long kb = Math.max(1, f.length() / 1024);
                 TextView metaView = new TextView(activity);
-                metaView.setText(kb + " KB  |  " + dateFmt.format(new Date(f.lastModified())));
-                metaView.setTextColor(TEXT_SECONDARY);
-                metaView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                if (isDir) {
+                    int childCount = countVisibleChildren(f);
+                    metaView.setText(tr(activity,
+                            "Folder  •  " + childCount + " item(s)  •  " + dateFmt.format(new Date(f.lastModified())),
+                            "مجلد  •  " + childCount + " عنصر  •  " + dateFmt.format(new Date(f.lastModified())),
+                            "بوخچە  •  " + childCount + " دانە  •  " + dateFmt.format(new Date(f.lastModified()))));
+                    metaView.setTextColor(SYSTEM_BLUE);
+                } else {
+                    long kb = Math.max(1, f.length() / 1024);
+                    metaView.setText(kb + " KB  •  " + dateFmt.format(new Date(f.lastModified())));
+                    metaView.setTextColor(TEXT_SECONDARY);
+                }
+                metaView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                LinearLayout.LayoutParams mvLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                mvLp.topMargin = dp(activity, 2);
+                metaView.setLayoutParams(mvLp);
                 infoCol.addView(metaView);
                 row.addView(infoCol);
 
-                TextView openBtn = createCupertinoButton(activity,
-                        tr(activity, "Open", "فتح", "کردنەوە"),
-                        true, false, v -> {
-                            dialog.dismiss();
-                            cb.onOpenFile(f);
-                        });
-                LinearLayout.LayoutParams olp = (LinearLayout.LayoutParams) openBtn.getLayoutParams();
-                olp.setMarginEnd(dp(activity, 6));
-                row.addView(openBtn);
+                // 4. Clean Apple-style Action Icon Buttons (Zero crowded text)
+                if (isDir) {
+                    View openFolderBtn = createIconButton(activity, R.drawable.ic_action_open,
+                            tr(activity, "Open Folder", "فتح المجلد", "کردنەوەی بوخچە"),
+                            true, false, v -> {
+                                dialog.dismiss();
+                                showVaultFileManagerModal(activity, vaultRoot, f, cb);
+                            });
+                    LinearLayout.LayoutParams ofLp = (LinearLayout.LayoutParams) openFolderBtn.getLayoutParams();
+                    ofLp.setMarginEnd(dp(activity, 8));
+                    row.addView(openFolderBtn);
 
-                TextView shareBtn = createCupertinoButton(activity,
-                        tr(activity, "Share", "مشاركة", "هاوبەشکردن"),
-                        false, false, v -> {
-                            dialog.dismiss();
-                            cb.onShareFile(f);
-                        });
-                LinearLayout.LayoutParams shLp = (LinearLayout.LayoutParams) shareBtn.getLayoutParams();
-                shLp.setMarginEnd(dp(activity, 6));
-                row.addView(shareBtn);
+                    View moveCopyFolderBtn = createIconButton(activity, R.drawable.ic_action_move,
+                            tr(activity, "Move or Copy Folder", "نقل أو نسخ المجلد", "گواستنەوە یان کۆپیکردنی بوخچە"),
+                            false, false, v -> showCopyMoveDestinationDialog(activity, dialog, vaultRoot, currentDir,
+                                    Collections.singletonList(f), null, cb));
+                    LinearLayout.LayoutParams mcfLp = (LinearLayout.LayoutParams) moveCopyFolderBtn.getLayoutParams();
+                    mcfLp.setMarginEnd(dp(activity, 8));
+                    row.addView(moveCopyFolderBtn);
+                } else {
+                    View openBtn = createIconButton(activity, R.drawable.ic_action_open,
+                            tr(activity, "Open", "فتح", "کردنەوە"),
+                            true, false, v -> {
+                                dialog.dismiss();
+                                cb.onOpenFile(f);
+                            });
+                    LinearLayout.LayoutParams olp = (LinearLayout.LayoutParams) openBtn.getLayoutParams();
+                    olp.setMarginEnd(dp(activity, 8));
+                    row.addView(openBtn);
 
-                TextView delBtn = createCupertinoButton(activity,
+                    View moveCopyBtn = createIconButton(activity, R.drawable.ic_action_move,
+                            tr(activity, "Move or Copy", "نقل أو نسخ", "گواستنەوە یان کۆپیکردن"),
+                            false, false, v -> showCopyMoveDestinationDialog(activity, dialog, vaultRoot, currentDir,
+                                    Collections.singletonList(f), null, cb));
+                    LinearLayout.LayoutParams mcLp = (LinearLayout.LayoutParams) moveCopyBtn.getLayoutParams();
+                    mcLp.setMarginEnd(dp(activity, 8));
+                    row.addView(moveCopyBtn);
+
+                    View shareBtn = createIconButton(activity, R.drawable.ic_action_share,
+                            tr(activity, "Share", "مشاركة", "هاوبەشکردن"),
+                            false, false, v -> {
+                                dialog.dismiss();
+                                cb.onShareFile(f);
+                            });
+                    LinearLayout.LayoutParams shLp = (LinearLayout.LayoutParams) shareBtn.getLayoutParams();
+                    shLp.setMarginEnd(dp(activity, 8));
+                    row.addView(shareBtn);
+                }
+
+                View delBtn = createIconButton(activity, R.drawable.ic_action_delete,
                         tr(activity, "Delete", "حذف", "سڕینەوە"),
                         false, true, v -> {
-                            List<File> single = new ArrayList<>();
-                            single.add(f);
+                            deleteItemRecursive(f);
+                            Toast.makeText(activity, tr(activity,
+                                    "Deleted: " + f.getName(),
+                                    "تم الحذف: " + f.getName(),
+                                    "سڕایەوە: " + f.getName()), Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
-                            cb.onDeleteFiles(single);
+                            showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
                         });
                 row.addView(delBtn);
 
@@ -2337,15 +2575,6 @@ public class AsycudaMaterialUi {
             scroll.addView(listBox);
             root.addView(scroll);
         } else {
-            header.addView(createCupertinoButton(activity,
-                    tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
-                    false, false, v -> {
-                        dialog.dismiss();
-                        showControlCenter(activity, cb);
-                    }));
-            root.addView(header);
-            root.addView(createHairlineDivider(activity));
-
             LinearLayout emptyCard = new LinearLayout(activity);
             emptyCard.setOrientation(LinearLayout.VERTICAL);
             emptyCard.setGravity(Gravity.CENTER);
@@ -2358,11 +2587,23 @@ public class AsycudaMaterialUi {
             ecLp.topMargin = dp(activity, 12);
             emptyCard.setLayoutParams(ecLp);
 
+            ImageView emptyIcon = new ImageView(activity);
+            emptyIcon.setImageResource(R.drawable.ic_folder);
+            emptyIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+            LinearLayout.LayoutParams eiLp = new LinearLayout.LayoutParams(dp(activity, 40), dp(activity, 40));
+            eiLp.bottomMargin = dp(activity, 10);
+            emptyCard.addView(emptyIcon, eiLp);
+
             TextView emptyText = new TextView(activity);
-            emptyText.setText(tr(activity,
-                    "No printed PDFs or exported files yet.\n\nCustoms declarations and documents you print inside ASYCUDA World are saved here automatically.",
-                    "لا توجد ملفات PDF أو مستندات محفوظة حالياً.\n\nالتصاريح الكمركية والمستندات التي تقوم بطباعتها أو تصديرها داخل نظام أسيكودا ستظهر هنا تلقائياً.",
-                    "هیچ پەڕگەیەکی PDF یان بەڵگەنامەی پاشەکەوتکراو نییە.\n\nئەو بەڵگەنامە گومرگییانەی لە ناو سیستەمی ئەسیکۆدا چاپیان دەکەیت لێرە پاشەکەوت دەکرێن."));
+            emptyText.setText(isAtRoot
+                    ? tr(activity,
+                            "This Vault is currently empty.\n\nPrinted PDFs and files imported from your phone appear here automatically. Use the top bar icons to import a file or create a new folder.",
+                            "الخزنة فارغة حالياً.\n\nملفات PDF المطبوعة والملفات المستوردة من الهاتف تظهر هنا تلقائياً. يمكنك استخدام الأيقونات في الأعلى لاستيراد ملف أو إنشاء مجلد جديد.",
+                            "قاسەکە لە ئێستادا بەتاڵە.\n\nپەڕگەکانی PDF و پەڕگە هاوردەکراوەکان لێرە دەردەکەون. دەتوانیت لە شریتی سەرەوە پەڕگە هاوردە بکەیت یان بوخچەی نوێ دروست بکەیت.")
+                    : tr(activity,
+                            "This folder is empty.\n\nUse the top bar icons to import a file into this folder or create a subfolder.",
+                            "هذا المجلد فارغ.\n\nاستخدم الأيقونات في الأعلى لاستيراد ملف داخل هذا المجلد أو إنشاء مجلد فرعي.",
+                            "ئەم بوخچەیە بەتاڵە.\n\nلە شریتی سەرەوە پەڕگە هاوردە بکە یان بوخچەی لاوەکی دروست بکە."));
             emptyText.setTextColor(TEXT_SECONDARY);
             emptyText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
             emptyText.setGravity(Gravity.CENTER);
@@ -2372,6 +2613,471 @@ public class AsycudaMaterialUi {
 
         dialog.setContentView(root);
         dialog.show();
+    }
+
+    private static void showCreateFolderDialog(MainActivity activity, File parentDir, Runnable onCreated) {
+        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.85f : 0.65f, 400, true);
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        }
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(R.drawable.ic_folder_add);
+        icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        icLp.setMarginEnd(dp(activity, 10));
+        header.addView(icon, icLp);
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity, "Create New Folder", "إنشاء مجلد جديد", "دروستکردنی بوخچەی نوێ"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        header.addView(title);
+
+        header.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Cancel", "إلغاء", "پاشگەزبوونەوە"),
+                false, false, v -> dlg.dismiss()));
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        EditText input = new EditText(activity);
+        input.setHint(tr(activity, "Folder name...", "اسم المجلد...", "ناوی بوخچە..."));
+        input.setHintTextColor(TEXT_TERTIARY);
+        input.setTextColor(TEXT_PRIMARY);
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        input.setSingleLine(true);
+        input.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
+        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
+        LinearLayout.LayoutParams inLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        inLp.topMargin = dp(activity, 14);
+        inLp.bottomMargin = dp(activity, 14);
+        root.addView(input, inLp);
+
+        // Top-bar Create (✓) icon placed before the Cancel icon (replaces old bottom footer button)
+        View createBtn = createIconButton(activity, R.drawable.ic_action_check,
+                tr(activity, "Create Folder", "إنشاء المجلد", "دروستکردن"),
+                true, false, v -> {
+                    String raw = input.getText() != null ? input.getText().toString().trim() : "";
+                    String safe = raw.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe)) {
+                        input.setError(tr(activity, "Enter a valid folder name", "أدخل اسماً صحيحاً للمجلد", "ناوێکی دروست بنووسە"));
+                        return;
+                    }
+                    File newDir = new File(parentDir, safe);
+                    if (newDir.exists() || newDir.mkdirs()) {
+                        dlg.dismiss();
+                        if (onCreated != null) onCreated.run();
+                    } else {
+                        Toast.makeText(activity, tr(activity, "Could not create folder", "تعذر إنشاء المجلد", "نەتوانرا بوخچەکە دروست بکرێت"), Toast.LENGTH_SHORT).show();
+                    }
+                });
+        LinearLayout.LayoutParams cbLp = (LinearLayout.LayoutParams) createBtn.getLayoutParams();
+        cbLp.setMarginEnd(dp(activity, 8));
+        header.addView(createBtn, header.getChildCount() - 1);
+
+        dlg.setContentView(root);
+        dlg.show();
+    }
+
+    private static void showCopyMoveDestinationDialog(
+            MainActivity activity,
+            Dialog parentVaultDialog,
+            File vaultRoot,
+            File currentDir,
+            List<File> sourceItems,
+            Boolean forceCopyMode,
+            MenuActionCallback cb) {
+        if (sourceItems == null || sourceItems.isEmpty()) return;
+
+        Dialog destDlg = createModalDialog(activity, isCompactWidth(activity) ? 0.90f : 0.72f, 520, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        // Header
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(forceCopyMode != null && forceCopyMode
+                ? R.drawable.ic_action_copy : R.drawable.ic_action_move);
+        icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        icLp.setMarginEnd(dp(activity, 10));
+        header.addView(icon, icLp);
+
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView title = new TextView(activity);
+        if (forceCopyMode == null) {
+            title.setText(tr(activity,
+                    "Move or Copy to Folder",
+                    "نقل أو نسخ إلى مجلد",
+                    "گواستنەوە یان کۆپیکردن بۆ بوخچە"));
+        } else if (forceCopyMode) {
+            title.setText(tr(activity,
+                    "Copy " + sourceItems.size() + " Item(s) to Folder",
+                    "نسخ " + sourceItems.size() + " عنصر إلى مجلد",
+                    "کۆپیکردنی " + sourceItems.size() + " دانە بۆ بوخچە"));
+        } else {
+            title.setText(tr(activity,
+                    "Move " + sourceItems.size() + " Item(s) to Folder",
+                    "نقل " + sourceItems.size() + " عنصر إلى مجلد",
+                    "گواستنەوەی " + sourceItems.size() + " دانە بۆ بوخچە"));
+        }
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        titleCol.addView(title);
+
+        TextView subTitle = new TextView(activity);
+        if (sourceItems.size() == 1) {
+            subTitle.setText(sourceItems.get(0).getName());
+        } else {
+            subTitle.setText(tr(activity,
+                    "Choose a destination folder inside the Vault",
+                    "اختر المجلد الوجهة داخل الخزنة",
+                    "بوخچەی مەبەست لە ناو قاسەکە هەڵبژێرە"));
+        }
+        subTitle.setTextColor(TEXT_SECONDARY);
+        subTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        subTitle.setSingleLine(true);
+        subTitle.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+        titleCol.addView(subTitle);
+        header.addView(titleCol);
+
+        // Quick New Folder button inside destination dialog
+        View newFolderBtn = createIconButton(activity, R.drawable.ic_folder_add,
+                tr(activity, "New Folder", "مجلد جديد", "بوخچەی نوێ"),
+                false, false, v -> showCreateFolderDialog(activity, currentDir, () -> {
+                    destDlg.dismiss();
+                    showCopyMoveDestinationDialog(activity, parentVaultDialog, vaultRoot, currentDir, sourceItems, forceCopyMode, cb);
+                }));
+        LinearLayout.LayoutParams nfLp = (LinearLayout.LayoutParams) newFolderBtn.getLayoutParams();
+        nfLp.setMarginEnd(dp(activity, 8));
+        header.addView(newFolderBtn);
+
+        header.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Cancel", "إلغاء", "پاشگەزبوونەوە"),
+                false, false, v -> destDlg.dismiss()));
+
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        // Collect all valid destination folders in the Vault
+        List<File> allDirs = new ArrayList<>();
+        allDirs.add(vaultRoot);
+        collectVaultDirectoriesRecursive(vaultRoot, allDirs);
+
+        List<File> validTargets = new ArrayList<>();
+        for (File candidateDir : allDirs) {
+            // Skip currentDir itself (moving/copying to the same folder is redundant)
+            if (isSameDirectory(candidateDir, currentDir)) continue;
+            // Skip if candidateDir is inside any source directory being moved/copied
+            boolean insideSource = false;
+            for (File src : sourceItems) {
+                if (src.isDirectory() && isSubPathOrEqual(src, candidateDir)) {
+                    insideSource = true;
+                    break;
+                }
+            }
+            if (!insideSource) {
+                validTargets.add(candidateDir);
+            }
+        }
+
+        if (validTargets.isEmpty()) {
+            LinearLayout emptyBox = new LinearLayout(activity);
+            emptyBox.setOrientation(LinearLayout.VERTICAL);
+            emptyBox.setGravity(Gravity.CENTER);
+            int p = dp(activity, 24);
+            emptyBox.setPadding(p, p, p, p);
+            emptyBox.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+            LinearLayout.LayoutParams ebLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            ebLp.topMargin = dp(activity, 12);
+            emptyBox.setLayoutParams(ebLp);
+
+            TextView emptyMsg = new TextView(activity);
+            emptyMsg.setText(tr(activity,
+                    "No other folders exist in the Vault yet.\nTap the New Folder (+) icon above to create a destination folder.",
+                    "لا توجد مجلدات أخرى في الخزنة حالياً.\nاضغط على أيقونة إنشاء مجلد (+) في الأعلى لإنشاء مجلد وجهة.",
+                    "هیچ بوخچەیەکی تر لە قاسەکەدا نییە.\nرتە لە ئایکۆنی بوخچەی نوێ (+) لە سەرەوە بکە بۆ دروستکردنی بوخچە."));
+            emptyMsg.setTextColor(TEXT_SECONDARY);
+            emptyMsg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            emptyMsg.setGravity(Gravity.CENTER);
+            emptyBox.addView(emptyMsg);
+            root.addView(emptyBox);
+        } else {
+            ScrollView scroll = new ScrollView(activity);
+            scroll.setFillViewport(true);
+            LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            scrollLp.topMargin = dp(activity, 10);
+            scroll.setLayoutParams(scrollLp);
+
+            LinearLayout listBox = new LinearLayout(activity);
+            listBox.setOrientation(LinearLayout.VERTICAL);
+
+            for (File targetDir : validTargets) {
+                boolean isRootTarget = isSameDirectory(targetDir, vaultRoot);
+                String displayPath = isRootTarget
+                        ? tr(activity, "/Vault (Main Folder)", "/Vault (المجلد الرئيسي)", "/Vault (بوخچەی سەرەکی)")
+                        : "/Vault/" + getRelativeVaultPath(vaultRoot, targetDir);
+
+                LinearLayout row = new LinearLayout(activity);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(activity, 14), dp(activity, 11), dp(activity, 14), dp(activity, 11));
+                row.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rlp.bottomMargin = dp(activity, 8);
+                row.setLayoutParams(rlp);
+
+                ImageView fIcon = new ImageView(activity);
+                fIcon.setImageResource(R.drawable.ic_folder);
+                fIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+                LinearLayout.LayoutParams fiLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+                fiLp.setMarginEnd(dp(activity, 12));
+                row.addView(fIcon, fiLp);
+
+                LinearLayout textCol = new LinearLayout(activity);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+                textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView fName = new TextView(activity);
+                fName.setText(isRootTarget
+                        ? tr(activity, "Vault (Main Folder)", "الخزنة (المجلد الرئيسي)", "قاسە (بوخچەی سەرەکی)")
+                        : targetDir.getName());
+                fName.setTextColor(TEXT_PRIMARY);
+                fName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+                fName.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+                fName.setSingleLine(true);
+                fName.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+                textCol.addView(fName);
+
+                TextView fPath = new TextView(activity);
+                fPath.setText(displayPath);
+                fPath.setTextColor(TEXT_SECONDARY);
+                fPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                fPath.setSingleLine(true);
+                fPath.setEllipsize(android.text.TextUtils.TruncateAt.START);
+                textCol.addView(fPath);
+                row.addView(textCol);
+
+                if (forceCopyMode == null || forceCopyMode) {
+                    View copyHereBtn = createIconButton(activity, R.drawable.ic_action_copy,
+                            tr(activity, "Copy Here", "نسخ هنا", "کۆپیکردن بۆ ئێرە"),
+                            forceCopyMode != null, false, v -> {
+                                int ok = 0;
+                                for (File src : sourceItems) {
+                                    if (copyItemToDirectory(src, targetDir)) ok++;
+                                }
+                                Toast.makeText(activity, tr(activity,
+                                        "Copied " + ok + " item(s) to " + (isRootTarget ? "Vault" : targetDir.getName()),
+                                        "تم نسخ " + ok + " عنصر إلى " + (isRootTarget ? "الخزنة" : targetDir.getName()),
+                                        ok + " دانە کۆپی کرا بۆ " + (isRootTarget ? "قاسە" : targetDir.getName())),
+                                        Toast.LENGTH_SHORT).show();
+                                destDlg.dismiss();
+                                if (parentVaultDialog != null && parentVaultDialog.isShowing()) {
+                                    parentVaultDialog.dismiss();
+                                }
+                                showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                            });
+                    LinearLayout.LayoutParams chLp = (LinearLayout.LayoutParams) copyHereBtn.getLayoutParams();
+                    if (forceCopyMode == null) {
+                        chLp.setMarginEnd(dp(activity, 8));
+                    }
+                    row.addView(copyHereBtn);
+                }
+
+                if (forceCopyMode == null || !forceCopyMode) {
+                    View moveHereBtn = createIconButton(activity, R.drawable.ic_action_move,
+                            tr(activity, "Move Here", "نقل هنا", "گواستنەوە بۆ ئێرە"),
+                            true, false, v -> {
+                                int ok = 0;
+                                for (File src : sourceItems) {
+                                    if (moveItemToDirectory(src, targetDir)) ok++;
+                                }
+                                Toast.makeText(activity, tr(activity,
+                                        "Moved " + ok + " item(s) to " + (isRootTarget ? "Vault" : targetDir.getName()),
+                                        "تم نقل " + ok + " عنصر إلى " + (isRootTarget ? "الخزنة" : targetDir.getName()),
+                                        ok + " دانە گواسترایەوە بۆ " + (isRootTarget ? "قاسە" : targetDir.getName())),
+                                        Toast.LENGTH_SHORT).show();
+                                destDlg.dismiss();
+                                if (parentVaultDialog != null && parentVaultDialog.isShowing()) {
+                                    parentVaultDialog.dismiss();
+                                }
+                                showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                            });
+                    row.addView(moveHereBtn);
+                }
+
+                listBox.addView(row);
+            }
+
+            scroll.addView(listBox);
+            root.addView(scroll);
+        }
+
+        destDlg.setContentView(root);
+        destDlg.show();
+    }
+
+    private static void collectVaultDirectoriesRecursive(File dir, List<File> outDirs) {
+        if (dir == null || !dir.isDirectory()) return;
+        File[] children = dir.listFiles();
+        if (children == null) return;
+        List<File> subDirs = new ArrayList<>();
+        for (File c : children) {
+            if (c.isDirectory() && !c.getName().startsWith(".")) {
+                subDirs.add(c);
+            }
+        }
+        subDirs.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (File sub : subDirs) {
+            outDirs.add(sub);
+            collectVaultDirectoriesRecursive(sub, outDirs);
+        }
+    }
+
+    private static boolean isSameDirectory(File a, File b) {
+        if (a == null || b == null) return false;
+        try {
+            return a.getCanonicalPath().equals(b.getCanonicalPath());
+        } catch (Exception e) {
+            return a.getAbsolutePath().equals(b.getAbsolutePath());
+        }
+    }
+
+    private static File resolveNonCollidingTarget(File destDir, String originalName) {
+        File target = new File(destDir, originalName);
+        if (!target.exists()) return target;
+        String base = originalName;
+        String ext = "";
+        int dot = originalName.lastIndexOf('.');
+        if (dot > 0) {
+            base = originalName.substring(0, dot);
+            ext = originalName.substring(dot);
+        }
+        for (int i = 1; i < 1000; i++) {
+            File cand = new File(destDir, base + "_" + i + ext);
+            if (!cand.exists()) return cand;
+        }
+        return new File(destDir, base + "_" + System.currentTimeMillis() + ext);
+    }
+
+    private static boolean copyItemToDirectory(File src, File destDir) {
+        if (src == null || !src.exists() || destDir == null) return false;
+        if (!destDir.exists() && !destDir.mkdirs()) return false;
+        File target = resolveNonCollidingTarget(destDir, src.getName());
+        return copyRecursiveInternal(src, target);
+    }
+
+    private static boolean copyRecursiveInternal(File src, File dst) {
+        try {
+            if (src.isDirectory()) {
+                if (!dst.exists() && !dst.mkdirs()) return false;
+                File[] children = src.listFiles();
+                if (children != null) {
+                    for (File c : children) {
+                        if (!copyRecursiveInternal(c, new File(dst, c.getName()))) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            } else {
+                try (FileInputStream in = new FileInputStream(src);
+                     FileOutputStream out = new FileOutputStream(dst)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                    }
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean moveItemToDirectory(File src, File destDir) {
+        if (src == null || !src.exists() || destDir == null) return false;
+        if (!destDir.exists() && !destDir.mkdirs()) return false;
+        File target = resolveNonCollidingTarget(destDir, src.getName());
+        if (src.renameTo(target)) {
+            return true;
+        }
+        if (copyRecursiveInternal(src, target)) {
+            deleteItemRecursive(src);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isSubPathOrEqual(File rootDir, File target) {
+        try {
+            String r = rootDir.getCanonicalPath();
+            String t = target.getCanonicalPath();
+            return t.equals(r) || t.startsWith(r + File.separator);
+        } catch (Exception e) {
+            String r = rootDir.getAbsolutePath();
+            String t = target.getAbsolutePath();
+            return t.equals(r) || t.startsWith(r + File.separator);
+        }
+    }
+
+    private static String getRelativeVaultPath(File rootDir, File target) {
+        try {
+            String r = rootDir.getCanonicalPath();
+            String t = target.getCanonicalPath();
+            if (t.startsWith(r + File.separator)) {
+                return t.substring(r.length() + 1);
+            }
+        } catch (Exception ignored) { /* Best-effort UI operation */ }
+        return target.getName();
+    }
+
+    private static int countVisibleChildren(File dir) {
+        if (dir == null || !dir.isDirectory()) return 0;
+        File[] list = dir.listFiles();
+        if (list == null) return 0;
+        int c = 0;
+        for (File f : list) {
+            if (!f.getName().startsWith(".") && !f.getName().endsWith(".apk")) {
+                c++;
+            }
+        }
+        return c;
+    }
+
+    private static void deleteItemRecursive(File f) {
+        if (f == null || !f.exists()) return;
+        if (f.isDirectory()) {
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File c : children) {
+                    deleteItemRecursive(c);
+                }
+            }
+        }
+        if (!f.delete()) {
+            f.deleteOnExit();
+        }
     }
 
     public static void showEncryptedVaultInfoModal(MainActivity activity) {
@@ -2404,6 +3110,9 @@ public class AsycudaMaterialUi {
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
+        header.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Got It", "حسناً، فهمت", KU_DONE),
+                false, false, v -> infoDialog.dismiss()));
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
@@ -2437,15 +3146,6 @@ public class AsycudaMaterialUi {
         card.addView(msg);
         root.addView(card);
 
-        LinearLayout footer = new LinearLayout(activity);
-        footer.setOrientation(LinearLayout.HORIZONTAL);
-        footer.setGravity(Gravity.END);
-        TextView okBtn = createCupertinoButton(activity,
-                tr(activity, "Got It", "حسناً، فهمت", KU_DONE),
-                true, false, v -> infoDialog.dismiss());
-        footer.addView(okBtn);
-        root.addView(footer);
-
         infoDialog.setContentView(root);
         infoDialog.show();
     }
@@ -2477,7 +3177,7 @@ public class AsycudaMaterialUi {
         topTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         topBar.addView(topTitle);
 
-        topBar.addView(createCupertinoButton(activity,
+        topBar.addView(createIconButton(activity, R.drawable.ic_nav_back,
                 tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
                 false, false, v -> {
                     dialog.dismiss();
@@ -2992,6 +3692,15 @@ public class AsycudaMaterialUi {
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
+
+        // Top-bar Continue icon (replaces old full-width bottom "Continue to ASYCUDA" button)
+        header.addView(createIconButton(activity, R.drawable.ic_action_check,
+                tr(activity, "Continue to ASYCUDA", "متابعة إلى النظام", "بەردەوامبوون بۆ سیستەم"),
+                true, false, v -> {
+                    markWhatsNewSeen(activity);
+                    dialog.dismiss();
+                    if (onContinue != null) onContinue.run();
+                }));
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
@@ -3011,33 +3720,33 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "1. Zero Storage Permissions & Native File Picker Middleman",
-                        "1. العمل بدون صلاحية الوصول الشامل للملفات وجسر استيراد الملفات الذكي",
-                        "١. کارکردن بەبێ مۆڵەتی گشتیی پەڕگەکان و پردی زیرەکی هاوردەکردنی پەڕگە"),
+                        "1. Zero Storage Permissions & Automatic File Picker Bridge",
+                        "1. العمل بدون صلاحية الوصول الشامل للملفات وجسر اختيار الملفات الذكي",
+                        "١. کارکردن بەبێ مۆڵەتی گشتیی پەڕگەکان و پردی زیرەکی هەڵبژاردنی پەڕگە"),
                 tr(activity,
-                        "Removed MANAGE_EXTERNAL_STORAGE, READ/WRITE_EXTERNAL_STORAGE, Wi-Fi state, and Accessibility Service permissions. Added an \"Import from Phone\" button inside ASYCUDA's Java file chooser that opens Android's native system file picker with zero broad storage permissions.",
-                        "إزالة صلاحية الوصول الشامل للملفات (MANAGE_EXTERNAL_STORAGE) وكافة الصلاحيات غير الضرورية، وإضافة زر «استيراد ملف من الهاتف» داخل نافذة اختيار ملفات الجافا لفتح مستعرض ملفات الأندرويد الآمن مباشرة.",
-                        "لابردنی مۆڵەتی MANAGE_EXTERNAL_STORAGE و زیادکردنی دوگمەی «هاوردەکردنی پەڕگە لە مۆبایلەوە» لەناو پەنجەرەی هەڵبژاردنی پەڕگەی ئەسیکۆدا."));
+                        "Removed MANAGE_EXTERNAL_STORAGE, READ/WRITE_EXTERNAL_STORAGE, Wi-Fi state, and Accessibility Service permissions. Whenever ASYCUDA opens its Java file chooser (with zero modifications to government JARs), the app automatically prompts you to either import a new file from your phone into the Vault or pick a file already stored in your Vault.",
+                        "إزالة صلاحية الوصول الشامل للملفات (MANAGE_EXTERNAL_STORAGE) وكافة الصلاحيات غير الضرورية. عند فتح نافذة اختيار ملفات الجافا في النظام (دون أي تعديل على ملفات الوزارة الرسمية)، يعرض التطبيق نافذة ذكية تتيح لك استيراد ملف جديد من الهاتف إلى الخزنة أو اختيار ملف موجود مسبقاً بالخزنة.",
+                        "لابردنی مۆڵەتی MANAGE_EXTERNAL_STORAGE و زیادکردنی پردی زیرەکی هەڵبژاردنی پەڕگە کە ڕاستەوخۆ لەگەڵ کردنەوەی پەنجەرەی هەڵبژاردنی پەڕگەی ئەسیکۆدا کار دەکات بەبێ دەستکاریکردنی هیچ پەڕگەیەکی فەرمی."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "2. Encrypted Private App Storage for Customs PDFs & Declarations",
-                        "2. حفظ التصاريح وملفات الـ PDF داخل الخزنة المشفرة للتطبيق فقط",
-                        "٢. پاراستنی پەڕگەکانی PDF و مامەڵە گومرگییەکان لە قاسەی نهێنی بەرنامەکەدا"),
+                        "2. Full-Featured Encrypted Vault — File Manager (Folders, Copy, Move, Share & Delete)",
+                        "2. الخزنة المشفرة — مدير ملفات متكامل (مجلدات، نسخ، نقل، مشاركة وحذف)",
+                        "٢. قاسەی نهێنی — بەڕێوەبەری پەڕگەی تەواو (بوخچە، کۆپیکردن، گواستنەوە، هاوبەشکردن و سڕینەوە)"),
                 tr(activity,
-                        "All printed PDFs and exported files are now stored exclusively inside the app's private encrypted storage (/data/data/iq.asycuda/files/prints) so no other app on your phone can read your customs documents. Manage them anytime via Open, Share, and Delete.",
-                        "يتم الآن حفظ جميع ملفات الـ PDF والتصاريح المطبوعة حصرياً داخل المساحة المشفرة الخاصة بالتطبيق لحماية سرية معاملاتك الكمركية من أي تطبيق آخر على الهاتف، مع إمكانية فتحها أو مشاركتها أو حذفها بسهولة.",
-                        "ئێستا سەرجەم پەڕگە چاپکراوەکانی PDF تەنها لەناو بیرگەی تایبەت و پارێزراوی بەرنامەکەدا هەڵدەگیرێن تا هیچ بەرنامەیەکی تر نەتوانێت بیانخوێنێتەوە."));
+                        "Unified all printed PDFs and imported documents into the encrypted Vault (/data/data/iq.asycuda/files/prints) with full folder navigation, folder creation, Copy & Move between folders, multi-select batch actions, and smart upload staging protection so uploading an attachment to the server never re-saves or re-opens the file.",
+                        "توحيد جميع ملفات الـ PDF المطبوعة والملفات المستوردة داخل الخزنة المشفرة للتطبيق مع دعم كامل لإنشاء المجلدات والتنقل بينها، ونسخ ونقل الملفات والمجلدات، والتحديد المتعدد، ومنع إعادة حفظ أو فتح المرفقات عند رفعها للخادم.",
+                        "یەکخستنی سەرجەم پەڕگە چاپکراوەکانی PDF و پەڕگە هاوردەکراوەکان لەناو قاسەی نهێنی بەرنامەکەدا لەگەڵ پشتگیری تەواوی بوخچەکان، کۆپیکردن و گواستنەوە لە نێوان بوخچەکاندا."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "3. Previewable Legal Consent Receipt & Auto-Cleaned App Updates",
-                        "3. معاينة إيصال التوثيق القانوني قبل الإرسال والتنظيف التلقائي لملفات التحديث",
-                        "٣. پێشبینینی پسوولەی یاسایی پێش ناردن و سڕینەوەی خۆکاری پەڕگەی نوێکردنەوە"),
+                        "3. Apple-Style Icon Toolbar Navigation & Previewable Legal Consent Receipt",
+                        "3. أشرطة أدوات علوية بالأيقونات ومعاينة إيصال التوثيق القانوني قبل الإرسال",
+                        "٣. شریتی ئامرازی سەرەوە بە ئایکۆن و پێشبینینی پسوولەی یاسایی پێش ناردن"),
                 tr(activity,
-                        "Added a \"Preview Sentry Receipt Before Sending\" button so you can inspect the exact 8-field JSON receipt before accepting Terms & Privacy Policy, and moved in-app update APKs to private cache with automatic deletion after installation.",
-                        "إضافة زر لمعاينة محتوى إيصال الموافقة القانونية (الحقول الثمانية بالتفصيل) قبل إرساله، وتحميل تحديثات التطبيق في الذاكرة المؤقتة المعزولة مع حذف ملف التحديث تلقائياً فور اكتمال التثبيت.",
-                        "زیادکردنی دوگمەی پێشبینینی پسوولەی ڕەزامەندی یاسایی پێش ناردن، و سڕینەوەی خۆکاری پاکێجی نوێکردنەوەی بەرنامە دوای دامەزراندن."));
+                        "Streamlined all app windows with clean Apple-style top-bar icon buttons to maximize screen space on both compact phones and tablets, plus a \"Preview Sentry Receipt Before Sending\" button to inspect the exact 8-field JSON receipt before accepting Terms & Privacy Policy.",
+                        "تحديث جميع نوافذ التطبيق بأيقونات علوية أنيقة لتوفير مساحة الشاشة على الهواتف والأجهزة اللوحية، مع زر لمعاينة محتوى إيصال الموافقة القانونية (الحقول الثمانية بالتفصيل) قبل إرساله.",
+                        "نوێکردنەوەی سەرجەم پەنجەرەکانی بەرنامەکە بە ئایکۆنی سەرەوە بۆ پاشەکەوتکردنی شوێنی شاشە، لەگەڵ دوگمەی پێشبینینی پسوولەی ڕەزامەندی یاسایی پێش ناردن."));
 
         addPolicyClause(activity, card,
                 tr(activity,
@@ -3051,19 +3760,6 @@ public class AsycudaMaterialUi {
 
         scroll.addView(card);
         root.addView(scroll);
-
-        TextView continueBtn = createCupertinoButton(activity,
-                tr(activity, "Continue to ASYCUDA", "متابعة إلى النظام", "بەردەوامبوون بۆ سیستەم"),
-                true, false, v -> {
-                    markWhatsNewSeen(activity);
-                    dialog.dismiss();
-                    if (onContinue != null) onContinue.run();
-                });
-        continueBtn.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        continueBtn.setLayoutParams(btnLp);
-        root.addView(continueBtn);
 
         dialog.setOnCancelListener(d -> {
             markWhatsNewSeen(activity);
@@ -3353,7 +4049,17 @@ public class AsycudaMaterialUi {
         hSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
         header.addView(hSub);
 
-        root.addView(header);
+        // Wrap title column with a top-bar Close icon (replaces old bottom "Close Preview" button)
+        LinearLayout headerRow = new LinearLayout(activity);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        headerRow.setGravity(Gravity.CENTER_VERTICAL);
+        header.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        headerRow.addView(header);
+        headerRow.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Close Preview", "إغلاق المعاينة", "داخستنی پێشبینین"),
+                false, false, v -> infoDialog.dismiss()));
+
+        root.addView(headerRow);
         root.addView(createHairlineDivider(activity));
 
         ScrollView scroll = new ScrollView(activity);
@@ -3406,13 +4112,6 @@ public class AsycudaMaterialUi {
 
         scroll.addView(body);
         root.addView(scroll);
-
-        TextView okBtn = createCupertinoButton(activity,
-                tr(activity, "Close Preview", "إغلاق المعاينة", "داخستنی پێشبینین"),
-                true, false, v -> infoDialog.dismiss());
-        okBtn.setGravity(Gravity.CENTER);
-        root.addView(okBtn, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         infoDialog.setContentView(root);
         infoDialog.show();
@@ -4163,6 +4862,46 @@ public class AsycudaMaterialUi {
         return tv;
     }
 
+    public static FrameLayout createIconButton(Context ctx, int iconResId, String tooltipText,
+                                               boolean isPrimary, boolean isDestructive,
+                                               View.OnClickListener listener) {
+        FrameLayout box = new FrameLayout(ctx);
+        box.setBackground(createCupertinoButtonDrawable(ctx, isPrimary, isDestructive));
+        box.setClickable(true);
+        box.setFocusable(true);
+        if (tooltipText != null && !tooltipText.isEmpty()) {
+            box.setContentDescription(tooltipText);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                box.setTooltipText(tooltipText);
+            }
+        }
+        if (listener != null) box.setOnClickListener(listener);
+        int size = dp(ctx, 38);
+        box.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+
+        ImageView icon = new ImageView(ctx);
+        icon.setImageResource(iconResId);
+        icon.setImageTintList(ColorStateList.valueOf(isDestructive ? SYSTEM_RED : TEXT_PRIMARY));
+        int icSize = dp(ctx, 20);
+        box.addView(icon, new FrameLayout.LayoutParams(icSize, icSize, Gravity.CENTER));
+        return box;
+    }
+
+    /** Updates an icon button (created by createIconButton) with a new icon, tooltip and accent style. */
+    public static void setIconButtonState(Context ctx, FrameLayout box, int iconResId, String tooltipText, boolean isPrimary) {
+        if (box == null) return;
+        box.setBackground(createCupertinoButtonDrawable(ctx, isPrimary, false));
+        if (tooltipText != null) {
+            box.setContentDescription(tooltipText);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                box.setTooltipText(tooltipText);
+            }
+        }
+        if (box.getChildCount() > 0 && box.getChildAt(0) instanceof ImageView) {
+            ((ImageView) box.getChildAt(0)).setImageResource(iconResId);
+        }
+    }
+
     public static TextView createGlassPillButton(Context ctx, String label, boolean isPrimaryAccent, View.OnClickListener listener) {
         return createCupertinoButton(ctx, label, isPrimaryAccent, false, listener);
     }
@@ -4181,6 +4920,119 @@ public class AsycudaMaterialUi {
         GradientDrawable content = createCardDrawable(ctx, fillColor, radiusDp, strokeColor);
         GradientDrawable mask = createCardDrawable(ctx, Color.WHITE, radiusDp, 0);
         return new RippleDrawable(ColorStateList.valueOf(RIPPLE_HIGHLIGHT), content, mask);
+    }
+
+    public static void showFilePickerBridgePromptModal(MainActivity activity, int vaultFileCount,
+                                                       Runnable onImportFromPhone, Runnable onUseExistingVault) {
+        if (activity == null || activity.isFinishing()) return;
+        boolean compact = isCompactWidth(activity);
+        Dialog dlg = createModalDialog(activity, compact ? 0.86f : 0.68f, 390, true);
+        LinearLayout outer = createDialogContainer(activity);
+        int p = dp(activity, 14);
+        outer.setPadding(p, dp(activity, 10), p, p);
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+
+        LinearLayout sheet = new LinearLayout(activity);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+
+        LinearLayout topRow = new LinearLayout(activity);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        trLp.bottomMargin = dp(activity, 6);
+        topRow.setLayoutParams(trLp);
+
+        ImageView folderIcon = new ImageView(activity);
+        folderIcon.setImageResource(R.drawable.ic_folder);
+        folderIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+        LinearLayout.LayoutParams fiLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        fiLp.setMarginEnd(dp(activity, 8));
+        topRow.addView(folderIcon, fiLp);
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "Vault File Bridge",
+                "جسر ملفات الخزنة",
+                "پردی پەڕگەکانی قاسە"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        topRow.addView(title);
+
+        topRow.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Use Vault", "ملفات الخزنة", "ناو قاسە"),
+                false, false, v -> {
+                    dlg.dismiss();
+                    if (onUseExistingVault != null) onUseExistingVault.run();
+                }));
+        sheet.addView(topRow);
+
+        TextView body = new TextView(activity);
+        body.setText(tr(activity,
+                "Import a new file from your phone into the Vault, or select from " + vaultFileCount + " file(s) already in the Vault.",
+                "استورد ملفاً جديداً من هاتفك إلى الخزنة، أو اختر من بين (" + vaultFileCount + ") ملفات موجودة بالخزنة.",
+                "پەڕگەیەکی نوێ لە مۆبایلەوە هاوردە بکە، یان لە (" + vaultFileCount + ") پەڕگەی ناو قاسەکە هەڵبژێرە."));
+        body.setTextColor(TEXT_SECONDARY);
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        body.setLineSpacing(dp(activity, 2), 1.0f);
+        LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bodyLp.bottomMargin = dp(activity, 12);
+        sheet.addView(body, bodyLp);
+
+        LinearLayout btnRow = new LinearLayout(activity);
+        btnRow.setOrientation(compact ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView useVaultBtn = createCupertinoButton(activity, tr(activity,
+                "Use Vault (" + vaultFileCount + ")",
+                "ملفات الخزنة (" + vaultFileCount + ")",
+                "ناو قاسە (" + vaultFileCount + ")"), false, false, v -> {
+            dlg.dismiss();
+            if (onUseExistingVault != null) onUseExistingVault.run();
+        });
+        useVaultBtn.setGravity(Gravity.CENTER);
+        useVaultBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        useVaultBtn.setPadding(dp(activity, 12), dp(activity, 9), dp(activity, 12), dp(activity, 9));
+
+        TextView importBtn = createCupertinoButton(activity, tr(activity,
+                "Import from Phone",
+                "استيراد من الهاتف",
+                "هاوردەکردن لە مۆبایل"), true, false, v -> {
+            dlg.dismiss();
+            if (onImportFromPhone != null) onImportFromPhone.run();
+        });
+        importBtn.setGravity(Gravity.CENTER);
+        importBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        importBtn.setPadding(dp(activity, 12), dp(activity, 9), dp(activity, 12), dp(activity, 9));
+
+        if (compact) {
+            LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp1.bottomMargin = dp(activity, 8);
+            btnRow.addView(importBtn, lp1);
+            btnRow.addView(useVaultBtn, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        } else {
+            LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp1.setMarginEnd(dp(activity, 8));
+            btnRow.addView(useVaultBtn, lp1);
+            btnRow.addView(importBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.15f));
+        }
+
+        sheet.addView(btnRow, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        scroll.addView(sheet);
+        outer.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        dlg.setContentView(outer);
+        dlg.show();
     }
 
     private static boolean isCompactWidth(Context ctx) {

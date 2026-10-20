@@ -4,12 +4,12 @@
   "serialNumber": "urn:uuid:3900a5ca-9e42-49d0-9b41-a5ca20261020",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-20T18:00:00Z",
+    "timestamp": "2026-10-21T00:15:00Z",
     "component": {
       "type": "application",
       "name": "ASYCUDA-Iraq-Android",
       "group": "iq.asycuda",
-      "version": "3.9.0",
+      "version": "3.9.5",
       "description": "Standalone Android X11 & OpenJDK 8 Runtime Client for Iraqi Customs ASYCUDA World (asy.mof.gov.iq)",
       "licenses": [
         {
@@ -18,7 +18,7 @@
           }
         }
       ],
-      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v3.9.0"
+      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v3.9.5"
     }
   },
   "components": [
@@ -89,7 +89,7 @@
       "type": "library",
       "name": "asycuda-java-bridge",
       "group": "iq.asycuda",
-      "version": "3.9.0",
+      "version": "3.9.5",
       "description": "Open-source Android-to-Java8 bridge (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) compiled from java-bridge/build-bridge.sh"
     },
     {
