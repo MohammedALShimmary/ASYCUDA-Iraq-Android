@@ -18,8 +18,8 @@ Android client for the Iraqi General Commission of Customs (**ASYCUDA World** â€
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | `36aba646d88f0424f1aec2c83b077fb3df2689ff0f91cd49d588dcf2cb967b7e` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | `31fd49b386f365a3c9874bcd8620e63363b93bbc97131d866fd42e25e51624ee` |
+| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | `5b1c868faac9974e1dd7929060f9f55db620b46f85b181c9201aa1e147eaeb1f` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | `e06fa907965721479fb540f74faddbf87f9c6a7bfb2bd5daa1a1802f81381f30` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
 ---

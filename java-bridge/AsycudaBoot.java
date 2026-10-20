@@ -141,13 +141,16 @@ public class AsycudaBoot {
     }
 
     public static boolean sendToAndroidApk(String msg) {
-        String token = System.getProperty("asycuda.bridge.token", "");
-        String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
-        byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
-        try (Socket sock = new Socket(java.net.InetAddress.getLoopbackAddress(), 47891);
-             OutputStream out = sock.getOutputStream()) {
-            out.write(payloadBytes);
-            out.flush();
+        java.net.InetSocketAddress loopbackAddr = new java.net.InetSocketAddress(
+                java.net.InetAddress.getLoopbackAddress(), 47891);
+        try (java.nio.channels.SocketChannel ch = java.nio.channels.SocketChannel.open(loopbackAddr)) {
+            String token = System.getProperty("asycuda.bridge.token", "");
+            String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
+            byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(payloadBytes);
+            while (buf.hasRemaining()) {
+                ch.write(buf);
+            }
             return true;
         } catch (Throwable t) {
             return false;

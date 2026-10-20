@@ -25,8 +25,8 @@ Every asset published on the [official `v3.9.5` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 40`) | `36aba646d88f0424f1aec2c83b077fb3df2689ff0f91cd49d588dcf2cb967b7e` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | Baseline ASYCUDA Iraq client bundle + open-source `java-bridge/` JARs (`v3.9.5`) | `31fd49b386f365a3c9874bcd8620e63363b93bbc97131d866fd42e25e51624ee` |
+| [**`ASYCUDA_Iraq_v3.9.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/ASYCUDA_Iraq_v3.9.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 40`) | `5b1c868faac9974e1dd7929060f9f55db620b46f85b181c9201aa1e147eaeb1f` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz) | Baseline ASYCUDA Iraq client bundle + open-source `java-bridge/` JARs (`v3.9.5`) | `e06fa907965721479fb540f74faddbf87f9c6a7bfb2bd5daa1a1802f81381f30` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + OpenJDK 8u402 runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
 

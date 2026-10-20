@@ -2076,7 +2076,7 @@ public class AsycudaMaterialUi {
      * Vault — File Manager Modal with Full Folder Navigation, Folder Creation,
      * File Import, Individual Open/Share/Delete Icons, and Multi-Select Batch Actions.
      */
-    public static void showFilesModal(MainActivity activity, List<File> unusedLegacyFiles, MenuActionCallback cb) {
+    public static void showFilesModal(MainActivity activity, MenuActionCallback cb) {
         File vaultRoot = new File(activity.getFilesDir(), "prints");
         if (!vaultRoot.exists() && !vaultRoot.mkdirs()) {
             // Directory exists or created concurrently
@@ -2940,13 +2940,10 @@ public class AsycudaMaterialUi {
         if (dir == null || !dir.isDirectory()) return;
         File[] children = dir.listFiles();
         if (children == null) return;
-        List<File> subDirs = new ArrayList<>();
-        for (File c : children) {
-            if (c.isDirectory() && !c.getName().startsWith(".")) {
-                subDirs.add(c);
-            }
-        }
-        subDirs.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        List<File> subDirs = java.util.Arrays.stream(children)
+                .filter(c -> c.isDirectory() && !c.getName().startsWith("."))
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .collect(java.util.stream.Collectors.toList());
         for (File sub : subDirs) {
             outDirs.add(sub);
             collectVaultDirectoriesRecursive(sub, outDirs);

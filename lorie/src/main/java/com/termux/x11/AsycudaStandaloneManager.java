@@ -2094,20 +2094,7 @@ public class AsycudaStandaloneManager {
 
             @Override
             public void onOpenFiles() {
-                List<File> rawFiles = new ArrayList<>();
-                collectFiles(new File(activity.getFilesDir(), DIR_PRINTS), rawFiles);
-                collectFiles(new File(activity.getFilesDir(), DIR_WORKSPACE), rawFiles);
-                rawFiles.sort(Comparator.comparingLong(File::lastModified).reversed());
-
-                // Deduplicate by filename so files appear once
-                List<File> uniqueFiles = new ArrayList<>();
-                Set<String> seenNames = new LinkedHashSet<>();
-                for (File f : rawFiles) {
-                    if (seenNames.add(f.getName())) {
-                        uniqueFiles.add(f);
-                    }
-                }
-                AsycudaMaterialUi.showFilesModal(activity, uniqueFiles, this);
+                AsycudaMaterialUi.showFilesModal(activity, this);
             }
 
             @Override
