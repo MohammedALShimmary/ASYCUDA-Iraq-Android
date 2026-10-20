@@ -65,8 +65,8 @@ public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
-    public static final String CURRENT_POLICY_VERSION = "1.1-2026.10";
-    public static final int CURRENT_CHANGELOG_VERSION = 38;
+    public static final String CURRENT_POLICY_VERSION = "1.2-2026.10";
+    public static final int CURRENT_CHANGELOG_VERSION = 39;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
@@ -267,7 +267,7 @@ public class AsycudaMaterialUi {
         } catch (Throwable ignored) {
             // Fallback to current release version label
         }
-        return "v3.8.0";
+        return "v3.9.0";
     }
 
     public static boolean shouldShowWhatsNew(Context ctx) {
@@ -2111,6 +2111,20 @@ public class AsycudaMaterialUi {
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
 
+        // Interactive Security / Encrypted Vault Info Badge (!)
+        TextView vaultInfoBadge = new TextView(activity);
+        vaultInfoBadge.setText("!");
+        vaultInfoBadge.setGravity(Gravity.CENTER);
+        vaultInfoBadge.setTextColor(Color.WHITE);
+        vaultInfoBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        vaultInfoBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        vaultInfoBadge.setBackground(createRippleCardDrawable(activity, SYSTEM_BLUE, 13, Color.parseColor("#88FFFFFF")));
+        LinearLayout.LayoutParams vibLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
+        vibLp.setMarginEnd(dp(activity, 8));
+        vaultInfoBadge.setLayoutParams(vibLp);
+        vaultInfoBadge.setOnClickListener(v -> showEncryptedVaultInfoModal(activity));
+        header.addView(vaultInfoBadge);
+
         dialog.setOnCancelListener(d -> showControlCenter(activity, cb));
 
         if (!files.isEmpty()) {
@@ -2358,6 +2372,82 @@ public class AsycudaMaterialUi {
 
         dialog.setContentView(root);
         dialog.show();
+    }
+
+    public static void showEncryptedVaultInfoModal(MainActivity activity) {
+        Dialog infoDialog = createModalDialog(activity, 0.78f, 540, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+
+        TextView iconCircle = new TextView(activity);
+        iconCircle.setText("!");
+        iconCircle.setGravity(Gravity.CENTER);
+        iconCircle.setTextColor(Color.WHITE);
+        iconCircle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        iconCircle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        iconCircle.setBackground(createCardDrawable(activity, SYSTEM_BLUE, 13, 0));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
+        icLp.setMarginEnd(dp(activity, 10));
+        header.addView(iconCircle, icLp);
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "Encrypted App Storage Protection",
+                "حماية سرية الملفات داخل الخزنة المشفرة للتطبيق",
+                "پاراستنی نهێنی پەڕگەکان لەناو بیرگەی تایبەتی بەرنامە"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        header.addView(title);
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(activity, 14);
+        card.setPadding(pad, pad, pad, pad);
+        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, Color.parseColor("#550A84FF")));
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLp.topMargin = dp(activity, 12);
+        cardLp.bottomMargin = dp(activity, 12);
+        card.setLayoutParams(cardLp);
+
+        TextView msg = new TextView(activity);
+        msg.setText(tr(activity,
+                "For your security and trade confidentiality, all printed PDFs and downloaded customs documents are saved exclusively inside the encrypted private data storage of this application.\n\n"
+                        + "• Complete Confidentiality: No other app on your phone can read, scan, or access your customs declarations.\n"
+                        + "• Zero Broad Storage Permissions: The app operates without requesting all-files access to your personal phone storage.\n"
+                        + "• Protected Access: These documents are accessible only from this window — use Open, Share, or Delete whenever needed.",
+                "حفاظاً على أمانك وسرية معاملاتك الكمركية، يتم حفظ جميع ملفات PDF المطبوعة والمستندات المحمّلة حصرياً داخل الذاكرة الخاصة والمشفرة لهذا التطبيق.\n\n"
+                        + "• سرية تامة: لا يمكن لأي تطبيق آخر على هاتفك قراءة أو فحص أو الوصول إلى تصاريحك ومستنداتك الكمركية.\n"
+                        + "• بدون صلاحيات وصول عامة: يعمل التطبيق بأمان تام دون طلب صلاحية الوصول الشامل لملفات هاتفك الشخصية.\n"
+                        + "• تحكم آمن ومباشر: لا يمكن الوصول لهذه الملفات إلا من خلال هذه النافذة — يمكنك فتحها أو مشاركتها أو حذفها بكل أمان.",
+                "بۆ پاراستنی ئاسایش و نهێنی مامەڵە گومرگییەکانت، هەموو پەڕگە چاپکراوەکانی PDF و بەڵگەنامەکان تەنها لەناو بیرگەی تایبەت و پارێزراوی ئەم بەرنامەیەدا پاشەکەوت دەکرێن.\n\n"
+                        + "• نهێنی تەواو: هیچ بەرنامەیەکی تر لەسەر مۆبایلەکەت ناتوانێت دەستی بگات بە بەڵگەنامە گومرگییەکانت.\n"
+                        + "• بەبێ مۆڵەتی گشتی پەڕگەکان: بەرنامەکە داوای مۆڵەتی گەیشتن بە پەڕگە تایبەتییەکانی مۆبایلەکەت ناکات.\n"
+                        + "• کۆنترۆڵی پارێزراو: تەنها لە ڕێگەی ئەم پەنجەرەیەوە دەتوانیت پەڕگەکانت بکەیتەوە، هاوبەشیان پێبکەیت، یان بیانسڕیتەوە."));
+        msg.setTextColor(TEXT_PRIMARY);
+        msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        card.addView(msg);
+        root.addView(card);
+
+        LinearLayout footer = new LinearLayout(activity);
+        footer.setOrientation(LinearLayout.HORIZONTAL);
+        footer.setGravity(Gravity.END);
+        TextView okBtn = createCupertinoButton(activity,
+                tr(activity, "Got It", "حسناً، فهمت", KU_DONE),
+                true, false, v -> infoDialog.dismiss());
+        footer.addView(okBtn);
+        root.addView(footer);
+
+        infoDialog.setContentView(root);
+        infoDialog.show();
     }
 
     public static void showAboutAndCreditsModal(MainActivity activity, MenuActionCallback cb) {
@@ -2895,9 +2985,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Security Hardening, Open-Source Bridge Transparency & Smart SOClass Updater",
-                "تعزيز الأمان، الشفافية الكاملة للكود المصدري، والتحديث الذكي لملفات SOClass",
-                "بەهێزکردنی ئاسایش، شەفافییەتی سەرچاوە کراوە و نوێکەرەوەی زیرەکی SOClass"));
+                "Zero Storage Permissions, Encrypted App Vault & Native File Picker Bridge",
+                "إلغاء صلاحيات التخزين الواسعة، خزنة الملفات المشفرة، وجسر استيراد الملفات الآمن",
+                "لابردنی مۆڵەتی گشتیی پەڕگەکان، قاسەی نهێنی بەرنامە و پردی هاوردەکردنی پەڕگە"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         titleCol.addView(subtitle);
@@ -2921,43 +3011,43 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "1. Verified SSL/TLS & Cryptographic Update Protection",
-                        "1. توثيق شهادات الأمان (SSL/TLS) وحماية التحديثات",
-                        "١. پشتڕاستکردنەوەی بڕوانامەی پاراستن (SSL/TLS) و نوێکردنەوەکان"),
+                        "1. Zero Storage Permissions & Native File Picker Middleman",
+                        "1. العمل بدون صلاحية الوصول الشامل للملفات وجسر استيراد الملفات الذكي",
+                        "١. کارکردن بەبێ مۆڵەتی گشتیی پەڕگەکان و پردی زیرەکی هاوردەکردنی پەڕگە"),
                 tr(activity,
-                        "Enforces strict X.509 certificate chain verification for asy.mof.gov.iq using the official Sectigo/ZeroSSL CA chain, verifies SHA-256 checksums and Android package signatures before installing app updates, and secures local X11/JVM communication with per-session authentication tokens.",
-                        "تفعيل التحقق الصارم من شهادات الأمان الرقمية لخادم وزارة المالية (asy.mof.gov.iq)، والتحقق من البصمة الرقمية (SHA-256) والتوقيع الرسمي للتطبيق قبل تثبيت أي تحديث، وتأمين قناة الاتصال الداخلية برموز تحقق مشفرة لكل جلسة.",
-                        "چالاککردنی پشکنینی وردی بڕوانامەی پاراستنی سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq)، و پشتڕاستکردنەوەی واژۆی دیجیتاڵی و SHA-256 پێش دامەزراندنی هەر نوێکردنەوەیەک."));
+                        "Removed MANAGE_EXTERNAL_STORAGE, READ/WRITE_EXTERNAL_STORAGE, Wi-Fi state, and Accessibility Service permissions. Added an \"Import from Phone\" button inside ASYCUDA's Java file chooser that opens Android's native system file picker with zero broad storage permissions.",
+                        "إزالة صلاحية الوصول الشامل للملفات (MANAGE_EXTERNAL_STORAGE) وكافة الصلاحيات غير الضرورية، وإضافة زر «استيراد ملف من الهاتف» داخل نافذة اختيار ملفات الجافا لفتح مستعرض ملفات الأندرويد الآمن مباشرة.",
+                        "لابردنی مۆڵەتی MANAGE_EXTERNAL_STORAGE و زیادکردنی دوگمەی «هاوردەکردنی پەڕگە لە مۆبایلەوە» لەناو پەنجەرەی هەڵبژاردنی پەڕگەی ئەسیکۆدا."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "2. 100% Open-Source Java Bridge Transparency",
-                        "2. الشفافية الكاملة لملفات الجسر البرمجي (Java Bridge)",
-                        "٢. شەفافییەتی تەواوی پەڕگەکانی پردی جاڤا (Java Bridge)"),
+                        "2. Encrypted Private App Storage for Customs PDFs & Declarations",
+                        "2. حفظ التصاريح وملفات الـ PDF داخل الخزنة المشفرة للتطبيق فقط",
+                        "٢. پاراستنی پەڕگەکانی PDF و مامەڵە گومرگییەکان لە قاسەی نهێنی بەرنامەکەدا"),
                 tr(activity,
-                        "Published the complete Java source code and reproducible build scripts (java-bridge/) for all three Android bridge archives (00_bootpatch.jar, 00_boot.jar, and 00_jnlp.jar). Official Ministry of Finance JARs are never modified, and zero login credentials are ever collected.",
-                        "نشر الكود المصدري الكامل وأدوات البناء القياسية (في مجلد java-bridge/) لجميع ملفات التوافق الثلاثة (00_bootpatch.jar و 00_boot.jar و 00_jnlp.jar)، مع ضمان عدم المساس بملفات النظام الرسمية وعدم جمع أي بيانات دخول.",
-                        "بڵاوکردنەوەی تەواوی کۆدی سەرچاوە بۆ هەرسێ پەڕگەی پردی جاڤا لە فۆڵدەری java-bridge/، بەبێ هیچ دەستکارییەک لە پەڕگە فەرمییەکانی وەزارەتی دارایی."));
+                        "All printed PDFs and exported files are now stored exclusively inside the app's private encrypted storage (/data/data/iq.asycuda/files/prints) so no other app on your phone can read your customs documents. Manage them anytime via Open, Share, and Delete.",
+                        "يتم الآن حفظ جميع ملفات الـ PDF والتصاريح المطبوعة حصرياً داخل المساحة المشفرة الخاصة بالتطبيق لحماية سرية معاملاتك الكمركية من أي تطبيق آخر على الهاتف، مع إمكانية فتحها أو مشاركتها أو حذفها بسهولة.",
+                        "ئێستا سەرجەم پەڕگە چاپکراوەکانی PDF تەنها لەناو بیرگەی تایبەت و پارێزراوی بەرنامەکەدا هەڵدەگیرێن تا هیچ بەرنامەیەکی تر نەتوانێت بیانخوێنێتەوە."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "3. Automatic SOClass Alert Listener & Dynamic JNLP Sync",
-                        "3. الاستجابة التلقائية لتنبيهات SOClass والمزامنة الديناميكية",
-                        "٣. وەڵامدانەوەی خۆکاری ئاگادارکردنەوەی SOClass و هاوکاتکردنی پەڕگەکان"),
+                        "3. Previewable Legal Consent Receipt & Auto-Cleaned App Updates",
+                        "3. معاينة إيصال التوثيق القانوني قبل الإرسال والتنظيف التلقائي لملفات التحديث",
+                        "٣. پێشبینینی پسوولەی یاسایی پێش ناردن و سڕینەوەی خۆکاری پەڕگەی نوێکردنەوە"),
                 tr(activity,
-                        "Listens for ASYCUDA server SOClass update alerts (\"SOClass Client have to be updated\") and automatically opens the Update Center. Dynamically syncs the exact file list from AWIQWorld.jnlp (supporting any number of new or removed government JARs) and checks for app updates on launch.",
-                        "الاستماع التلقائي لتنبيهات خادم أسيكودا عند طلب تحديث ملفات (SOClass) وفتح نافذة التحديث فوراً، مع قراءة قائمة الملفات الرسمية من AWIQWorld.jnlp بشكل ديناميكي مهما تغير عدد الحزم في التحديثات المستقبلية.",
-                        "گوێگرتنی خۆکار بۆ ئاگادارکردنەوەکانی نوێکردنەوەی SOClass لە ڕاژەی ئەسیکۆدا و کردنەوەی ڕاستەوخۆی پەنجەرەی نوێکردنەوە، لەگەڵ هاوکاتکردنی لیستی پەڕگە فەرمییەکانی AWIQWorld.jnlp."));
+                        "Added a \"Preview Sentry Receipt Before Sending\" button so you can inspect the exact 8-field JSON receipt before accepting Terms & Privacy Policy, and moved in-app update APKs to private cache with automatic deletion after installation.",
+                        "إضافة زر لمعاينة محتوى إيصال الموافقة القانونية (الحقول الثمانية بالتفصيل) قبل إرساله، وتحميل تحديثات التطبيق في الذاكرة المؤقتة المعزولة مع حذف ملف التحديث تلقائياً فور اكتمال التثبيت.",
+                        "زیادکردنی دوگمەی پێشبینینی پسوولەی ڕەزامەندی یاسایی پێش ناردن، و سڕینەوەی خۆکاری پاکێجی نوێکردنەوەی بەرنامە دوای دامەزراندن."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "4. Audited by SonarQube Cloud & Snyk",
-                        "4. الفحص المستمر عبر SonarQube Cloud و Snyk",
-                        "٤. پشکنینی بەردەوام لە ڕێگەی SonarQube Cloud و Snyk"),
+                        "4. Verified by SonarQube Cloud, Snyk & Automated Security Suite",
+                        "4. الفحص الأمني الآلي المستمر عبر SonarQube Cloud و Snyk",
+                        "٤. پشکنینی ئەمنی خۆکار لە ڕێگەی SonarQube Cloud و Snyk"),
                 tr(activity,
-                        "Resolved static analysis security hotspots, native C/C++ buffer bounds checks, and Java resource lifecycle issues verified by SonarQube Cloud and Snyk.",
-                        "معالجة كافة الملاحظات الأمنية والبرمجية في كود الجافا ومكتبات C/C++ الأصلية وتوثيق الفحص عبر منصتي SonarQube Cloud و Snyk.",
-                        "چارەسەرکردنی سەرجەم تێبینییە ئەمنی و تەکنیکییەکان بە پشتڕاستکردنەوەی SonarQube Cloud و Snyk."));
+                        "Every commit is verified by automated adversarial security tests (JNLP allowlist, X.509 certificate pinning, IPC token authentication, and PII redaction) alongside SonarQube Cloud and Snyk.",
+                        "فحص آلي شامل مع كل تحديث برمجي للتحقق من شهادات التوقيع الرقمي وحماية البيانات عبر منصتي SonarQube Cloud و Snyk.",
+                        "پشکنینی خۆکاری بەردەوام بۆ هەموو نوێکردنەوەیەک لە ڕێگەی SonarQube Cloud و Snyk."));
 
         scroll.addView(card);
         root.addView(scroll);
@@ -3137,7 +3227,7 @@ public class AsycudaMaterialUi {
     }
 
     @SuppressLint("HardwareIds")
-    public static JSONObject recordTermsAccepted(Context ctx, String fullName, String companyName) {
+    public static JSONObject buildConsentReceiptObject(Context ctx, String fullName, String companyName) {
         JSONObject receipt = new JSONObject();
         if (ctx == null) return receipt;
         try {
@@ -3180,23 +3270,6 @@ public class AsycudaMaterialUi {
             }
             String deviceHash = idHex.toString();
 
-            SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-            sp.edit()
-                    .putBoolean(KEY_ACCEPTED, true)
-                    .putBoolean(KEY_CLOUD_SYNCED, false)
-                    .putString(KEY_CONSENT_ID, consentId)
-                    .putString(KEY_SIGNATORY_NAME, cleanName)
-                    .putString(KEY_COMPANY_NAME, cleanCompany)
-                    .putString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION)
-                    .putString(KEY_APP_VERSION, appVer)
-                    .putString(KEY_ACCEPTED_UTC, utcIso)
-                    .putString(KEY_ACCEPTED_LOCAL, localStr)
-                    .putString("device_model", deviceModel)
-                    .putString(KEY_DEVICE_HASH, deviceHash)
-                    .putString(KEY_SHA256_SIG, fullHash)
-                    .putString("locale", getAppLanguage(ctx))
-                    .apply();
-
             receipt.put("status", "ACCEPTED");
             receipt.put(KEY_CONSENT_ID, consentId);
             receipt.put(KEY_SIGNATORY_NAME, cleanName);
@@ -3210,6 +3283,30 @@ public class AsycudaMaterialUi {
             receipt.put(KEY_DEVICE_HASH, deviceHash);
             receipt.put("locale", getAppLanguage(ctx));
             receipt.put(KEY_SHA256_SIG, fullHash);
+        } catch (Exception ignored) { /* Best-effort UI operation */ }
+        return receipt;
+    }
+
+    public static JSONObject recordTermsAccepted(Context ctx, String fullName, String companyName) {
+        JSONObject receipt = buildConsentReceiptObject(ctx, fullName, companyName);
+        if (ctx == null || receipt.length() == 0) return receipt;
+        try {
+            SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
+            sp.edit()
+                    .putBoolean(KEY_ACCEPTED, true)
+                    .putBoolean(KEY_CLOUD_SYNCED, false)
+                    .putString(KEY_CONSENT_ID, receipt.optString(KEY_CONSENT_ID, ""))
+                    .putString(KEY_SIGNATORY_NAME, receipt.optString(KEY_SIGNATORY_NAME, ""))
+                    .putString(KEY_COMPANY_NAME, receipt.optString(KEY_COMPANY_NAME, ""))
+                    .putString(KEY_POLICY_VERSION, receipt.optString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION))
+                    .putString(KEY_APP_VERSION, receipt.optString(KEY_APP_VERSION, ""))
+                    .putString(KEY_ACCEPTED_UTC, receipt.optString(KEY_ACCEPTED_UTC, ""))
+                    .putString(KEY_ACCEPTED_LOCAL, receipt.optString(KEY_ACCEPTED_LOCAL, ""))
+                    .putString("device_model", receipt.optString("device_model", ""))
+                    .putString(KEY_DEVICE_HASH, receipt.optString(KEY_DEVICE_HASH, ""))
+                    .putString(KEY_SHA256_SIG, receipt.optString(KEY_SHA256_SIG, ""))
+                    .putString("locale", receipt.optString("locale", getAppLanguage(ctx)))
+                    .apply();
 
             File receiptFile = new File(ctx.getFilesDir(), "legal_consent_receipt.json");
             try (FileOutputStream fos = new FileOutputStream(receiptFile)) {
@@ -3218,6 +3315,107 @@ public class AsycudaMaterialUi {
             }
         } catch (Exception ignored) { /* Best-effort UI operation */ }
         return receipt;
+    }
+
+    private static void showConsentReceiptPreviewModal(MainActivity activity, String fullName, String companyName) {
+        Dialog infoDialog = createModalDialog(activity, 0.86f, 620, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        String sampleName = (fullName == null || fullName.trim().isEmpty())
+                ? tr(activity, "[Your Full Name]", "[الاسم الكامل المدخل]", "[ناوی تەواو]")
+                : fullName.trim();
+        String sampleCompany = (companyName == null || companyName.trim().isEmpty())
+                ? tr(activity, "[Your Company / Brokerage]", "[اسم الشركة أو مكتب التخليص]", "[ناوی کۆمپانیا یان نووسینگە]")
+                : companyName.trim();
+
+        JSONObject previewReceipt = buildConsentReceiptObject(activity, sampleName, sampleCompany);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 8));
+
+        TextView hTitle = new TextView(activity);
+        hTitle.setText(tr(activity,
+                "Preview of Legal Consent Receipt (Sentry)",
+                "معاينة إيصال توثيق الموافقة القانونية (Sentry)",
+                "پێشبینینی پسوولەی ڕەزامەندی یاسایی (Sentry)"));
+        hTitle.setTextColor(TEXT_PRIMARY);
+        hTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+        hTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        header.addView(hTitle);
+
+        TextView hSub = new TextView(activity);
+        hSub.setText(tr(activity,
+                "Exact 8-field JSON payload transmitted once upon acceptance",
+                "البيانات الدقيقة التي يتم إرسالها لمرة واحدة فقط عند الموافقة",
+                "ئەو زانیارییە دیاریکراوانەی کە تەنها یەک جار لە کاتی پەسەندکردندا دەنێردرێن"));
+        hSub.setTextColor(SYSTEM_BLUE);
+        hSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
+        header.addView(hSub);
+
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scLp.topMargin = dp(activity, 8);
+        scLp.bottomMargin = dp(activity, 8);
+        scroll.setLayoutParams(scLp);
+
+        LinearLayout body = new LinearLayout(activity);
+        body.setOrientation(LinearLayout.VERTICAL);
+
+        TextView noteView = new TextView(activity);
+        noteView.setText(tr(activity,
+                "Before you tap \"Accept & Continue\", you have the full right to inspect the exact digital receipt below. ONLY these 8 non-financial fields are sent once over HTTPS to our Sentry compliance log. Zero ASYCUDA passwords, zero customs declarations, and zero personal files are ever included:",
+                "قبل الضغط على «موافقة ومتابعة»، يحق لك الاطلاع الكامل على محتوى الإيصال الرقمي أدناه. يتم إرسال هذه الحقول الثمانية فقط لمرة واحدة عبر اتصال مشفّر (HTTPS) لتوثيق الموافقة القانونية في سجل (Sentry)، ولا يتم إطلاقاً إرسال أي كلمات مرور أو تصاريح كمركية أو ملفات خاصة:",
+                "پێش ئەوەی کرتە لەسەر «پەسەندکردن و بەردەوامبوون» بکەیت، مافی تەواوت هەیە پسوولەی دیجیتاڵی خوارەوە ببینیت. تەنها ئەم ٨ خانەیە یەک جار لە ڕێگەی (HTTPS) دەنێردرێت بۆ تۆماری یاسایی (Sentry) و هیچ وشەیەکی نهێنی یان مامەڵەیەکی گومرگی نانێردرێت:"));
+        noteView.setTextColor(TEXT_SECONDARY);
+        noteView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        body.addView(noteView);
+
+        TextView jsonBox = new TextView(activity);
+        String formattedJson;
+        try {
+            JSONObject eightFields = new JSONObject();
+            eightFields.put(KEY_CONSENT_ID, previewReceipt.optString(KEY_CONSENT_ID, ""));
+            eightFields.put(KEY_SIGNATORY_NAME, previewReceipt.optString(KEY_SIGNATORY_NAME, ""));
+            eightFields.put(KEY_COMPANY_NAME, previewReceipt.optString(KEY_COMPANY_NAME, ""));
+            eightFields.put(KEY_POLICY_VERSION, previewReceipt.optString(KEY_POLICY_VERSION, ""));
+            eightFields.put(KEY_APP_VERSION, previewReceipt.optString(KEY_APP_VERSION, ""));
+            eightFields.put(KEY_ACCEPTED_UTC, previewReceipt.optString(KEY_ACCEPTED_UTC, ""));
+            eightFields.put(KEY_DEVICE_HASH, previewReceipt.optString(KEY_DEVICE_HASH, ""));
+            eightFields.put(KEY_SHA256_SIG, previewReceipt.optString(KEY_SHA256_SIG, ""));
+            formattedJson = eightFields.toString(2);
+        } catch (Exception e) {
+            formattedJson = previewReceipt.toString();
+        }
+        jsonBox.setText(formattedJson);
+        jsonBox.setTextColor(Color.parseColor("#FF64D2FF"));
+        jsonBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        jsonBox.setTypeface(Typeface.MONOSPACE);
+        int pad = dp(activity, 12);
+        jsonBox.setPadding(pad, pad, pad, pad);
+        jsonBox.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
+        LinearLayout.LayoutParams jbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        jbLp.topMargin = dp(activity, 10);
+        jsonBox.setLayoutParams(jbLp);
+        body.addView(jsonBox);
+
+        scroll.addView(body);
+        root.addView(scroll);
+
+        TextView okBtn = createCupertinoButton(activity,
+                tr(activity, "Close Preview", "إغلاق المعاينة", "داخستنی پێشبینین"),
+                true, false, v -> infoDialog.dismiss());
+        okBtn.setGravity(Gravity.CENTER);
+        root.addView(okBtn, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        infoDialog.setContentView(root);
+        infoDialog.show();
     }
 
     public static String getTermsAcceptanceBadgeTitle(Context ctx) {
@@ -3522,6 +3720,30 @@ public class AsycudaMaterialUi {
 
         regCard.addView(fieldsRow);
 
+        // Preview Sentry Receipt Before Sending Button (Explicit user transparency)
+        TextView previewBtn = new TextView(activity);
+        previewBtn.setText(tr(activity,
+                "🔍 Preview Sentry Receipt Before Sending (See Exact 8 Fields)",
+                "🔍 معاينة إيصال الموافقة (Sentry) قبل الإرسال (عرض الحقول الـ 8 بالتفصيل)",
+                "🔍 پێشبینینی پسوولەی ڕەزامەندی (Sentry) پێش ناردن (بینینی ٨ خانەکە)"));
+        previewBtn.setTextColor(Color.parseColor("#FF64D2FF"));
+        previewBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        previewBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        previewBtn.setGravity(Gravity.CENTER);
+        previewBtn.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+        previewBtn.setBackground(createRippleCardDrawable(activity,
+                Color.parseColor("#1A0A84FF"), 10, Color.parseColor("#660A84FF")));
+        LinearLayout.LayoutParams pvLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pvLp.topMargin = dp(activity, 8);
+        previewBtn.setLayoutParams(pvLp);
+        previewBtn.setOnClickListener(v -> {
+            String curName = nameInput.getText() != null ? nameInput.getText().toString() : "";
+            String curComp = compInput.getText() != null ? compInput.getText().toString() : "";
+            showConsentReceiptPreviewModal(activity, curName, curComp);
+        });
+        regCard.addView(previewBtn);
+
         TextView errorBanner = new TextView(activity);
         errorBanner.setVisibility(View.GONE);
         errorBanner.setTextColor(Color.parseColor("#FFFF6961"));
@@ -3534,19 +3756,19 @@ public class AsycudaMaterialUi {
         regCard.addView(errorBanner);
 
         scrollContent.addView(regCard);
-        scroll.addView(scrollContent);
-        root.addView(scroll);
 
-        // Interactive Checkbox Row
+        // Mandatory Dual Consent Checkboxes (1: Terms & Liability, 2: Privacy Policy & Mandatory Sentry Receipt)
         final boolean[] isChecked = new boolean[] { false };
+        final boolean[] isPrivacyChecked = new boolean[] { false };
+
         LinearLayout checkCard = new LinearLayout(activity);
         checkCard.setOrientation(LinearLayout.HORIZONTAL);
         checkCard.setGravity(Gravity.CENTER_VERTICAL);
-        checkCard.setPadding(dp(activity, 12), dp(activity, 9), dp(activity, 12), dp(activity, 9));
+        checkCard.setPadding(dp(activity, 12), dp(activity, 8), dp(activity, 12), dp(activity, 8));
         checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams ckLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        ckLp.bottomMargin = dp(activity, 10);
+        ckLp.topMargin = dp(activity, 8);
         checkCard.setLayoutParams(ckLp);
 
         TextView checkBox = new TextView(activity);
@@ -3562,15 +3784,51 @@ public class AsycudaMaterialUi {
 
         TextView checkLabel = new TextView(activity);
         checkLabel.setText(tr(activity,
-                "I confirm my name and company details above are accurate, and I agree to the Terms & Conditions and Limitation of Liability on behalf of myself and my organization.",
-                "أقر بصحة اسمي وبيانات الشركة أعلاه، وأوافق على الشروط والأحكام وإخلاء المسؤولية الكاملة بالأصالة عن نفسي وبالنيابة عن الجهة التي أمثلها.",
-                "ڕاستی ناو و زانیاری کۆمپانیاکەم لە سەرەوە پشتڕاست دەکەمەوە، و ڕازیم بە مەرج و ڕێساکان و بەرپرسیارێتی یاسایی بە ناوی خۆم و لایەنەکەمەوە."));
+                "1. I confirm my name and company details above are accurate, and I agree to the Terms & Conditions and Complete Limitation of Liability on behalf of myself and my organization.",
+                "1. أقر بصحة اسمي وبيانات الشركة أعلاه، وأوافق على الشروط والأحكام وإخلاء المسؤولية الكاملة بالأصالة عن نفسي وبالنيابة عن الجهة التي أمثلها.",
+                "١. ڕاستی ناو و زانیاری کۆمپانیاکەم لە سەرەوە پشتڕاست دەکەمەوە، و ڕازیم بە مەرج و ڕێساکان و بەرپرسیارێتی یاسایی بە ناوی خۆم و لایەنەکەمەوە."));
         checkLabel.setTextColor(TEXT_PRIMARY);
-        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
         checkLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         checkLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         checkCard.addView(checkLabel);
-        root.addView(checkCard);
+        scrollContent.addView(checkCard);
+
+        LinearLayout privacyCard = new LinearLayout(activity);
+        privacyCard.setOrientation(LinearLayout.HORIZONTAL);
+        privacyCard.setGravity(Gravity.CENTER_VERTICAL);
+        privacyCard.setPadding(dp(activity, 12), dp(activity, 8), dp(activity, 12), dp(activity, 8));
+        privacyCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+        LinearLayout.LayoutParams pkLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pkLp.topMargin = dp(activity, 6);
+        privacyCard.setLayoutParams(pkLp);
+
+        TextView privacyBox = new TextView(activity);
+        privacyBox.setGravity(Gravity.CENTER);
+        privacyBox.setText("");
+        privacyBox.setTextColor(Color.WHITE);
+        privacyBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        privacyBox.setTypeface(Typeface.create("sans-serif-bold", Typeface.BOLD));
+        privacyBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
+        LinearLayout.LayoutParams pBoxLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        pBoxLp.setMarginEnd(dp(activity, 12));
+        privacyCard.addView(privacyBox, pBoxLp);
+
+        TextView privacyLabel = new TextView(activity);
+        privacyLabel.setText(tr(activity,
+                "2. I have reviewed the Privacy Policy and the Sentry Receipt Preview above, and I explicitly agree to register my signed legal consent receipt (ONLY those 8 fields) with the developer's Sentry compliance log.",
+                "2. لقد اطلعت على سياسة الخصوصية ومعاينة الإيصال أعلاه، وأوافق صراحةً على تسجيل وإرسال إيصال الموافقة القانونية الموقّع (الحقول الثمانية المعروضة فقط) إلى سجل التوثيق القانوني (Sentry).",
+                "٢. سیاسەتی تایبەتمەندی و پێشبینینی پسوولەکەم لە سەرەوە بینیوە، و بە ڕوونی ڕازیم بە تۆمارکردن و ناردنی پسوولەی ڕەزامەندی یاسایی (تەنها ئەو ٨ خانەیە) بۆ تۆماری یاسایی (Sentry)."));
+        privacyLabel.setTextColor(TEXT_PRIMARY);
+        privacyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
+        privacyLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
+        privacyLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        privacyCard.addView(privacyLabel);
+        scrollContent.addView(privacyCard);
+
+        scroll.addView(scrollContent);
+        root.addView(scroll);
 
         // Action Buttons Row (Decline & Exit | Accept & Continue)
         LinearLayout btnRow = new LinearLayout(activity);
@@ -3599,19 +3857,34 @@ public class AsycudaMaterialUi {
         btnRow.addView(acceptBtn);
         root.addView(btnRow);
 
+        Runnable syncAcceptAlpha = () -> acceptBtn.setAlpha((isChecked[0] && isPrivacyChecked[0]) ? 1.0f : 0.42f);
+
         checkCard.setOnClickListener(v -> {
             isChecked[0] = !isChecked[0];
             if (isChecked[0]) {
                 checkBox.setText("✓");
                 checkBox.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 6, SYSTEM_GREEN));
                 checkCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 12, Color.parseColor("#6630D158")));
-                acceptBtn.setAlpha(1.0f);
             } else {
                 checkBox.setText("");
                 checkBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
                 checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
-                acceptBtn.setAlpha(0.42f);
             }
+            syncAcceptAlpha.run();
+        });
+
+        privacyCard.setOnClickListener(v -> {
+            isPrivacyChecked[0] = !isPrivacyChecked[0];
+            if (isPrivacyChecked[0]) {
+                privacyBox.setText("✓");
+                privacyBox.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 6, SYSTEM_GREEN));
+                privacyCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 12, Color.parseColor("#6630D158")));
+            } else {
+                privacyBox.setText("");
+                privacyBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
+                privacyCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+            }
+            syncAcceptAlpha.run();
         });
 
         acceptBtn.setOnClickListener(v -> {
@@ -3628,11 +3901,12 @@ public class AsycudaMaterialUi {
             }
             errorBanner.setVisibility(View.GONE);
 
-            if (!isChecked[0]) {
+            if (!isChecked[0] || !isPrivacyChecked[0]) {
+                scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
                 Toast.makeText(activity, tr(activity,
-                        "Please tick the agreement checkbox first to continue.",
-                        "يرجى تحديد مربع الموافقة أولاً للمتابعة.",
-                        "تکایە سەرەتا نیشانەی ڕەزامەندی دابگرە بۆ بەردەوامبوون."), Toast.LENGTH_SHORT).show();
+                        "Please tick both mandatory agreement checkboxes (1 & 2) to continue.",
+                        "يرجى تحديد مربعي الموافقة الإلزاميين (1 و 2) للمتابعة.",
+                        "تکایە هەردوو نیشانەی ڕەزامەندی (١ و ٢) دابگرە بۆ بەردەوامبوون."), Toast.LENGTH_SHORT).show();
                 return;
             }
             JSONObject receipt = recordTermsAccepted(activity, enteredName, enteredCompany);

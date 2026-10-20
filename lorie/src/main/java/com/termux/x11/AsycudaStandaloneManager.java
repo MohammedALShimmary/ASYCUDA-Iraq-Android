@@ -18,11 +18,9 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
-import android.provider.Settings;
 import android.system.Os;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -100,9 +98,8 @@ public class AsycudaStandaloneManager {
     private static final String MOF_JNLP_URL     = "https://asy.mof.gov.iq/aw/AWIQWorld.jnlp";
     private static final String GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/latest";
     public static final int REQ_PICK_FEEDBACK_IMAGE = 47892;
+    public static final int REQ_PICK_WORKSPACE_FILE = 47893;
 
-    private static final String DOWNLOAD_FILES_PATH = "/storage/emulated/0/Download/Asycuda_Files";
-    private static final String DOWNLOAD_PRINTS_PATH = "/storage/emulated/0/Download/Asycuda_Prints";
     private static final String FILE_PROVIDER_AUTH = "iq.asycuda.fileprovider";
     private static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
     private static final String FLOATING_PILL_TAG = "asycuda_floating_pill";
@@ -133,6 +130,8 @@ public class AsycudaStandaloneManager {
     private static final String JNLP_JAR_REL = "jars/00_jnlp.jar";
     private static final String BOOTPATCH_JAR_NAME = "00_bootpatch.jar";
     private static final String DIR_PRINTS = "prints";
+    private static final String DIR_WORKSPACE = "workspace";
+    private static final String DIR_UPDATES_CACHE = "updates";
     private static final String DIR_CLIENT = "client";
     private static final String HEADER_USER_AGENT = "User-Agent";
     private static final String FILE_AWIQ_JNLP = "AWIQWorld.jnlp";
@@ -358,6 +357,80 @@ public class AsycudaStandaloneManager {
         }, "Asycuda-ImagePicker").start();
     }
 
+    public static void onWorkspaceFilePicked(MainActivity activity, Uri uri) {
+        if (activity == null || uri == null) return;
+        new Thread(() -> {
+            try {
+                String origName = queryUriDisplayName(activity, uri);
+                String safeName = (origName != null && !origName.trim().isEmpty())
+                        ? origName.trim().replaceAll(REGEX_UNSAFE_FILENAME, "_")
+                        : "imported_document_" + System.currentTimeMillis() + ".xml";
+                if (".".equals(safeName) || "..".equals(safeName)) {
+                    safeName = "imported_document_" + System.currentTimeMillis() + ".xml";
+                }
+                File workspaceDir = new File(activity.getFilesDir(), DIR_WORKSPACE);
+                ensureDir(workspaceDir);
+                File outFile = new File(workspaceDir, safeName);
+                try (InputStream in = activity.getContentResolver().openInputStream(uri);
+                     FileOutputStream out = new FileOutputStream(outFile)) {
+                    if (in == null) return;
+                    byte[] buf = new byte[32768];
+                    int n;
+                    while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                    out.getFD().sync();
+                }
+                setReadableOwnerOnly(outFile);
+
+                // Notify AsycudaBoot's JFileChooser middleman watcher via .last_imported marker
+                File marker = new File(workspaceDir, ".last_imported");
+                try (FileOutputStream mfos = new FileOutputStream(marker)) {
+                    mfos.write(safeName.getBytes(StandardCharsets.UTF_8));
+                    mfos.getFD().sync();
+                }
+                setReadableOwnerOnly(marker);
+
+                final String importedName = safeName;
+                UI.post(() -> Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                        "Imported into ASYCUDA Workspace: " + importedName,
+                        "تم استيراد الملف إلى مساحة عمل أسيكودا: " + importedName,
+                        "پەڕگەکە هاوردە کرا بۆ ناو ئەسیکۆدا: " + importedName), Toast.LENGTH_LONG).show());
+            } catch (Exception t) {
+                UI.post(() -> Toast.makeText(activity, "Import error: " + t.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        }, "Asycuda-WorkspaceFilePicker").start();
+    }
+
+    private static void cleanupStaleUpdateApks(Context ctx) {
+        if (ctx == null) return;
+        try {
+            File updatesCacheDir = new File(ctx.getCacheDir(), DIR_UPDATES_CACHE);
+            if (updatesCacheDir.exists()) {
+                File[] cachedApks = updatesCacheDir.listFiles();
+                if (cachedApks != null) {
+                    for (File f : cachedApks) {
+                        if (f.isFile() && f.getName().endsWith(".apk")) {
+                            deleteQuietly(f);
+                        }
+                    }
+                }
+            }
+            // Also clean up any legacy .apk files in files/prints from earlier versions
+            File printsDir = new File(ctx.getFilesDir(), DIR_PRINTS);
+            if (printsDir.exists()) {
+                File[] printFiles = printsDir.listFiles();
+                if (printFiles != null) {
+                    for (File f : printFiles) {
+                        if (f.isFile() && f.getName().endsWith(".apk")) {
+                            deleteQuietly(f);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Best-effort APK cache cleanup
+        }
+    }
+
     private static String queryUriDisplayName(Context ctx, Uri uri) {
         try (Cursor c = ctx.getContentResolver().query(uri, null, null, null, null)) {
             if (c != null && c.moveToFirst()) {
@@ -483,8 +556,9 @@ public class AsycudaStandaloneManager {
         }
 
         startBridgeListener();
+        cleanupStaleUpdateApks(activity);
 
-        // Listen for when user returns from Android Permission Settings screen
+        // Listen for when user returns from notification permission dialog
         activity.getWindow().getDecorView().getViewTreeObserver().addOnWindowFocusChangeListener(hasFocus -> {
             if (hasFocus) {
                 checkPermissionsAndProceed(sCurrentActivity != null ? sCurrentActivity : activity);
@@ -492,13 +566,6 @@ public class AsycudaStandaloneManager {
         });
 
         checkPermissionsAndProceed(activity);
-    }
-
-    private boolean hasStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            return Environment.isExternalStorageManager();
-        }
-        return true;
     }
 
     private boolean hasNotificationPermission(MainActivity activity) {
@@ -563,28 +630,7 @@ public class AsycudaStandaloneManager {
             return;
         }
 
-        // Gate 1: All Files Access Permission (Required for /sdcard/Download/Asycuda_Files & Prints)
-        if (!hasStoragePermission()) {
-            updateStatus(AsycudaMaterialUi.tr(activity,
-                    "Storage permission is required to save & open Customs PDFs and declarations.",
-                    "صلاحية الوصول للملفات مطلوبة لحفظ وفتح ملفات PDF والتصاريح الكمركية.",
-                    "مۆڵەتی گەیشتن بە پەڕگەکان پێویستە بۆ پاشەکەوتکردن و کردنەوەی پەڕگەکانی PDF."));
-            showSplashButton(AsycudaMaterialUi.tr(activity,
-                    "Grant All Files Access",
-                    "منح صلاحية الوصول للملفات",
-                    "پێدانی مۆڵەتی پەڕگەکان"), v -> {
-                try {
-                    Intent permIntent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            Uri.parse("package:" + activity.getPackageName()));
-                    activity.startActivity(permIntent);
-                } catch (Exception ignored) {
-                    // Ignore if settings intent is unavailable
-                }
-            });
-            return;
-        }
-
-        // Gate 2: Notification Permission on Android 13+ (Wait until granted or dismissed)
+        // Gate 1: Notification Permission on Android 13+ (Wait until granted or dismissed; zero storage permissions needed)
         if (!hasNotificationPermission(activity) && !activity.getSharedPreferences("asy_perms", Context.MODE_PRIVATE).getBoolean("asked_notif", false)) {
             activity.getSharedPreferences("asy_perms", Context.MODE_PRIVATE).edit().putBoolean("asked_notif", true).apply();
             updateStatus(AsycudaMaterialUi.tr(activity,
@@ -666,9 +712,9 @@ public class AsycudaStandaloneManager {
 
         mSplashStatus = new TextView(activity);
         mSplashStatus.setText(AsycudaMaterialUi.tr(activity,
-                "Checking permissions...",
-                "جاري التحقق من الصلاحيات...",
-                "پشکنینی مۆڵەتەکان..."));
+                "Preparing secure environment...",
+                "جاري تجهيز بيئة التشغيل الآمنة...",
+                "ئامادەکردنی ژینگەی پارێزراو..."));
         mSplashStatus.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
         mSplashStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         mSplashStatus.setGravity(Gravity.CENTER);
@@ -678,7 +724,7 @@ public class AsycudaStandaloneManager {
         card.addView(mSplashStatus, stLp);
 
         mActionBtn = AsycudaMaterialUi.createCupertinoButton(activity,
-                AsycudaMaterialUi.tr(activity, "Grant All Files Access", "منح صلاحية الوصول للملفات", "پێدانی مۆڵەتی پەڕگەکان"),
+                AsycudaMaterialUi.tr(activity, "Continue", "متابعة", "بەردەوامبوون"),
                 true, false, null);
         LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -692,17 +738,6 @@ public class AsycudaStandaloneManager {
         mSplashOverlay.addView(card, cardLp);
         root.addView(mSplashOverlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-    }
-
-    private void showSplashButton(String label, View.OnClickListener listener) {
-        UI.post(() -> {
-            if (mSplashProgress != null) mSplashProgress.setVisibility(View.GONE);
-            if (mActionBtn != null) {
-                mActionBtn.setText(label);
-                mActionBtn.setOnClickListener(listener);
-                mActionBtn.setVisibility(View.VISIBLE);
-            }
-        });
     }
 
     private void hideSplashButton() {
@@ -750,8 +785,9 @@ public class AsycudaStandaloneManager {
             File x11UnixDir = new File(usrTmpDir, ".X11-unix");
             File homeDir = new File(filesDir, "home");
             File printsDir = new File(filesDir, DIR_PRINTS);
+            File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v3_8_0");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v3_9_0");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -790,13 +826,11 @@ public class AsycudaStandaloneManager {
                 ensureFileCreated(runtimeMarker);
                 ensureFileCreated(bootPatchMarker);
             } else if (!bootPatchMarker.exists()) {
-                updateStatus("Applying v3.8.0 security & SOClass bridge components...");
+                updateStatus("Applying v3.9.0 zero-permission vault & file picker bridge...");
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_8_0"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
             }
-
-            // Migrate .SOClassCache from slow external FUSE (/storage/emulated/0) to fast internal flash (files/home)
-            migrateSoClassCacheToFastStorage(homeDir);
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
             syncGovernmentJars(clientDir, false, null);
@@ -807,6 +841,7 @@ public class AsycudaStandaloneManager {
             ensureDir(x11UnixDir);
             ensureDir(homeDir);
             ensureDir(printsDir);
+            ensureDir(workspaceDir);
             try {
                 Os.chmod(usrTmpDir.getAbsolutePath(), 0700);
                 Os.chmod(x11UnixDir.getAbsolutePath(), 0700);
@@ -897,52 +932,6 @@ public class AsycudaStandaloneManager {
                 if (ghConn != null) ghConn.disconnect();
             }
         }, "Asycuda-StartupAppUpdateCheck").start();
-    }
-
-    /**
-     * Moves .SOClassCache (178 MB of reference tables) from external FUSE storage
-     * (/storage/emulated/0/Download/Asycuda_Files/.SOClassCache) to internal ext4/f2fs flash
-     * (/data/data/iq.asycuda/files/home/.SOClassCache) for 50x faster document/window loading.
-     */
-    private void migrateSoClassCacheToFastStorage(File internalHome) {
-        try {
-            File extCache = new File(DOWNLOAD_FILES_PATH + "/.SOClassCache");
-            File intCache = new File(internalHome, ".SOClassCache");
-            if (extCache.exists() && extCache.isDirectory()) {
-                File[] extFiles = extCache.listFiles();
-                File[] intFiles = intCache.listFiles();
-                int extCount = extFiles != null ? extFiles.length : 0;
-                int intCount = intFiles != null ? intFiles.length : 0;
-                if (extCount > intCount) {
-                    updateStatus("Optimizing local tariff cache on internal high-speed storage...");
-                    copyDirectoryRecursive(extCache, intCache);
-                }
-            }
-        } catch (Exception ignored) {
-            // Ignore cache migration errors
-        }
-    }
-
-    private void copyDirectoryRecursive(File src, File dst) {
-        if (src == null || !src.exists()) return;
-        if (src.isDirectory()) {
-            ensureDir(dst);
-            File[] children = src.listFiles();
-            if (children == null) return;
-            for (File c : children) {
-                copyDirectoryRecursive(c, new File(dst, c.getName()));
-            }
-        } else {
-            if (dst.exists() && dst.length() == src.length()) return;
-            try (FileInputStream in = new FileInputStream(src);
-                 FileOutputStream out = new FileOutputStream(dst)) {
-                byte[] buf = new byte[65536];
-                int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-            } catch (Exception ignored) {
-                // Ignore individual file copy error
-            }
-        }
     }
 
     /**
@@ -1532,8 +1521,10 @@ public class AsycudaStandaloneManager {
                     }
                 }
 
-                ensureDir(new File(DOWNLOAD_FILES_PATH));
-                ensureDir(new File(DOWNLOAD_PRINTS_PATH));
+                File printsDir = new File(filesDir, DIR_PRINTS);
+                File workspaceDir = new File(filesDir, DIR_WORKSPACE);
+                ensureDir(printsDir);
+                ensureDir(workspaceDir);
 
                 // Keep user.home on fast internal flash (/data/data/iq.asycuda/files/home)
                 // so ASYCUDA's .SOClassCache (178 MB of small DB files) avoids Android's slow FUSE layer
@@ -1561,7 +1552,8 @@ public class AsycudaStandaloneManager {
                 cmd.add("-Xms256m");
                 cmd.add("-Xmx1280m");
                 cmd.add("-Djava.io.tmpdir=" + tmpDir.getAbsolutePath());
-                cmd.add("-Dasycuda.prints.dir=" + new File(filesDir, DIR_PRINTS).getAbsolutePath());
+                cmd.add("-Dasycuda.prints.dir=" + printsDir.getAbsolutePath());
+                cmd.add("-Dasycuda.workspace.dir=" + workspaceDir.getAbsolutePath());
                 cmd.add("-Djava.net.preferIPv4Stack=true");
                 cmd.add("-Dsun.net.inetaddr.ttl=-1");
                 cmd.add("-Dnetworkaddress.cache.ttl=-1");
@@ -1766,6 +1758,22 @@ public class AsycudaStandaloneManager {
             if (isAllowedBridgeUrl(url)) {
                 UI.post(() -> openUrl(act, url));
             }
+        } else if (msg.startsWith("PICK_WORKSPACE_FILE")) {
+            UI.post(() -> {
+                try {
+                    Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    pick.setType("*/*");
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    act.startActivityForResult(Intent.createChooser(pick,
+                            AsycudaMaterialUi.tr(act,
+                                    "Import File into ASYCUDA Workspace",
+                                    "استيراد ملف من الهاتف إلى مساحة عمل أسيكودا",
+                                    "هاوردەکردنی پەڕگە لە مۆبایلەوە بۆ ناو ئەسیکۆدا")),
+                            REQ_PICK_WORKSPACE_FILE);
+                } catch (Exception t) {
+                    Toast.makeText(act, "Cannot open file picker: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         } else if (msg.startsWith("SOCLASS_UPDATE|")) {
             UI.post(() -> {
                 Toast.makeText(act, AsycudaMaterialUi.tr(act,
@@ -1784,8 +1792,7 @@ public class AsycudaStandaloneManager {
         if (baseName.isEmpty() || ".".equals(baseName) || "..".equals(baseName)) return null;
         File[] allowedDirs = new File[] {
             new File(ctx.getFilesDir(), DIR_PRINTS),
-            new File(DOWNLOAD_PRINTS_PATH),
-            new File(DOWNLOAD_FILES_PATH)
+            new File(ctx.getFilesDir(), DIR_WORKSPACE)
         };
         for (File dir : allowedDirs) {
             File candidate = new File(dir, baseName);
@@ -1862,17 +1869,14 @@ public class AsycudaStandaloneManager {
         if (filesToDelete == null || filesToDelete.isEmpty()) return;
         int deleted = 0;
         File internalPrints = new File(activity.getFilesDir(), DIR_PRINTS);
-        File pubPrints = new File(DOWNLOAD_PRINTS_PATH);
-        File pubFiles = new File(DOWNLOAD_FILES_PATH);
+        File internalWorkspace = new File(activity.getFilesDir(), DIR_WORKSPACE);
 
         for (File f : filesToDelete) {
             if (f == null) continue;
             String name = f.getName();
             boolean ok = f.delete();
-            // Also remove mirrored copies with the same name so they don't reappear
             deleteQuietly(new File(internalPrints, name));
-            deleteQuietly(new File(pubPrints, name));
-            deleteQuietly(new File(pubFiles, name));
+            deleteQuietly(new File(internalWorkspace, name));
             if (ok) deleted++;
         }
 
@@ -1995,11 +1999,10 @@ public class AsycudaStandaloneManager {
             public void onOpenFiles() {
                 List<File> rawFiles = new ArrayList<>();
                 collectFiles(new File(activity.getFilesDir(), DIR_PRINTS), rawFiles);
-                collectFiles(new File(DOWNLOAD_FILES_PATH), rawFiles);
-                collectFiles(new File(DOWNLOAD_PRINTS_PATH), rawFiles);
+                collectFiles(new File(activity.getFilesDir(), DIR_WORKSPACE), rawFiles);
                 rawFiles.sort(Comparator.comparingLong(File::lastModified).reversed());
 
-                // Deduplicate by filename so mirrored files appear once
+                // Deduplicate by filename so files appear once
                 List<File> uniqueFiles = new ArrayList<>();
                 Set<String> seenNames = new LinkedHashSet<>();
                 for (File f : rawFiles) {
@@ -2236,9 +2239,10 @@ public class AsycudaStandaloneManager {
         HttpURLConnection conn = null;
         sApkDownloadActive.set(true);
         try {
-            File printsDir = new File(activity.getFilesDir(), DIR_PRINTS);
-            ensureDir(printsDir);
-            File outApk = new File(printsDir, "ASYCUDA_Iraq_" + versionTag.replaceAll(REGEX_UNSAFE_FILENAME, "") + ".apk");
+            cleanupStaleUpdateApks(activity);
+            File updatesCacheDir = new File(activity.getCacheDir(), DIR_UPDATES_CACHE);
+            ensureDir(updatesCacheDir);
+            File outApk = new File(updatesCacheDir, "ASYCUDA_Iraq_" + versionTag.replaceAll(REGEX_UNSAFE_FILENAME, "") + ".apk");
 
             conn = (HttpURLConnection) new URL(apkUrl).openConnection();
             conn.setInstanceFollowRedirects(true);
@@ -2500,7 +2504,7 @@ public class AsycudaStandaloneManager {
         File filesDir = activity.getFilesDir();
         File clientDir = new File(filesDir, DIR_CLIENT);
         purgeStaleDiagnosticFiles(new File(activity.getCacheDir(), "diagnostics"),
-                new File(filesDir, DIR_PRINTS), new File(DOWNLOAD_PRINTS_PATH));
+                new File(filesDir, DIR_PRINTS));
 
         String safeDescription = redactSensitiveLogContent(userDescription);
         ByteArrayOutputStream zipBuffer = new ByteArrayOutputStream(65536);
@@ -2617,6 +2621,8 @@ public class AsycudaStandaloneManager {
         redacted = redacted.replaceAll(
                 "(?is)<(password|passwd|pwd|user|username|login|secret|token|jsessionid|sessionid|tin|declarant|credential|pin|otp)[^>]*+>.*?</\\1>",
                 "<$1>[REDACTED]</$1>");
+        // Scrub Bearer / Basic authorization tokens
+        redacted = redacted.replaceAll("(?i)\\b(bearer|basic)\\s++[^\\s,;\"'&<>\\]}]++", "$1 [REDACTED]");
         // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys
         redacted = redacted.replaceAll(
                 "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|declarant|tin|tax_id|secret|token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|credential|private_key)[\"']?+\\s*+[:=]\\s*+)[^\\s,;\"'&<>\\]}]++",

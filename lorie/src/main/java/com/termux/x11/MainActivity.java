@@ -1154,8 +1154,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 47892 && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            AsycudaStandaloneManager.onImagePicked(this, data.getData());
+        if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+            if (requestCode == AsycudaStandaloneManager.REQ_PICK_FEEDBACK_IMAGE) {
+                AsycudaStandaloneManager.onImagePicked(this, data.getData());
+            } else if (requestCode == AsycudaStandaloneManager.REQ_PICK_WORKSPACE_FILE) {
+                AsycudaStandaloneManager.onWorkspaceFilePicked(this, data.getData());
+            }
         }
     }
 

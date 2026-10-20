@@ -1,0 +1,103 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3900a5ca-9e42-49d0-9b41-a5ca20261020",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-20T18:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "ASYCUDA-Iraq-Android",
+      "group": "iq.asycuda",
+      "version": "3.9.0",
+      "description": "Standalone Android X11 & OpenJDK 8 Runtime Client for Iraqi Customs ASYCUDA World (asy.mof.gov.iq)",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ],
+      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v3.9.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "appcompat",
+      "group": "androidx.appcompat",
+      "version": "1.6.1",
+      "purl": "pkg:maven/androidx.appcompat/appcompat@1.6.1"
+    },
+    {
+      "type": "library",
+      "name": "material",
+      "group": "com.google.android.material",
+      "version": "1.9.0",
+      "purl": "pkg:maven/com.google.android.material/material@1.9.0"
+    },
+    {
+      "type": "library",
+      "name": "preference",
+      "group": "androidx.preference",
+      "version": "1.2.0",
+      "purl": "pkg:maven/androidx.preference/preference@1.2.0"
+    },
+    {
+      "type": "library",
+      "name": "core",
+      "group": "androidx.core",
+      "version": "1.13.1",
+      "purl": "pkg:maven/androidx.core/core@1.13.1"
+    },
+    {
+      "type": "library",
+      "name": "commons-compress",
+      "group": "org.apache.commons",
+      "version": "1.26.2",
+      "purl": "pkg:maven/org.apache.commons/commons-compress@1.26.2"
+    },
+    {
+      "type": "library",
+      "name": "xz",
+      "group": "org.tukaani",
+      "version": "1.9",
+      "purl": "pkg:maven/org.tukaani/xz@1.9"
+    },
+    {
+      "type": "library",
+      "name": "HiddenApiBypass",
+      "group": "org.lsposed.hiddenapibypass",
+      "version": "4.3",
+      "purl": "pkg:maven/org.lsposed.hiddenapibypass/hiddenapibypass@4.3"
+    },
+    {
+      "type": "framework",
+      "name": "openjdk-jre-arm64",
+      "group": "org.openjdk",
+      "version": "1.8.0_402",
+      "description": "Embedded ARM64 Linux OpenJDK 8 Runtime Environment (runtime-arm64.tar.xz) for executing legacy JNLP/Swing ASYCUDA World client JARs locally on Android"
+    },
+    {
+      "type": "library",
+      "name": "glibc-aarch64",
+      "group": "org.gnu",
+      "version": "2.38",
+      "description": "Embedded ARM64 GNU C Library & X11 client libraries bundled inside runtime-arm64.tar.xz"
+    },
+    {
+      "type": "library",
+      "name": "asycuda-java-bridge",
+      "group": "iq.asycuda",
+      "version": "3.9.0",
+      "description": "Open-source Android-to-Java8 bridge (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) compiled from java-bridge/build-bridge.sh"
+    },
+    {
+      "type": "application",
+      "name": "asycuda-world-iraq-client-jars",
+      "group": "iq.gov.mof.asy",
+      "version": "4.2.2",
+      "description": "37 unmodified official Iraqi Ministry of Finance / UNCTAD ASYCUDA World client JAR archives signed by META-INF/SOCODE.RSA"
+    }
+  ]
+}

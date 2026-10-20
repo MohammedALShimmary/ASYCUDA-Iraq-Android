@@ -34,8 +34,8 @@ public class AsycudaBoot {
 
     private static final String PRINTER_NAME = "ASYCUDA_PDF_Printer";
     private static final String DEFAULT_TMP_DIR = "/data/data/iq.asycuda/files/tmp";
-    private static final String DOWNLOAD_FILES_DIR = "/storage/emulated/0/Download/Asycuda_Files";
-    private static final String DOWNLOAD_PRINTS_DIR = "/storage/emulated/0/Download/Asycuda_Prints";
+    private static final String DEFAULT_WORKSPACE_DIR = "/data/data/iq.asycuda/files/workspace";
+    private static final String DEFAULT_PRINTS_DIR = "/data/data/iq.asycuda/files/prints";
     private static final String PDF_MIME = "application/pdf";
     private static final String JPG_MIME = "image/jpeg";
     private static final String PNG_MIME = "image/png";
@@ -46,10 +46,15 @@ public class AsycudaBoot {
     private static final Map<String, Long> SEEN_PATHS = new ConcurrentHashMap<String, Long>();
     private static final AtomicBoolean SOCLASS_ALERT_SENT = new AtomicBoolean(false);
     private static volatile Object wrappedRejectHandler = null;
+    private static volatile JFileChooser activeFileChooser = null;
     private static volatile long lastMousePressTime = 0L;
 
     private AsycudaBoot() {
         // Utility entrypoint class
+    }
+
+    private static File getWorkspaceDir() {
+        return new File(System.getProperty("asycuda.workspace.dir", DEFAULT_WORKSPACE_DIR));
     }
 
     public static void handleDesktopAction(final String action, final String target) {
@@ -97,14 +102,7 @@ public class AsycudaBoot {
                 String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
                 String finalName = stamp + "_" + cleanBase + "." + realExt;
 
-                File pubDir = new File(DOWNLOAD_PRINTS_DIR);
-                if (!pubDir.exists() && !pubDir.mkdirs()) {
-                    // Continue with internal directory fallback
-                }
-                File pubDest = new File(pubDir, finalName);
-                copyFile(rawFile, pubDest);
-
-                String internalPrints = System.getProperty("asycuda.prints.dir", "/data/data/iq.asycuda/files/prints");
+                String internalPrints = System.getProperty("asycuda.prints.dir", DEFAULT_PRINTS_DIR);
                 File intDir = new File(internalPrints);
                 if (!intDir.exists() && !intDir.mkdirs()) {
                     // Directory may already exist
@@ -112,8 +110,7 @@ public class AsycudaBoot {
                 File intDest = new File(intDir, finalName);
                 copyFile(rawFile, intDest);
 
-                String targetPath = intDest.exists() ? intDest.getAbsolutePath() : pubDest.getAbsolutePath();
-                sendToAndroidApk("OPEN|" + targetPath + "|" + mime);
+                sendToAndroidApk("OPEN|" + intDest.getAbsolutePath() + "|" + mime);
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -695,12 +692,13 @@ public class AsycudaBoot {
             @Override
             public void run() {
                 File tmpDir = new File(System.getProperty("java.io.tmpdir", DEFAULT_TMP_DIR));
-                File dlDir = new File(DOWNLOAD_FILES_DIR);
+                File dlDir = getWorkspaceDir();
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         installSoClassRejectHandlerHook();
                         scanTmpDir(tmpDir, 0);
                         scanDownloadsForSo(dlDir);
+                        checkWorkspaceImportSignal(dlDir);
                         Thread.sleep(250);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -715,26 +713,74 @@ public class AsycudaBoot {
         watcher.start();
     }
 
+    private static void checkWorkspaceImportSignal(File workspaceDir) {
+        if (workspaceDir == null || !workspaceDir.exists()) return;
+        File marker = new File(workspaceDir, ".last_imported");
+        if (!marker.exists()) return;
+        String importedName = null;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(marker), StandardCharsets.UTF_8))) {
+            importedName = br.readLine();
+        } catch (Throwable ignored) {
+            // Ignore marker read failure
+        }
+        if (!marker.delete()) {
+            // Best-effort cleanup
+        }
+        if (importedName == null || importedName.trim().isEmpty()) return;
+        final File importedFile = new File(workspaceDir, importedName.trim());
+        if (!importedFile.exists()) return;
+        final JFileChooser fc = activeFileChooser;
+        if (fc != null) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        fc.setCurrentDirectory(workspaceDir);
+                        fc.rescanCurrentDirectory();
+                        fc.setSelectedFile(importedFile);
+                        fc.repaint();
+                    } catch (Throwable ignored) {
+                        // Ignore Swing update errors
+                    }
+                }
+            });
+        }
+    }
+
     private static void redirectFileChooserToDownloads(Container root) {
         if (root == null) return;
-        File dlDir = new File(DOWNLOAD_FILES_DIR);
+        final File dlDir = getWorkspaceDir();
         if (!dlDir.exists() && !dlDir.mkdirs()) {
             // Directory already exists or will be created on demand
         }
         if (root instanceof FileDialog) {
             FileDialog fd = (FileDialog) root;
-            String cur = fd.getDirectory();
-            if (cur == null || cur.contains("/data/data/")) {
-                fd.setDirectory(dlDir.getAbsolutePath());
-            }
+            fd.setDirectory(dlDir.getAbsolutePath());
             return;
         }
         for (Component c : root.getComponents()) {
             if (c instanceof JFileChooser) {
-                JFileChooser fc = (JFileChooser) c;
-                File cur = fc.getCurrentDirectory();
-                if (cur == null || cur.getAbsolutePath().contains("/data/data/")) {
-                    fc.setCurrentDirectory(dlDir);
+                final JFileChooser fc = (JFileChooser) c;
+                activeFileChooser = fc;
+                fc.setCurrentDirectory(dlDir);
+                if (fc.getAccessory() == null) {
+                    JPanel acc = new JPanel(new BorderLayout(4, 4));
+                    acc.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+                    JButton importBtn = new JButton("<html><center><b>Import from Phone</b><br>استيراد ملف من الهاتف</center></html>");
+                    importBtn.setFocusPainted(false);
+                    importBtn.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    sendToAndroidApk("PICK_WORKSPACE_FILE");
+                                }
+                            }, "Asycuda-PickBridge").start();
+                        }
+                    });
+                    acc.add(importBtn, BorderLayout.NORTH);
+                    fc.setAccessory(acc);
                 }
             } else if (c instanceof Container) {
                 redirectFileChooserToDownloads((Container) c);

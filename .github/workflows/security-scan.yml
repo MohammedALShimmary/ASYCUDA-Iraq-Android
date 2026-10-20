@@ -27,6 +27,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Run Automated Adversarial Security Verification Suite
+        run: |
+          mkdir -p /tmp/sec-tests
+          javac -d /tmp/sec-tests scripts/SecurityVerificationTest.java
+          java -cp /tmp/sec-tests SecurityVerificationTest
+
       - name: Install Snyk CLI
         run: |
           curl -sL https://static.snyk.io/cli/latest/snyk-linux -o /usr/local/bin/snyk
