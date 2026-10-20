@@ -60,7 +60,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
-@SuppressWarnings({"java:S3776", "java:S107", "java:S1141"})
+@SuppressWarnings({"java:S3776", "java:S107", "java:S1141", "java:S1192"})
 public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
