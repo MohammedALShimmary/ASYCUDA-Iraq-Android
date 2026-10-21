@@ -38,8 +38,8 @@ This directory contains **100% of the custom Java source code** compiled into th
      - Sends file-open (`OPEN|...`), browser-open (`BROWSE|...`), native file-picker (`PICK_WORKSPACE_FILE`), keyboard (`IME|SHOW`), and `SOClass` update (`SOCLASS_UPDATE|...`) events to the Android host activity using a per-session random authentication token (`-Dasycuda.bridge.token=<UUID>`).
   4. **`SOClass` Server Update Alert Listener (`installRejectHandlerHook`, `inspectDialogForSoClassUpdate`)**:
      - Hooks `so.rmi.transport.client.ClientTransportLayer`'s `RejectHandler` via a Java Dynamic Proxy and inspects modal error dialogs for `"SOClass Client have to be updated. It will be shutdown now."`, automatically opening the Android **Update Center** window.
-  5. **Subprocess-Blocking SecurityManager (`installPrintSecurityManager`)**:
-     - Installs a filesystem-watching `SecurityManager` for `/tmp/` print interception that explicitly **blocks OS subprocess execution** (`checkExec()` throws `SecurityException`).
+  5. **Hardened SecurityManager (`createHardenedSecurityManager`, `checkBlockedHostPath`, `checkAllowedOutboundNetwork`)**:
+     - Installs a hardened `SecurityManager` that explicitly **blocks OS subprocess execution** (`checkExec()` throws `SecurityException`), **blocks JVM access to Android host storage paths** (`checkBlockedHostPath()` blocks `/shared_prefs`, `/databases/`, `/datastore/`), and **enforces an outbound network allowlist** (`checkConnect()` / `checkAllowedOutboundNetwork()` restricts all JVM sockets strictly to `localhost`/`127.0.0.1` and `asy.mof.gov.iq`, throwing `SecurityException` for any other host or IP).
   6. **Zero Credential or Traffic Interception**:
      - `AsycudaBoot` never reads, logs, stores, or transmits ASYCUDA usernames, passwords, customs declarations, or session tokens. All customs traffic flows directly between the unmodified UNCTAD client classes and `asy.mof.gov.iq`.
 

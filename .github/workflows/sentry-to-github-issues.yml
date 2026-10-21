@@ -23,7 +23,25 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           python3 - << 'PYEOF'
-          import json, os, sys, urllib.request
+          import json, os, re, sys, urllib.request
+
+          # NOTE: This workflow NEVER uploads screenshots or diagnostic log attachments to GitHub.
+          # Attachments remain strictly inside the private developer-authenticated Sentry dashboard,
+          # and the user-written text summary is scrubbed for accidental PII/credentials before posting.
+          def scrub_text(text):
+              if not text:
+                  return ""
+              # Scrub email addresses
+              text = re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[REDACTED_EMAIL]', text)
+              # Scrub Iraqi / international phone numbers (10-15 digits)
+              text = re.sub(r'(?<!\d)(?:\+?964|07[3-9])\d{8,9}(?!\d)', '[REDACTED_PHONE]', text)
+              # Scrub key=value or key: value credentials/tokens/TINs
+              text = re.sub(
+                  r'(?i)(password|passwd|pwd|secret|token|authorization|bearer|cookie|jsessionid|sessionid|api[_-]?key|tin)\s*([:=])\s*([^\s,;]+)',
+                  r'\1\2[REDACTED]',
+                  text
+              )
+              return text
 
           sentry_token = os.environ.get("SENTRY_AUTH_TOKEN", "").strip()
           gh_token = os.environ.get("GITHUB_TOKEN", "").strip()
@@ -74,7 +92,8 @@ jobs:
 
               tags = {t.get("key"): t.get("value") for t in (ev.get("tags") or []) if isinstance(t, dict)}
               ctx = ev.get("context") or {}
-              full_desc = ctx.get("full_description") or ev.get("message") or title
+              full_desc = scrub_text(ctx.get("full_description") or ev.get("message") or title)
+              clean_title = scrub_text(title)
               device_model = tags.get("device_model", "Unknown")
               android_ver = tags.get("android_version", "Unknown")
               app_ver = tags.get("app_version", "Unknown")
@@ -87,7 +106,7 @@ jobs:
                   if group_id else "https://mohammed-ammar-hussein.sentry.io/issues/"
               )
 
-              issue_title = title.splitlines()[0][:120]
+              issue_title = clean_title.splitlines()[0][:120]
               issue_body = (
                   f"### 📩 User Feedback / Bug Report\n\n"
                   f"{full_desc}\n\n"
@@ -99,10 +118,10 @@ jobs:
                   f"| **Android Version** | `Android {android_ver}` |\n"
                   f"| **App Version** | `{app_ver}` |\n"
                   f"| **UI Language** | `{app_lang}` |\n"
-                  f"| **Screenshot / Attachments** | `{has_screenshot}` (Viewable in Sentry) |\n"
+                  f"| **Screenshot / Attachments** | `{has_screenshot}` (Strictly private — never uploaded to GitHub) |\n"
                   f"| **Submitted At (UTC)** | `{created_at}` |\n"
                   f"| **Sentry Event ID** | `{ev_id}` |\n"
-                  f"| **Sentry Dashboard Link** | [Open Event & Attachments in Sentry]({sentry_link}) |\n"
+                  f"| **Developer-Only Sentry Link** | [Open Private Event in Sentry (Requires Developer Auth)]({sentry_link}) |\n"
               )
 
               post_data = json.dumps({

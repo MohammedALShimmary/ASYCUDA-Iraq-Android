@@ -120,12 +120,6 @@ public class AsycudaStandaloneManager {
     private static final String KEY_EVENT_ID = "event_id";
     private static final String KEY_DEVICE_MODEL = "device_model";
     private static final String KEY_APP_VERSION = "app_version";
-    private static final String KEY_SIGNATORY_NAME = "signatory_name";
-    private static final String KEY_COMPANY_NAME = "company_name";
-    private static final String KEY_CONSENT_ID = "consent_id";
-    private static final String KEY_POLICY_VERSION = "policy_version";
-    private static final String KEY_DEVICE_HASH = "device_hash";
-    private static final String KEY_SHA256_SIG = "sha256_signature";
     private static final String BOOT_JAR_REL = "jars/00_boot.jar";
     private static final String JNLP_JAR_REL = "jars/00_jnlp.jar";
     private static final String BOOTPATCH_JAR_NAME = "00_bootpatch.jar";
@@ -138,7 +132,6 @@ public class AsycudaStandaloneManager {
     private static final String FILE_AWIQ_JNLP = "AWIQWorld.jnlp";
     private static final String FILE_CLASSPATH = "classpath.txt";
     private static final String FILE_ASYCUDA_LOG = "asycuda.log";
-    private static final String FILE_CONSENT_RECEIPT = "legal_consent_receipt.json";
     private static final String REGEX_UNSAFE_FILENAME = "[^a-zA-Z0-9._-]";
 
     /**
@@ -617,9 +610,8 @@ public class AsycudaStandaloneManager {
                     try {
                         AsycudaMaterialUi.showTermsAndConditionsModal(
                                 activity,
-                                receipt -> {
+                                () -> {
                                     sTermsDialogShowing = false;
-                                    uploadConsentReceiptToSentry(activity, receipt);
                                     checkPermissionsAndProceed(activity);
                                 },
                                 () -> {
@@ -632,11 +624,6 @@ public class AsycudaStandaloneManager {
                 });
             }
             return;
-        } else if (!AsycudaMaterialUi.isTermsCloudSynced(activity)) {
-            JSONObject savedReceipt = AsycudaMaterialUi.loadSavedConsentReceipt(activity);
-            if (savedReceipt != null) {
-                uploadConsentReceiptToSentry(activity, savedReceipt);
-            }
         }
 
         // Gate 0.5: Post-Install / Post-Update In-App Changelog Modal ("What's New")
@@ -814,7 +801,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_0");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_5");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -861,6 +848,7 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_3"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_4"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_5"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_0_0"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
             }
@@ -1029,7 +1017,7 @@ public class AsycudaStandaloneManager {
                     sb.append(mofAddr.getHostAddress()).append(" asy.mof.gov.iq\n");
                 }
             } catch (Exception ignored) {
-                // Offline DNS lookup fallback
+                // Offline DNS lookup skipped
             }
             try (FileOutputStream fos = new FileOutputStream(hostsFile)) {
                 fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
@@ -2841,128 +2829,8 @@ public class AsycudaStandaloneManager {
             }
             return pInfo.versionCode;
         } catch (Exception ignored) {
-            return 41L;
+            return 42L;
         }
-    }
-
-    /**
-     * Records a tamper-evident cloud consent audit event in Sentry when a user accepts the
-     * Terms & Conditions and Liability Policy on initial launch.
-     * Transmits strictly the 8 fields previewed by the user in the UI.
-     */
-    private void uploadConsentReceiptToSentry(Context ctx, JSONObject receipt) {
-        if (ctx == null || receipt == null) return;
-        new Thread(() -> {
-            HttpURLConnection conn = null;
-            try {
-                String dsn = BuildConfig.SENTRY_DSN;
-                if (dsn == null || dsn.isEmpty()) return;
-                SentryUriParts parts = parseSentryDsn(dsn);
-                if (parts == null) return;
-
-                String eventId = UUID.randomUUID().toString().replace("-", "");
-                SimpleDateFormat isoFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-                isoFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
-                String nowIso = isoFmt.format(new Date());
-
-                String consentId = receipt.optString(KEY_CONSENT_ID, "IRQ-UNKNOWN");
-                String sigName = receipt.optString(KEY_SIGNATORY_NAME, "Unknown");
-                String compName = receipt.optString(KEY_COMPANY_NAME, "Unknown");
-                String deviceHash = receipt.optString(KEY_DEVICE_HASH, "unknown_device");
-                String policyVer = receipt.optString(KEY_POLICY_VERSION, AsycudaMaterialUi.CURRENT_POLICY_VERSION);
-                String appVer = receipt.optString(KEY_APP_VERSION, AsycudaMaterialUi.getAppVersionLabel(ctx));
-                String sha256 = receipt.optString(KEY_SHA256_SIG, "");
-                long verCode = getAppVersionCode(ctx);
-
-                JSONObject envHeader = new JSONObject();
-                envHeader.put(KEY_EVENT_ID, eventId);
-                envHeader.put("sent_at", nowIso);
-                envHeader.put("dsn", dsn);
-
-                JSONObject eventObj = new JSONObject();
-                eventObj.put(KEY_EVENT_ID, eventId);
-                eventObj.put("timestamp", nowIso);
-                eventObj.put("platform", "java");
-                eventObj.put("level", "info");
-                eventObj.put("release", "iq.asycuda@" + appVer.replaceFirst("^v", "") + "+" + verCode);
-                eventObj.put("environment", "production");
-
-                JSONArray fingerprint = new JSONArray();
-                fingerprint.put("terms-accepted");
-                fingerprint.put(deviceHash);
-                eventObj.put("fingerprint", fingerprint);
-
-                JSONObject msgObj = new JSONObject();
-                msgObj.put("formatted", "[Terms Accepted] " + sigName + " (" + compName + ") • Receipt #" + consentId);
-                eventObj.put("message", msgObj);
-
-                JSONObject userObj = new JSONObject();
-                userObj.put("id", deviceHash);
-                userObj.put("username", sigName + " (" + compName + ")");
-                eventObj.put("user", userObj);
-
-                JSONObject tags = new JSONObject();
-                tags.put("audit_category", "terms_accepted");
-                tags.put(KEY_SIGNATORY_NAME, sigName);
-                tags.put(KEY_COMPANY_NAME, compName);
-                tags.put(KEY_CONSENT_ID, consentId);
-                tags.put(KEY_POLICY_VERSION, policyVer);
-                tags.put(KEY_APP_VERSION, appVer);
-                tags.put(KEY_DEVICE_HASH, deviceHash);
-                eventObj.put("tags", tags);
-
-                JSONObject extra = new JSONObject();
-                extra.put("consent_receipt", receipt.toString());
-                extra.put(KEY_SHA256_SIG, sha256);
-                eventObj.put("extra", extra);
-
-                byte[] eventBytes = eventObj.toString().getBytes(StandardCharsets.UTF_8);
-                JSONObject itemHeader = new JSONObject();
-                itemHeader.put("type", "event");
-                itemHeader.put(KEY_LENGTH, eventBytes.length);
-                itemHeader.put(KEY_CONTENT_TYPE, MIME_JSON);
-
-                byte[] receiptBytes = receipt.toString(2).getBytes(StandardCharsets.UTF_8);
-                JSONObject attHeader = new JSONObject();
-                attHeader.put("type", TYPE_ATTACHMENT);
-                attHeader.put(KEY_LENGTH, receiptBytes.length);
-                attHeader.put(KEY_FILENAME, FILE_CONSENT_RECEIPT);
-                attHeader.put(KEY_CONTENT_TYPE, MIME_JSON);
-                attHeader.put(KEY_ATTACHMENT_TYPE, VAL_EVENT_ATTACHMENT);
-
-                ByteArrayOutputStream envelope = new ByteArrayOutputStream();
-                envelope.write((envHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                envelope.write((itemHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                envelope.write(eventBytes);
-                envelope.write('\n');
-                envelope.write((attHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                envelope.write(receiptBytes);
-                envelope.write('\n');
-
-                String endpoint = "https://" + parts.host + "/api/" + parts.projectId
-                        + "/envelope/?sentry_key=" + parts.publicKey + "&sentry_version=7&sentry_client=asycuda.android/" + BuildConfig.VERSION_NAME;
-                conn = (HttpURLConnection) new URL(endpoint).openConnection();
-                conn.setRequestMethod("POST");
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(20000);
-                conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type", "application/x-sentry-envelope");
-                byte[] payload = envelope.toByteArray();
-                conn.setFixedLengthStreamingMode(payload.length);
-                try (OutputStream out = conn.getOutputStream()) {
-                    out.write(payload);
-                    out.flush();
-                }
-                int code = conn.getResponseCode();
-                if (code >= 200 && code < 300) {
-                    AsycudaMaterialUi.markTermsCloudSynced(ctx);
-                }
-            } catch (Exception ignored) {
-                // Consent receipt will retry on next launch if offline
-            } finally {
-                if (conn != null) conn.disconnect();
-            }
-        }, "Asycuda-ConsentAudit").start();
     }
 
     private static JSONObject buildSentryContexts(Context ctx, String appVer) throws org.json.JSONException {

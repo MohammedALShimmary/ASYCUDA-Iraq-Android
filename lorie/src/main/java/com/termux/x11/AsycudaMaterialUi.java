@@ -67,8 +67,8 @@ public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
-    public static final String CURRENT_POLICY_VERSION = "1.2-2026.10";
-    public static final int CURRENT_CHANGELOG_VERSION = 40;
+    public static final String CURRENT_POLICY_VERSION = "2.0-2026.10";
+    public static final int CURRENT_CHANGELOG_VERSION = 42;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
@@ -270,7 +270,7 @@ public class AsycudaMaterialUi {
         } catch (Throwable ignored) {
             // Fallback to current release version label
         }
-        return "v3.9.0";
+        return "v4.0.5";
     }
 
     public static boolean shouldShowWhatsNew(Context ctx) {
@@ -3737,13 +3737,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "3. Hardware Keystore AES-256-GCM Consent Receipt & 1:1 8-Field Parity",
-                        "3. تشفير إيصال الموافقة عبر Android Keystore AES-256-GCM وتطابق الحقول الثمانية 100%",
-                        "٣. کۆدکردنی پسوولەی ڕەزامەندی بە Keystore AES-256-GCM و هاوتابوونی تەواوی ٨ خانەکە"),
+                        "3. Enforced JVM Network Allowlist & Zero-PII Iraqi Law Liability Waiver",
+                        "3. حصر اتصالات الجافا بخادم الكمارك فقط وإخلاء المسؤولية وفق القانون العراقي دون جمع أي بيانات شخصية",
+                        "٣. سنووردارکردنی پەیوەندی جاڤا تەنها بۆ سێرڤەری گومرگ و بەرپرسیارێتی یاسایی بەبێ کۆکردنەوەی زانیاری کەسی"),
                 tr(activity,
-                        "The local legal consent receipt is encrypted at rest using Android Hardware Keystore AES-256-GCM, contains strictly the 8 fields shown in the preview modal (with zero IP address collection), and is isolated from the JVM by AsycudaBoot's SecurityManager.",
-                        "تشفير إيصال الموافقة القانونية محلياً باستخدام شريحة الأمان (Android Keystore AES-256-GCM)، مع ضمان تطابق الحقول الثمانية المعروضة في نافذة المعاينة بنسبة 100% وعدم جمع عنوان الـ IP.",
-                        "کۆدکردنی پسوولەی ڕەزامەندی یاسایی بە کلیلی ڕەقەکاڵای ئەندرۆید (AES-256-GCM) و ناردنی تەنها ئەو ٨ خانەیەی کە لە پەنجەرەی پێشبینیندا پیشان دەدرێن بەبێ تۆمارکردنی ناونیشانی IP."));
+                        "AsycudaBoot's SecurityManager enforces a strict outbound network allowlist (checkConnect: exclusively localhost and asy.mof.gov.iq). First-launch Terms acceptance operates as a zero-PII electronic click-wrap waiver under Iraqi Civil Code No. 40 of 1951 (Article 259/2) and Iraqi Electronic Transactions Law No. 78 of 2012 (Article 18/1), with zero personal or company names collected or transmitted.",
+                        "يقوم مدير الأمان (SecurityManager) بحصر جميع اتصالات الجافا الخارجية بالخادم الرسمي للكمارك (asy.mof.gov.iq) فقط. كما تعمل الموافقة القانونية عند التشغيل كعقد إلكتروني ملزم وإخلاء مسؤولية وفق المادة (259/2) من القانون المدني العراقي رقم 40 لسنة 1951 والمادة (18/أولاً) من قانون التوقيع الإلكتروني والمعاملات الإلكترونية رقم 78 لسنة 2012، دون جمع أو إرسال أي أسماء شخصية أو أسماء شركات.",
+                        "بەڕێوەبەری ئەمنی (SecurityManager) هەموو پەیوەندییەکانی جاڤا تەنها لەسەر سێرڤەری فەرمی گومرگ (asy.mof.gov.iq) سنووردار دەکات، و پەسەندکردنی مەرجەکان بەپێی یاسای شارستانی عێراقی ژمارە ٤٠ی ساڵی ١٩٥١ (ماددەی ٢٥٩/٢) و یاسای مامەڵە ئەلیکترۆنییەکان ژمارە ٧٨ی ساڵی ٢٠١٢ (ماددەی ١٨/١) کاردەکات بەبێ کۆکردنەوەی هیچ زانیارییەکی کەسی."));
 
         addPolicyClause(activity, card,
                 tr(activity,
@@ -3777,404 +3777,55 @@ public class AsycudaMaterialUi {
         dialog.show();
     }
 
+    private static void purgeLegacyConsentPii(Context ctx) {
+        if (ctx == null) return;
+        try {
+            File legacyReceiptFile = new File(ctx.getFilesDir(), "legal_consent_receipt.json");
+            if (legacyReceiptFile.exists() && !legacyReceiptFile.delete()) {
+                // Best-effort cleanup of legacy file
+            }
+            SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
+            if (sp.contains(KEY_SIGNATORY_NAME) || sp.contains(KEY_COMPANY_NAME) || sp.contains(KEY_DEVICE_HASH)) {
+                sp.edit()
+                        .remove(KEY_SIGNATORY_NAME)
+                        .remove(KEY_COMPANY_NAME)
+                        .remove(KEY_DEVICE_HASH)
+                        .remove(KEY_CONSENT_ID)
+                        .remove(KEY_SHA256_SIG)
+                        .remove(KEY_CLOUD_SYNCED)
+                        .apply();
+            }
+        } catch (Exception ignored) { /* Best-effort cleanup */ }
+    }
+
     public static boolean hasAcceptedTerms(Context ctx) {
         if (ctx == null) return false;
+        purgeLegacyConsentPii(ctx);
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        return sp.getBoolean(KEY_ACCEPTED, false)
-                && CURRENT_POLICY_VERSION.equals(sp.getString(KEY_POLICY_VERSION, ""));
+        return sp.getBoolean(KEY_ACCEPTED, false);
     }
 
-    public static boolean isTermsCloudSynced(Context ctx) {
-        if (ctx == null) return false;
-        SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        return sp.getBoolean(KEY_CLOUD_SYNCED, false);
-    }
-
-    public static void markTermsCloudSynced(Context ctx) {
+    public static void recordTermsAccepted(Context ctx) {
         if (ctx == null) return;
-        ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(KEY_CLOUD_SYNCED, true)
+        purgeLegacyConsentPii(ctx);
+        String localStr = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new Date());
+        String utcStr = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(new Date());
+        SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
+        sp.edit()
+                .putBoolean(KEY_ACCEPTED, true)
+                .putString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION)
+                .putString(KEY_APP_VERSION, getAppVersionLabel(ctx))
+                .putString(KEY_ACCEPTED_UTC, utcStr)
+                .putString(KEY_ACCEPTED_LOCAL, localStr)
                 .apply();
-    }
-
-    public static JSONObject loadSavedConsentReceipt(Context ctx) {
-        if (ctx == null) return null;
-        try {
-            File receiptFile = new File(ctx.getFilesDir(), "legal_consent_receipt.json");
-            if (receiptFile.exists()) {
-                byte[] buf = new byte[(int) receiptFile.length()];
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(receiptFile)) {
-                    int n = fis.read(buf);
-                    if (n > 0) {
-                        JSONObject obj = new JSONObject(new String(buf, 0, n, StandardCharsets.UTF_8));
-                        if (obj.has("ciphertext") && obj.has("iv")) {
-                            byte[] plain = decryptWithAndroidKeystore(
-                                    android.util.Base64.decode(obj.getString("iv"), android.util.Base64.NO_WRAP),
-                                    android.util.Base64.decode(obj.getString("ciphertext"), android.util.Base64.NO_WRAP));
-                            if (plain != null) {
-                                return new JSONObject(new String(plain, StandardCharsets.UTF_8));
-                            }
-                        }
-                        return obj;
-                    }
-                }
-            }
-        } catch (Exception ignored) { /* Best-effort UI operation */ }
-        return null;
-    }
-
-    private static byte[] decryptWithAndroidKeystore(byte[] iv, byte[] ciphertext) {
-        try {
-            java.security.KeyStore ks = java.security.KeyStore.getInstance("AndroidKeyStore");
-            ks.load(null);
-            String alias = "AsycudaConsentKey_v1";
-            if (!ks.containsAlias(alias)) return null;
-            javax.crypto.SecretKey secretKey =
-                    ((java.security.KeyStore.SecretKeyEntry) ks.getEntry(alias, null)).getSecretKey();
-            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey,
-                    new javax.crypto.spec.GCMParameterSpec(128, iv));
-            return cipher.doFinal(ciphertext);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    /**
-     * Validates the signatory Full Name and Company / Customs Brokerage Name entered in the
-     * Terms & Conditions modal. Returns null if valid, or a localized error prompt if invalid.
-     */
-    private static String auditConsentIdentity(Context ctx, String fullName, String companyName) {
-        String name = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
-        String comp = companyName == null ? "" : companyName.trim().replaceAll("\\s+", " ");
-
-        if (name.isEmpty()) {
-            return tr(ctx,
-                    "Please enter your full name (First and Last Name).",
-                    "يرجى إدخال اسمك الكامل (الاسم الأول واللقب).",
-                    "تکایە ناوی تەواوی خۆت بنووسە (ناوی یەکەم و دووەم).");
-        }
-
-        String[] nameParts = name.split(" ");
-        if (nameParts.length < 2 || name.length() < 5) {
-            return tr(ctx,
-                    "Please enter both your first and last name (at least two words).",
-                    "يرجى كتابة الاسم الثنائي أو الثلاثي الكامل (كلمتين على الأقل).",
-                    "تکایە ناوی دووانی یان سیانی خۆت بە تەواوی بنووسە (لانیکەم دوو وشە).");
-        }
-
-        // Full name should contain letters and spaces/hyphens/dots, no digits, and each of the first two parts >= 2 letters
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (Character.isDigit(c)) {
-                return tr(ctx,
-                        "Your full name cannot contain numbers.",
-                        "لا يمكن أن يحتوي الاسم الشخصي على أرقام.",
-                        "ناوی کەسی نابێت ژمارەی تێدابێت.");
-            }
-        }
-        int validParts = 0;
-        for (String part : nameParts) {
-            int letters = 0;
-            for (int i = 0; i < part.length(); i++) {
-                if (Character.isLetter(part.charAt(i))) letters++;
-            }
-            if (letters >= 2) validParts++;
-        }
-        if (validParts < 2) {
-            return tr(ctx,
-                    "Please enter a valid first and last name.",
-                    "يرجى إدخال اسم أول ولقب صحيحين.",
-                    "تکایە ناوی یەکەم و دووەم بە دروستی بنووسە.");
-        }
-
-        if (comp.isEmpty() || comp.length() < 3) {
-            return tr(ctx,
-                    "Please enter your Company or Customs Brokerage Office name.",
-                    "يرجى إدخال اسم الشركة أو مكتب التخليص الكمركي.",
-                    "تکایە ناوی کۆمپانیا یان نووسینگەی گومرگی بنووسە.");
-        }
-
-        int compLetters = 0;
-        for (int i = 0; i < comp.length(); i++) {
-            if (Character.isLetter(comp.charAt(i))) compLetters++;
-        }
-        if (compLetters < 3) {
-            return tr(ctx,
-                    "Company / Brokerage name must contain a valid name (not just numbers or symbols).",
-                    "يجب أن يحتوي اسم الشركة أو المكتب على حروف صحيحة وليس أرقاماً أو رموزاً فقط.",
-                    "ناوی کۆمپانیا یان نووسینگە دەبێت پیتی دروستی تێدابێت نەک تەنها ژمارە.");
-        }
-
-        // Check repeated character spam (e.g., "aaaa bbbb" or "xxxxx")
-        String combinedLower = (name + " " + comp).toLowerCase(Locale.ROOT);
-        int run = 1;
-        for (int i = 1; i < combinedLower.length(); i++) {
-            char c = combinedLower.charAt(i);
-            if (c == combinedLower.charAt(i - 1) && !Character.isWhitespace(c)) {
-                run++;
-                if (run >= 4) {
-                    return tr(ctx,
-                            "Please enter your real name and company name without repeated characters.",
-                            "يرجى إدخال الاسم الحقيقي واسم الشركة بشكل صحيح دون تكرار عشوائي للحروف.",
-                            "تکایە ناوی ڕاستەقینەی خۆت و کۆمپانیاکەت بە دروستی بنووسە.");
-                }
-            } else {
-                run = 1;
-            }
-        }
-
-        // Block placeholder / fake / test / profane entries
-        String[] blockedTokens = new String[] {
-                "test", "testing", "tester", "fake", "none", "null", "admin", "user", "unknown",
-                "asdf", "qwer", "zxcv", "abcd", "xxxx", "anon", "anonymous", "nobody",
-                "fuck", "shit", "bitch", "asshole", "dick", "pussy", "bastard", "idiot", "stupid",
-                "تست", "تجربة", "تجربه", "وهمي", "كذب", "بدون", "لايوجد", "مجهول", "احمق", "غبي", "تافه"
-        };
-        String normalizedTokens = " " + combinedLower.replaceAll("[^\\p{L}\\p{N}]+", " ") + " ";
-        for (String bad : blockedTokens) {
-            if (normalizedTokens.contains(" " + bad + " ")) {
-                return tr(ctx,
-                        "Please enter your real legal name and registered company/brokerage name.",
-                        "يرجى إدخال الاسم الصريح الحقيقي واسم الشركة أو المكتب الفعلي.",
-                        "تکایە ناوی یاسایی ڕاستەقینە و ناوی کۆمپانیا یان نووسینگەی فەرمی بنووسە.");
-            }
-        }
-
-        String compLower = comp.toLowerCase(Locale.ROOT);
-        if (compLower.equals("company") || compLower.equals("my company") || compLower.equals("office")
-                || compLower.equals("شركة") || compLower.equals("شركه") || compLower.equals("مكتب")
-                || compLower.equals("لا يوجد") || compLower.equals("كۆمپانیا")) {
-            return tr(ctx,
-                    "Please enter the specific name of your company or customs brokerage office.",
-                    "يرجى كتابة الاسم الفعلي للشركة أو مكتب التخليص الكمركي.",
-                    "تکایە ناوی دیاریکراوی کۆمپانیا یان نووسینگەی گومرگییەکەت بنووسە.");
-        }
-
-        return null;
-    }
-
-    @SuppressLint("HardwareIds")
-    public static JSONObject buildConsentReceiptObject(Context ctx, String fullName, String companyName) {
-        JSONObject receipt = new JSONObject();
-        if (ctx == null) return receipt;
-        try {
-            String cleanName = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
-            String cleanCompany = companyName == null ? "" : companyName.trim().replaceAll("\\s+", " ");
-
-            Date now = new Date();
-            SimpleDateFormat utcFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
-            utcFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String utcIso = utcFmt.format(now);
-
-            String androidId = "";
-            try {
-                androidId = Settings.Secure.getString(ctx.getContentResolver(), Settings.Secure.ANDROID_ID);
-            } catch (Exception ignored) { /* Best-effort UI operation */ }
-            if (androidId == null) androidId = "unknown";
-
-            String appVer = getAppVersionLabel(ctx);
-            String deviceModel = Build.MANUFACTURER + " " + Build.MODEL;
-            String rawPayload = androidId + "|" + utcIso + "|" + CURRENT_POLICY_VERSION + "|" + appVer
-                    + "|" + deviceModel + "|" + cleanName + "|" + cleanCompany;
-
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(rawPayload.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : digest) {
-                hex.append(String.format(Locale.US, "%02X", b));
-            }
-            String fullHash = hex.toString();
-            String consentId = "IRQ-" + fullHash.substring(0, 8);
-
-            // Also hash androidId alone so we don't store raw hardware ID in plain text
-            byte[] idDigest = md.digest(androidId.getBytes(StandardCharsets.UTF_8));
-            StringBuilder idHex = new StringBuilder();
-            for (int i = 0; i < 6 && i < idDigest.length; i++) {
-                idHex.append(String.format(Locale.US, "%02X", idDigest[i]));
-            }
-            String deviceHash = idHex.toString();
-
-            receipt.put(KEY_CONSENT_ID, consentId);
-            receipt.put(KEY_SIGNATORY_NAME, cleanName);
-            receipt.put(KEY_COMPANY_NAME, cleanCompany);
-            receipt.put(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION);
-            receipt.put(KEY_APP_VERSION, appVer);
-            receipt.put(KEY_ACCEPTED_UTC, utcIso);
-            receipt.put(KEY_DEVICE_HASH, deviceHash);
-            receipt.put(KEY_SHA256_SIG, fullHash);
-        } catch (Exception ignored) { /* Best-effort UI operation */ }
-        return receipt;
-    }
-
-    private static byte[] encryptWithAndroidKeystore(byte[] plaintext) {
-        try {
-            java.security.KeyStore ks = java.security.KeyStore.getInstance("AndroidKeyStore");
-            ks.load(null);
-            String alias = "AsycudaConsentKey_v1";
-            javax.crypto.SecretKey secretKey;
-            if (!ks.containsAlias(alias)) {
-                javax.crypto.KeyGenerator kg = javax.crypto.KeyGenerator.getInstance(
-                        android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
-                kg.init(new android.security.keystore.KeyGenParameterSpec.Builder(
-                        alias,
-                        android.security.keystore.KeyProperties.PURPOSE_ENCRYPT
-                                | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
-                        .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
-                        .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
-                        .setKeySize(256)
-                        .build());
-                secretKey = kg.generateKey();
-            } else {
-                secretKey = ((java.security.KeyStore.SecretKeyEntry) ks.getEntry(alias, null)).getSecretKey();
-            }
-            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey);
-            byte[] iv = cipher.getIV();
-            byte[] ciphertext = cipher.doFinal(plaintext);
-            JSONObject env = new JSONObject();
-            env.put("alg", "AES-256-GCM-AndroidKeyStore");
-            env.put("iv", android.util.Base64.encodeToString(iv, android.util.Base64.NO_WRAP));
-            env.put("ciphertext", android.util.Base64.encodeToString(ciphertext, android.util.Base64.NO_WRAP));
-            return env.toString(2).getBytes(StandardCharsets.UTF_8);
-        } catch (Exception ignored) {
-            return plaintext;
-        }
-    }
-
-    public static JSONObject recordTermsAccepted(Context ctx, String fullName, String companyName) {
-        JSONObject receipt = buildConsentReceiptObject(ctx, fullName, companyName);
-        if (ctx == null || receipt.length() == 0) return receipt;
-        try {
-            String localStr = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new Date());
-            SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-            sp.edit()
-                    .putBoolean(KEY_ACCEPTED, true)
-                    .putBoolean(KEY_CLOUD_SYNCED, false)
-                    .putString(KEY_CONSENT_ID, receipt.optString(KEY_CONSENT_ID, ""))
-                    .putString(KEY_SIGNATORY_NAME, receipt.optString(KEY_SIGNATORY_NAME, ""))
-                    .putString(KEY_COMPANY_NAME, receipt.optString(KEY_COMPANY_NAME, ""))
-                    .putString(KEY_POLICY_VERSION, receipt.optString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION))
-                    .putString(KEY_APP_VERSION, receipt.optString(KEY_APP_VERSION, ""))
-                    .putString(KEY_ACCEPTED_UTC, receipt.optString(KEY_ACCEPTED_UTC, ""))
-                    .putString(KEY_ACCEPTED_LOCAL, localStr)
-                    .putString(KEY_DEVICE_HASH, receipt.optString(KEY_DEVICE_HASH, ""))
-                    .putString(KEY_SHA256_SIG, receipt.optString(KEY_SHA256_SIG, ""))
-                    .apply();
-
-            File receiptFile = new File(ctx.getFilesDir(), "legal_consent_receipt.json");
-            byte[] rawBytes = receipt.toString(2).getBytes(StandardCharsets.UTF_8);
-            byte[] encryptedBytes = encryptWithAndroidKeystore(rawBytes);
-            try (FileOutputStream fos = new FileOutputStream(receiptFile)) {
-                fos.write(encryptedBytes);
-                fos.getFD().sync();
-            }
-        } catch (Exception ignored) { /* Best-effort UI operation */ }
-        return receipt;
-    }
-
-    private static void showConsentReceiptPreviewModal(MainActivity activity, String fullName, String companyName) {
-        Dialog infoDialog = createModalDialog(activity, 0.86f, 620, true);
-        LinearLayout root = createDialogContainer(activity);
-
-        String sampleName = (fullName == null || fullName.trim().isEmpty())
-                ? tr(activity, "[Your Full Name]", "[الاسم الكامل المدخل]", "[ناوی تەواو]")
-                : fullName.trim();
-        String sampleCompany = (companyName == null || companyName.trim().isEmpty())
-                ? tr(activity, "[Your Company / Brokerage]", "[اسم الشركة أو مكتب التخليص]", "[ناوی کۆمپانیا یان نووسینگە]")
-                : companyName.trim();
-
-        JSONObject previewReceipt = buildConsentReceiptObject(activity, sampleName, sampleCompany);
-
-        LinearLayout header = new LinearLayout(activity);
-        header.setOrientation(LinearLayout.VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 8));
-
-        TextView hTitle = new TextView(activity);
-        hTitle.setText(tr(activity,
-                "Preview of Legal Consent Receipt (Sentry)",
-                "معاينة إيصال توثيق الموافقة القانونية (Sentry)",
-                "پێشبینینی پسوولەی ڕەزامەندی یاسایی (Sentry)"));
-        hTitle.setTextColor(TEXT_PRIMARY);
-        hTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
-        hTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        header.addView(hTitle);
-
-        TextView hSub = new TextView(activity);
-        hSub.setText(tr(activity,
-                "Exact 8-field JSON payload transmitted once upon acceptance",
-                "البيانات الدقيقة التي يتم إرسالها لمرة واحدة فقط عند الموافقة",
-                "ئەو زانیارییە دیاریکراوانەی کە تەنها یەک جار لە کاتی پەسەندکردندا دەنێردرێن"));
-        hSub.setTextColor(SYSTEM_BLUE);
-        hSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
-        header.addView(hSub);
-
-        // Wrap title column with a top-bar Close icon (replaces old bottom "Close Preview" button)
-        LinearLayout headerRow = new LinearLayout(activity);
-        headerRow.setOrientation(LinearLayout.HORIZONTAL);
-        headerRow.setGravity(Gravity.CENTER_VERTICAL);
-        header.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        headerRow.addView(header);
-        headerRow.addView(createIconButton(activity, R.drawable.ic_action_close,
-                tr(activity, "Close Preview", "إغلاق المعاينة", "داخستنی پێشبینین"),
-                false, false, v -> infoDialog.dismiss()));
-
-        root.addView(headerRow);
-        root.addView(createHairlineDivider(activity));
-
-        ScrollView scroll = new ScrollView(activity);
-        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        scLp.topMargin = dp(activity, 8);
-        scLp.bottomMargin = dp(activity, 8);
-        scroll.setLayoutParams(scLp);
-
-        LinearLayout body = new LinearLayout(activity);
-        body.setOrientation(LinearLayout.VERTICAL);
-
-        TextView noteView = new TextView(activity);
-        noteView.setText(tr(activity,
-                "Before you tap \"Accept & Continue\", you have the full right to inspect the exact 8-field JSON receipt below (stored locally with Android Keystore AES-256-GCM encryption and transmitted once inside a standard Sentry HTTPS event envelope with zero IP collection; note that sha256_signature is a deterministic SHA-256 integrity digest). Zero ASYCUDA passwords, zero customs declarations, and zero personal files are ever included:",
-                "قبل الضغط على «موافقة ومتابعة»، يحق لك الاطلاع الكامل على محتوى الإيصال الرقمي المكوّن من 8 حقول أدناه (يُحفظ محلياً بتشفير Android Keystore AES-256-GCM ويُرسل لمرة واحدة فقط ضمن مظروف Sentry قياسي عبر HTTPS دون جمع عنوان الـ IP، حيث يمثل حقل sha256_signature بصمة تحقق رقمية SHA-256). لا يتم إطلاقاً إرسال أي كلمات مرور أو تصاريح كمركية أو ملفات خاصة:",
-                "پێش ئەوەی کرتە لەسەر «پەسەندکردن و بەردەوامبوون» بکەیت، مافی تەواوت هەیە پسوولەی دیجیتاڵی ٨ خانەیی خوارەوە ببینیت (بە کۆدکردنی Android Keystore AES-256-GCM پاشەکەوت دەکرێت و تەنها یەک جار لە ڕێگەی HTTPS دەنێردرێت بۆ Sentry بەبێ تۆمارکردنی ناونیشانی IP) و هیچ وشەیەکی نهێنی یان مامەڵەیەکی گومرگی نانێردرێت:"));
-        noteView.setTextColor(TEXT_SECONDARY);
-        noteView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        body.addView(noteView);
-
-        TextView jsonBox = new TextView(activity);
-        String formattedJson;
-        try {
-            formattedJson = previewReceipt.toString(2);
-        } catch (Exception e) {
-            formattedJson = previewReceipt.toString();
-        }
-        jsonBox.setText(formattedJson);
-        jsonBox.setTextColor(Color.parseColor("#FF64D2FF"));
-        jsonBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-        jsonBox.setTypeface(Typeface.MONOSPACE);
-        int pad = dp(activity, 12);
-        jsonBox.setPadding(pad, pad, pad, pad);
-        jsonBox.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
-        LinearLayout.LayoutParams jbLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        jbLp.topMargin = dp(activity, 10);
-        jsonBox.setLayoutParams(jbLp);
-        body.addView(jsonBox);
-
-        scroll.addView(body);
-        root.addView(scroll);
-
-        infoDialog.setContentView(root);
-        infoDialog.show();
     }
 
     public static String getTermsAcceptanceBadgeTitle(Context ctx) {
         if (hasAcceptedTerms(ctx)) {
             return tr(ctx,
-                    "✓ Terms & Conditions Accepted (Verified)",
-                    "✓ تمت الموافقة على الشروط والأحكام وإخلاء المسؤولية",
-                    "✓ مەرج و ڕێساکان و بەرپرسیارێتی پەسەندکراون");
+                    "✓ Terms & Conditions Accepted (Iraqi Civil Code Art. 259/2 & Law 78/2012 Art. 18)",
+                    "✓ تمت الموافقة على الشروط وإخلاء المسؤولية (م 259/2 مدني عراقي وم 18 قانون 78 لسنة 2012)",
+                    "✓ مەرج و بەرپرسیارێتی یاسایی پەسەندکراون (یاسای شارستانی عێراقی م ٢٥٩/٢ و یاسای ٧٨/٢٠١٢)");
         }
         return tr(ctx,
                 "Terms & Conditions Pending Acceptance",
@@ -4186,21 +3837,15 @@ public class AsycudaMaterialUi {
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
         if (!sp.getBoolean(KEY_ACCEPTED, false)) {
             return tr(ctx,
-                    "User agreement will be recorded on initial launch.",
-                    "سيتم توثيق موافقة المستخدم عند بدء التشغيل.",
-                    "ڕەزامەندی بەکارهێنەر لە کاتی دەستپێکردندا تۆمار دەکرێت.");
+                    "Electronic click-wrap agreement required on initial launch (Zero personal data collected).",
+                    "يتطلب الموافقة الإلكترونية عند بدء التشغيل (دون جمع أي بيانات شخصية).",
+                    "ڕەزامەندی ئەلیکترۆنی لە کاتی دەستپێکردندا پێویستە (بەبێ کۆکردنەوەی زانیاری کەسی).");
         }
-        String sigName = sp.getString(KEY_SIGNATORY_NAME, "");
-        String compName = sp.getString(KEY_COMPANY_NAME, "");
         String localDate = sp.getString(KEY_ACCEPTED_LOCAL, "");
-        String consentId = sp.getString(KEY_CONSENT_ID, "IRQ-VERIFIED");
-        String who = (!sigName.isEmpty() && !compName.isEmpty())
-                ? (sigName + " (" + compName + ")  •  ")
-                : "";
         return tr(ctx,
-                who + "Accepted on " + localDate + "  •  Receipt #" + consentId,
-                who + "تاريخ الموافقة: " + localDate + "  •  رقم الإيصال #" + consentId,
-                who + "بەرواری پەسەندکردن: " + localDate + "  •  پسوولەی #" + consentId);
+                "Accepted on " + localDate + "  •  Zero-PII Local Waiver (Policy v" + CURRENT_POLICY_VERSION + ")",
+                "تاريخ الموافقة: " + localDate + "  •  إقرار إلكتروني محلي دون جمع بيانات شخصية (الإصدار " + CURRENT_POLICY_VERSION + ")",
+                "بەرواری پەسەندکردن: " + localDate + "  •  بەبێ کۆکردنەوەی زانیاری کەسی (وەشانی " + CURRENT_POLICY_VERSION + ")");
     }
 
     public static String getTermsConsentSummaryForDiagnostics(Context ctx) {
@@ -4208,19 +3853,13 @@ public class AsycudaMaterialUi {
         if (!sp.getBoolean(KEY_ACCEPTED, false)) {
             return "TermsAccepted: false";
         }
-        return "TermsAccepted: true\n"
-                + "ConsentReceiptID: " + sp.getString(KEY_CONSENT_ID, "") + "\n"
-                + "SignatoryName: " + sp.getString(KEY_SIGNATORY_NAME, "") + "\n"
-                + "CompanyName: " + sp.getString(KEY_COMPANY_NAME, "") + "\n"
-                + "PolicyVersion: " + sp.getString(KEY_POLICY_VERSION, "") + "\n"
-                + "AcceptedAtUTC: " + sp.getString(KEY_ACCEPTED_UTC, "") + "\n"
-                + "AcceptedAppVersion: " + sp.getString(KEY_APP_VERSION, "") + "\n"
-                + "DeviceHash: " + sp.getString(KEY_DEVICE_HASH, "") + "\n"
-                + "ReceiptSHA256: " + sp.getString(KEY_SHA256_SIG, "");
+        return "TermsAccepted: true (Iraqi Civil Code Art. 259/2 & Law No. 78 of 2012 Art. 18/1)\n"
+                + "PolicyVersion: " + sp.getString(KEY_POLICY_VERSION, CURRENT_POLICY_VERSION) + "\n"
+                + "AcceptedAppVersion: " + sp.getString(KEY_APP_VERSION, "");
     }
 
     public interface TermsAcceptedHandler {
-        void onAccepted(JSONObject receipt);
+        void onAccepted();
     }
 
     public static void showTermsAndConditionsModal(
@@ -4228,15 +3867,8 @@ public class AsycudaMaterialUi {
             TermsAcceptedHandler onAccepted,
             Runnable onDeclined) {
 
-        Dialog dialog = createModalDialog(activity, 0.92f, 720, false);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        }
+        Dialog dialog = createModalDialog(activity, 0.90f, 700, false);
         LinearLayout root = createDialogContainer(activity);
-
-        SharedPreferences existingPrefs = activity.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
-        String savedName = existingPrefs.getString(KEY_SIGNATORY_NAME, "");
-        String savedCompany = existingPrefs.getString(KEY_COMPANY_NAME, "");
 
         // Header Row with Logo + Title + Language Switcher Pills
         LinearLayout header = new LinearLayout(activity);
@@ -4256,9 +3888,9 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "Terms & Conditions and Legal Policy",
+                "Terms & Conditions and Legal Liability Waiver",
                 "الشروط والأحكام وإخلاء المسؤولية القانونية",
-                "مەرج و ڕێساکان و سیاسەتی یاسایی"));
+                "مەرج و ڕێساکان و بەرپرسیارێتی یاسایی"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -4266,11 +3898,11 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Please review the terms and register your name & company below to continue",
-                "يرجى قراءة الشروط وتسجيل الاسم والشركة أدناه للموافقة والمتابعة",
-                "تکایە مەرجەکان بخوێنەرەوە و ناو و کۆمپانیاکەت لە خوارەوە تۆمار بکە بۆ بەردەوامبوون"));
+                "Governed by Iraqi Civil Code No. 40 of 1951 (Art. 259/2) & Electronic Transactions Law No. 78 of 2012 (Art. 18/1)",
+                "خاضع للمادة (259/2) من القانون المدني العراقي رقم 40 لسنة 1951 والمادة (18/أولاً) من قانون المعاملات الإلكترونية رقم 78 لسنة 2012",
+                "بەپێی ماددەی (٢٥٩/٢) لە یاسای شارستانی عێراقی ژمارە ٤٠ی ١٩٥١ و ماددەی (١٨/١) لە یاسای مامەڵە ئەلیکترۆنییەکان ژمارە ٧٨ی ٢٠١٢"));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -4308,7 +3940,7 @@ public class AsycudaMaterialUi {
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
-        // Scrollable Policy Body + Mandatory Identity Inputs
+        // Scrollable Policy Body
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
@@ -4332,194 +3964,53 @@ public class AsycudaMaterialUi {
                         "1. الغرض من التطبيق وعدم التبعية الرسمية",
                         "١. مەبەستی بەرنامەکە و سەربەخۆیی"),
                 tr(activity,
-                        "This application was created solely as a helpful technical utility to assist customs brokers, logistics coordinators, and trade companies in running the Iraqi Customs ASYCUDA World desktop environment on Android phones and tablets. It is an independent project and is not affiliated with, sponsored by, or officially endorsed by the Iraqi Ministry of Finance, the General Commission for Customs, or UNCTAD.",
-                        "تم تطوير هذا التطبيق لغرض المساعدة فقط وتسهيل عمل المخلصين الكمركيين، المنسقين اللوجستيين، والشركات التجارية في تشغيل بيئة نظام أسيكودا العالمي على هواتف وأجهزة الأندرويد. هذا التطبيق مبادرة تقنية مستقلة ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD).",
-                        "ئەم بەرنامەیە تەنها بە مەبەستی هاوکاری و کارئاسانی بۆ بریکارانی گومرگی و کۆمپانیا بازرگانییەکان دروستکراوە بۆ بەکارهێنانی سیستەمی ئەسیکۆدای جیهانی لەسەر ئامێرەکانی ئەندرۆید. ئەم پڕۆژەیە دەستپێشخەرییەکی تەکنیکی سەربەخۆیە و بە فەرمی سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە."));
+                        "This free, open-source application (GPL v3 License) was created solely as a technical utility to assist customs brokers, logistics coordinators, and trade companies in running the Iraqi Customs ASYCUDA World desktop environment on Android devices. It is an independent project and is not affiliated with, sponsored by, or officially endorsed by the Iraqi Ministry of Finance, the General Commission for Customs, or UNCTAD.",
+                        "تم تطوير هذا التطبيق المجاني مفتوح المصدر (بموجب رخصة GPL v3) لغرض المساعدة التقنية فقط وتسهيل عمل المخلصين الكمركيين والشركات التجارية في تشغيل بيئة نظام أسيكودا العالمي على أجهزة الأندرويد. هذا التطبيق مبادرة تقنية مستقلة ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD).",
+                        "ئەم بەرنامە خۆڕایی و سەرچاوە کراوەیە (مۆڵەتی GPL v3) تەنها بە مەبەستی هاوکاری تەکنیکی بۆ بریکارانی گومرگی و کۆمپانیا بازرگانییەکان دروستکراوە بۆ بەکارهێنانی سیستەمی ئەسیکۆدای جیهانی لەسەر ئامێرەکانی ئەندرۆید، و بە فەرمی سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە."));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "2. Official Client Packages & Integrity",
-                        "2. سلامة الملفات الرسمية والاتصال المباشر",
+                        "2. Official Client Packages & Enforced Network Isolation",
+                        "2. سلامة الملفات الرسمية وحصر الاتصال بالخادم الحكومي",
                         "٢. سەلامەتی پەڕگە فەرمییەکان و پەیوەندی ڕاستەوخۆ"),
                 tr(activity,
-                        "The application connects directly to the official Iraqi Customs server (asy.mof.gov.iq) and executes the unmodified official ASYCUDA World Java packages locally on your device. No government JAR archives or security certificates are altered or bypassed.",
-                        "يتصل التطبيق مباشرة بالخادم الرسمي للهيئة العامة للكمارك (asy.mof.gov.iq) ويقوم بتشغيل الحزم الرسمية لنظام أسيكودا محلياً على جهازك دون أي تعديل أو تلاعب بملفات النظام الحكومية.",
-                        "ئەم بەرنامەیە ڕاستەوخۆ پەیوەندی دەکات بە سێرڤەری فەرمی گومرگی عێراق (asy.mof.gov.iq) و پەڕگە فەرمییەکانی ئەسیکۆدا وەک خۆی و بەبێ هیچ دەستکارییەک لەسەر ئامێرەکەت کارپێدەکات."));
+                        "The application connects directly to the official Iraqi Customs server (https://asy.mof.gov.iq), downloads the 131 official UNCTAD/SOClass-signed JAR packages on first launch after verifying their X.509 cryptographic signature, and enforces a strict JVM SecurityManager network allowlist confining all ASYCUDA traffic exclusively to asy.mof.gov.iq.",
+                        "يتصل التطبيق مباشرة بالخادم الرسمي للهيئة العامة للكمارك (https://asy.mof.gov.iq) ويقوم بتحميل الحزم الرسمية الموقّعة رقمياً (131 ملف JAR) والتحقق من شهادتها التشفيرية (X.509)، مع فرض جدار حماية برمجي (SecurityManager) يحصر اتصالات بيئة الجافا بالخادم الحكومي حصرياً.",
+                        "ئەم بەرنامەیە ڕاستەوخۆ پەیوەندی دەکات بە سێرڤەری فەرمی گومرگی عێراق (https://asy.mof.gov.iq) و ١٣١ پەڕگە فەرمییەکانی ئەسیکۆدا دوای پشتڕاستکردنەوەی بڕوانامەی X.509 کارپێدەکات."));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "3. Complete Limitation of Liability & Assumption of Risk",
-                        "3. إخلاء المسؤولية القانونية والمالية الكاملة",
-                        "٣. سنووردارکردنی بەرپرسیارێتی یاسایی و دارایی"),
+                        "3. Binding Contractual Liability Waiver (Iraqi Civil Code Art. 259/2 & Law No. 78 of 2012 Art. 18/1)",
+                        "3. شرط الإعفاء من المسؤولية وحجية القبول الإلكتروني (المادة 259/2 مدني عراقي والمادة 18/أولاً قانون 78 لسنة 2012)",
+                        "٣. مەرجی بەخشین لە بەرپرسیارێتی یاسایی (ماددەی ٢٥٩/٢ یاسای شارستانی عێراقی و ماددەی ١٨/١ یاسای ٧٨ی ٢٠١٢)"),
                 tr(activity,
-                        "This software is provided \"as is\" without warranties of any kind. The developer assumes no responsibility or liability whatsoever for any direct, indirect, incidental, or consequential harm, financial loss, data discrepancy, customs clearance delay, account suspension, ban, administrative penalty, or any action taken by government authorities or any other entity against individual users or companies using this application. You use this application entirely at your own risk and responsibility.",
-                        "يُقدّم هذا البرنامج \"كما هو\" دون أي ضمانات صريحة أو ضمنية. يخلي مطور التطبيق مسؤوليته القانونية والمالية والفنية الكاملة عن أي ضرر مباشر أو غير مباشر، أو خسائر مالية، أو تأخير في المعاملات، أو إيقاف أو حظر للحسابات، أو غرامات، أو أي إجراءات إدارية أو قانونية قد تُتخذ من قِبل الجهات الحكومية أو أي جهة أخرى بحق المستخدمين أو الشركات التي تستخدم هذا التطبيق. إن استخدامك للتطبيق يتم على مسؤوليتك الشخصية الكاملة.",
-                        "ئەم نەرمەکاڵایە \"وەک خۆی\" پێشکەش دەکرێت بەبێ هیچ گەرەنتییەک. گەشەپێدەری بەرنامەکە هیچ بەرپرسیارێتییەکی یاسایی، دارایی، یان تەکنیکی هەڵناگرێت بەرامبەر هەر زیانێکی ڕاستەوخۆ یان ناڕاستەوخۆ، دواکەوتنی مامەڵە، ڕاگرتن یان بلۆککردنی هەژمار، سزا، یان هەر ڕێکارێک کە لەلایەن لایەنە حکومییەکان یان هەر دامەزراوەیەکی ترەوە بگیرێتەبەر بەرامبەر بەکارهێنەران یان کۆمپانیاکان."));
+                        "Pursuant to Article 259(2) of the Iraqi Civil Code No. 40 of 1951 (permitting contractual exemption from liability), the gratuitous nature of this free software, and Article 18(1) of the Iraqi Electronic Signature and Electronic Transactions Law No. 78 of 2012 (recognizing the full legal validity of electronic offer and click-wrap acceptance), this software is provided \"AS IS\" without warranties of any kind. The developer assumes no responsibility or liability whatsoever for any direct, indirect, incidental, or consequential harm, financial loss, data discrepancy, customs clearance delay, account suspension, administrative penalty, or any action taken by government authorities or any other entity. Because the application is technologically locked until you accept below, proceeding to use the application constitutes conclusive electronic proof of your acceptance of this waiver.",
+                        "عملاً بأحكام المادة (259/2) من القانون المدني العراقي رقم (40) لسنة 1951 (التي تُجيز الاتفاق على الإعفاء من المسؤولية العقدية)، وبما أن هذا البرنامج يُقدّم مجاناً بدون عوض مالي (على سبيل التبرع بالمنافع التقنية)، واستناداً إلى المادة (18/أولاً) والمادة (13) من قانون التوقيع الإلكتروني والمعاملات الإلكترونية العراقي رقم (78) لسنة 2012 (التي تُقر الحجية القانونية الكاملة للإيجاب والقبول الإلكتروني)، يُقدّم هذا البرنامج «كما هو» (AS IS) دون أي ضمانات صريحة أو ضمنية. يُعفى مطور التطبيق إعفاءً تاماً وشاملاً من أي مسؤولية قانونية أو مدنية أو مالية أو فنية عن أي ضرر مباشر أو غير مباشر، أو خسائر مالية، أو تأخير في المعاملات الكمركية، أو إيقاف للحسابات، أو غرامات، أو أي إجراءات إدارية أو قانونية. وبما أن التطبيق مقفل برمجياً ولا يعمل إلا بعد الضغط على زر الموافقة أدناه، فإن تشغيلك أو استخدامك للتطبيق يُعد قرينة إلكترونية قاطعة وحجة قانونية ملزمة على قبولك التام لهذا الإعفاء.",
+                        "بەپێی حوکمەکانی ماددەی (٢٥٩/٢) لە یاسای شارستانی عێراقی ژمارە (٤٠)ی ساڵی ١٩٥١ و ماددەی (١٨/یەکەم) لە یاسای واژۆی ئەلیکترۆنی و مامەڵە ئەلیکترۆنییەکانی عێراق ژمارە (٧٨)ی ساڵی ٢٠١٢، ئەم نەرمەکاڵایە بە خۆڕایی و «وەک خۆی» (AS IS) پێشکەش دەکرێت بەبێ هیچ گەرەنتییەک. گەشەپێدەری بەرنامەکە بە تەواوی دەبەخشرێت لە هەر بەرپرسیارێتییەکی یاسایی، شارستانی، دارایی، یان تەکنیکی بەرامبەر هەر زیانێکی ڕاستەوخۆ یان ناڕاستەوخۆ، دواکەوتنی مامەڵەی گومرگی، یان ڕاگرتنی هەژمار. بەهۆی ئەوەی بەرنامەکە کارناکات تاوەکو دوگمەی پەسەندکردن لە خوارەوە دانەگریت، بەکارهێنانی بەرنامەکە بەڵگەی ئەلیکترۆنی یەکلاکەرەوەیە لەسەر پەسەندکردنی تەواوی ئەم مەرجانە."));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "4. Signatory Authority, Data Privacy & Consent Audit Record (Sentry)",
-                        "4. صفة المستخدم، سياسة الخصوصية وتوثيق الموافقة (Sentry)",
-                        "٤. دەسەڵاتی بەکارهێنەر، سیاسەتی تایبەتمەندی و تۆمارکردنی ڕەزامەندی (Sentry)"),
+                        "4. Zero Personal Data Collection & Strict Privacy Guarantee",
+                        "4. عدم جمع أي بيانات شخصية وضمان الخصوصية التامة",
+                        "٤. کۆنەکردنەوەی هیچ زانیارییەکی کەسی و گەرەنتی تایبەتمەندی"),
                 tr(activity,
-                        "Your ASYCUDA login credentials and customs declarations remain strictly between your device and the official Ministry of Finance server. By registering your name and organization below, you confirm that the information provided is accurate and that you are authorized to accept these terms on behalf of yourself and the organization or brokerage you represent. Entering false identification constitutes a breach of these terms and does not waive or limit the Limitation of Liability in Section 3. A timestamped 8-field digital consent receipt (Policy v" + CURRENT_POLICY_VERSION + ", including consent_id, signatory_name, company_name, policy_version, app_version, accepted_at_utc, device_hash, and deterministic sha256_signature integrity digest) is encrypted on your device via Android Keystore AES-256-GCM and transmitted once over HTTPS inside a Sentry event envelope (with zero IP collection).",
-                        "تبقى بيانات الدخول والتصاريح الكمركية الخاصة بك حصرياً بين جهازك وخادم وزارة المالية الرسمي. بتسجيل اسمك واسم شركتك أو مكتبك أدناه، فإنك تقر بصحة البيانات المدخلة وبأنك مخوّل بالموافقة على هذه الشروط بالأصالة عن نفسك وبالنيابة عن الشركة أو المكتب الذي تمثله. إن إدخال بيانات غير صحيحة يُعد إخلالاً بشروط الاستخدام ولا يترتب عليه بأي حال سقوط أو تقييد إخلاء المسؤولية المنصوص عليه في البند (3). يتم تشفير وحفظ إيصال موافقة رقمي مكوّن من 8 حقول على جهازك عبر (Android Keystore AES-256-GCM) وإرساله لمرة واحدة عبر اتصال مشفّر (HTTPS) إلى سجل التوثيق (Sentry) دون جمع عنوان الـ IP.",
-                        "زانیاری چوونەژوورەوە و مامەڵە گومرگییەکانت تەنها لە نێوان ئامێرەکەت و سێرڤەری فەرمی وەزارەتی داراییدا دەمێنێتەوە. بە تۆمارکردنی ناو و کۆمپانیاکەت لە خوارەوە، پشتڕاستی دەکەیتەوە کە زانیارییەکان ڕاستن و ڕێگەپێدراویت بۆ پەسەندکردنی ئەم مەرجانە بە ناوی خۆت و کۆمپانیاکەتەوە. تۆمارکردنی زانیاری ناڕاست پێشێلکردنی مەرجەکانە و بەرپرسیارێتی یاسایی بڕگەی (٣) هەڵناوەشێنێتەوە. پسوولەی ڕەزامەندی ٨ خانەیی بە کۆدکردنی (Android Keystore AES-256-GCM) لەسەر ئامێرەکەت و لە سیستەمی (Sentry) بەبێ ناونیشانی IP تۆمار دەکرێت."));
+                        "This application collects ZERO personal data, ZERO personal names, ZERO company names, ZERO hardware device IDs, and ZERO ASYCUDA login credentials. Your acceptance of these terms is stored strictly as a local boolean flag on your device — nothing is transmitted to any external server upon acceptance. Diagnostic logs are only sent if you manually submit a support ticket via 'Report a Technical Issue'.",
+                        "لا يقوم هذا التطبيق بجمع أو طلب أو تخزين أي بيانات شخصية، ولا يطلب اسمك أو اسم شركتك أو معرفات جهازك، ولا يطّلع إطلاقاً على كلمات مرور أو تصاريح نظام أسيكودا. يتم حفظ موافقتك على هذه الشروط كإشارة محلية فقط داخل جهازك دون إرسال أي بيانات إلى أي خادم خارجي عند الموافقة.",
+                        "ئەم بەرنامەیە هیچ زانیارییەکی کەسی، ناوی کەسی، ناوی کۆمپانیا، یان وشەی نهێنی ئەسیکۆدا کۆناکاتەوە و پاشەکەوتی ناکات. پەسەندکردنی ئەم مەرجانە تەنها لەناو ئامێرەکەتدا دەمێنێتەوە و هیچ زانیارییەک لە کاتی پەسەندکردندا نانێردرێت بۆ هیچ سێرڤەرێکی دەرەکی."));
 
         scrollContent.addView(bodyCard);
 
-        // User & Company Registration Card inside ScrollView
-        LinearLayout regCard = new LinearLayout(activity);
-        regCard.setOrientation(LinearLayout.VERTICAL);
-        regCard.setPadding(p, dp(activity, 10), p, dp(activity, 12));
-        regCard.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, Color.parseColor("#440A84FF")));
-        LinearLayout.LayoutParams regLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        regLp.topMargin = dp(activity, 8);
-        regCard.setLayoutParams(regLp);
-
-        TextView regTitle = new TextView(activity);
-        regTitle.setText(tr(activity,
-                "Signatory & Company Registration (Required)",
-                "بيانات المستخدم والشركة أو مكتب التخليص (مطلوب)",
-                "زانیاری بەکارهێنەر و کۆمپانیا یان نووسینگە (پێویستە)"));
-        regTitle.setTextColor(SYSTEM_BLUE);
-        regTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        regTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        regCard.addView(regTitle);
-
-        // Full Name + Company Name side-by-side in landscape so both fit comfortably
-        LinearLayout fieldsRow = new LinearLayout(activity);
-        fieldsRow.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams frLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        frLp.topMargin = dp(activity, 8);
-        fieldsRow.setLayoutParams(frLp);
-
-        // Column 1: Full Name
-        LinearLayout nameCol = new LinearLayout(activity);
-        nameCol.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams ncLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        ncLp.setMarginEnd(dp(activity, 8));
-        nameCol.setLayoutParams(ncLp);
-
-        TextView nameLbl = new TextView(activity);
-        nameLbl.setText(tr(activity,
-                "Full Name (First & Last Name) *",
-                "الاسم الكامل (الاسم الأول واللقب) *",
-                "ناوی تەواو (ناوی یەکەم و دووەم) *"));
-        nameLbl.setTextColor(TEXT_PRIMARY);
-        nameLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        nameLbl.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
-        nameCol.addView(nameLbl);
-
-        EditText nameInput = new EditText(activity);
-        nameInput.setHint(tr(activity,
-                "e.g. Mohammed Al-Obaidi",
-                "مثال: محمد العبيدي",
-                "نموونە: محەمەد عوبەیدی"));
-        nameInput.setHintTextColor(TEXT_TERTIARY);
-        nameInput.setTextColor(TEXT_PRIMARY);
-        nameInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        nameInput.setSingleLine(true);
-        nameInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        nameInput.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
-        nameInput.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
-        if (!savedName.isEmpty()) nameInput.setText(savedName);
-        LinearLayout.LayoutParams niLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        niLp.topMargin = dp(activity, 4);
-        nameInput.setLayoutParams(niLp);
-        nameCol.addView(nameInput);
-        fieldsRow.addView(nameCol);
-
-        // Column 2: Company / Customs Brokerage Name
-        LinearLayout compCol = new LinearLayout(activity);
-        compCol.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams ccLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        compCol.setLayoutParams(ccLp);
-
-        TextView compLbl = new TextView(activity);
-        compLbl.setText(tr(activity,
-                "Company / Customs Brokerage Name *",
-                "اسم الشركة أو مكتب التخليص الكمركي *",
-                "ناوی کۆمپانیا یان نووسینگەی گومرگی *"));
-        compLbl.setTextColor(TEXT_PRIMARY);
-        compLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        compLbl.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
-        compCol.addView(compLbl);
-
-        EditText compInput = new EditText(activity);
-        compInput.setHint(tr(activity,
-                "e.g. Al-Rafidain Customs Clearance Co.",
-                "مثال: شركة الرافدين للتخليص الكمركي",
-                "نموونە: کۆمپانیای ڕافیدەین بۆ کاروباری گومرگی"));
-        compInput.setHintTextColor(TEXT_TERTIARY);
-        compInput.setTextColor(TEXT_PRIMARY);
-        compInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        compInput.setSingleLine(true);
-        compInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        compInput.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
-        compInput.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
-        if (!savedCompany.isEmpty()) compInput.setText(savedCompany);
-        LinearLayout.LayoutParams ciLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        ciLp.topMargin = dp(activity, 4);
-        compInput.setLayoutParams(ciLp);
-        compCol.addView(compInput);
-        fieldsRow.addView(compCol);
-
-        regCard.addView(fieldsRow);
-
-        // Preview Sentry Receipt Before Sending Button (Explicit user transparency)
-        TextView previewBtn = new TextView(activity);
-        previewBtn.setText(tr(activity,
-                "🔍 Preview Sentry Receipt Before Sending (See Exact 8 Fields)",
-                "🔍 معاينة إيصال الموافقة (Sentry) قبل الإرسال (عرض الحقول الـ 8 بالتفصيل)",
-                "🔍 پێشبینینی پسوولەی ڕەزامەندی (Sentry) پێش ناردن (بینینی ٨ خانەکە)"));
-        previewBtn.setTextColor(Color.parseColor("#FF64D2FF"));
-        previewBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        previewBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        previewBtn.setGravity(Gravity.CENTER);
-        previewBtn.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
-        previewBtn.setBackground(createRippleCardDrawable(activity,
-                Color.parseColor("#1A0A84FF"), 10, Color.parseColor("#660A84FF")));
-        LinearLayout.LayoutParams pvLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pvLp.topMargin = dp(activity, 8);
-        previewBtn.setLayoutParams(pvLp);
-        previewBtn.setOnClickListener(v -> {
-            String curName = nameInput.getText() != null ? nameInput.getText().toString() : "";
-            String curComp = compInput.getText() != null ? compInput.getText().toString() : "";
-            showConsentReceiptPreviewModal(activity, curName, curComp);
-        });
-        regCard.addView(previewBtn);
-
-        TextView errorBanner = new TextView(activity);
-        errorBanner.setVisibility(View.GONE);
-        errorBanner.setTextColor(Color.parseColor("#FFFF6961"));
-        errorBanner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        errorBanner.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        LinearLayout.LayoutParams errLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        errLp.topMargin = dp(activity, 6);
-        errorBanner.setLayoutParams(errLp);
-        regCard.addView(errorBanner);
-
-        scrollContent.addView(regCard);
-
-        // Mandatory Dual Consent Checkboxes (1: Terms & Liability, 2: Privacy Policy & Mandatory Sentry Receipt)
+        // Mandatory Click-Wrap Agreement Checkbox
         final boolean[] isChecked = new boolean[] { false };
-        final boolean[] isPrivacyChecked = new boolean[] { false };
 
         LinearLayout checkCard = new LinearLayout(activity);
         checkCard.setOrientation(LinearLayout.HORIZONTAL);
         checkCard.setGravity(Gravity.CENTER_VERTICAL);
-        checkCard.setPadding(dp(activity, 12), dp(activity, 8), dp(activity, 12), dp(activity, 8));
+        checkCard.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
         checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams ckLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        ckLp.topMargin = dp(activity, 8);
+        ckLp.topMargin = dp(activity, 10);
         checkCard.setLayoutParams(ckLp);
 
         TextView checkBox = new TextView(activity);
@@ -4535,48 +4026,15 @@ public class AsycudaMaterialUi {
 
         TextView checkLabel = new TextView(activity);
         checkLabel.setText(tr(activity,
-                "1. I confirm my name and company details above are accurate, and I agree to the Terms & Conditions and Complete Limitation of Liability on behalf of myself and my organization.",
-                "1. أقر بصحة اسمي وبيانات الشركة أعلاه، وأوافق على الشروط والأحكام وإخلاء المسؤولية الكاملة بالأصالة عن نفسي وبالنيابة عن الجهة التي أمثلها.",
-                "١. ڕاستی ناو و زانیاری کۆمپانیاکەم لە سەرەوە پشتڕاست دەکەمەوە، و ڕازیم بە مەرج و ڕێساکان و بەرپرسیارێتی یاسایی بە ناوی خۆم و لایەنەکەمەوە."));
+                "I have read and agree to the Terms & Conditions and the Contractual Liability Waiver pursuant to Iraqi Civil Code No. 40 of 1951 (Article 259/2) and Iraqi Electronic Transactions Law No. 78 of 2012 (Article 18/1).",
+                "لقد قرأت الشروط والأحكام أعلاه وأوافق موافقة إلكترونية ملزمة على شرط الإعفاء الكامل من المسؤولية وفقاً للمادة (259/2) من القانون المدني العراقي رقم 40 لسنة 1951 والمادة (18/أولاً) من قانون التوقيع الإلكتروني والمعاملات الإلكترونية رقم 78 لسنة 2012.",
+                "مەرج و ڕێساکانی سەرەوەم خوێندووەتەوە و بە شێوەیەکی ئەلیکترۆنی پابەندکەر ڕازیم بە مەرجی بەخشین لە بەرپرسیارێتی یاسایی بەپێی ماددەی (٢٥٩/٢) لە یاسای شارستانی عێراقی ژمارە ٤٠ی ١٩٥١ و ماددەی (١٨/یەکەم) لە یاسای مامەڵە ئەلیکترۆنییەکان ژمارە ٧٨ی ٢٠١٢."));
         checkLabel.setTextColor(TEXT_PRIMARY);
-        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
+        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.4f);
         checkLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         checkLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         checkCard.addView(checkLabel);
         scrollContent.addView(checkCard);
-
-        LinearLayout privacyCard = new LinearLayout(activity);
-        privacyCard.setOrientation(LinearLayout.HORIZONTAL);
-        privacyCard.setGravity(Gravity.CENTER_VERTICAL);
-        privacyCard.setPadding(dp(activity, 12), dp(activity, 8), dp(activity, 12), dp(activity, 8));
-        privacyCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
-        LinearLayout.LayoutParams pkLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pkLp.topMargin = dp(activity, 6);
-        privacyCard.setLayoutParams(pkLp);
-
-        TextView privacyBox = new TextView(activity);
-        privacyBox.setGravity(Gravity.CENTER);
-        privacyBox.setText("");
-        privacyBox.setTextColor(Color.WHITE);
-        privacyBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        privacyBox.setTypeface(Typeface.create("sans-serif-bold", Typeface.BOLD));
-        privacyBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
-        LinearLayout.LayoutParams pBoxLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        pBoxLp.setMarginEnd(dp(activity, 12));
-        privacyCard.addView(privacyBox, pBoxLp);
-
-        TextView privacyLabel = new TextView(activity);
-        privacyLabel.setText(tr(activity,
-                "2. I have reviewed the Privacy Policy and the Sentry Receipt Preview above, and I explicitly agree to register my signed legal consent receipt (ONLY those 8 fields) with the developer's Sentry compliance log.",
-                "2. لقد اطلعت على سياسة الخصوصية ومعاينة الإيصال أعلاه، وأوافق صراحةً على تسجيل وإرسال إيصال الموافقة القانونية الموقّع (الحقول الثمانية المعروضة فقط) إلى سجل التوثيق القانوني (Sentry).",
-                "٢. سیاسەتی تایبەتمەندی و پێشبینینی پسوولەکەم لە سەرەوە بینیوە، و بە ڕوونی ڕازیم بە تۆمارکردن و ناردنی پسوولەی ڕەزامەندی یاسایی (تەنها ئەو ٨ خانەیە) بۆ تۆماری یاسایی (Sentry)."));
-        privacyLabel.setTextColor(TEXT_PRIMARY);
-        privacyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
-        privacyLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
-        privacyLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        privacyCard.addView(privacyLabel);
-        scrollContent.addView(privacyCard);
 
         scroll.addView(scrollContent);
         root.addView(scroll);
@@ -4608,62 +4066,34 @@ public class AsycudaMaterialUi {
         btnRow.addView(acceptBtn);
         root.addView(btnRow);
 
-        Runnable syncAcceptAlpha = () -> acceptBtn.setAlpha((isChecked[0] && isPrivacyChecked[0]) ? 1.0f : 0.42f);
-
         checkCard.setOnClickListener(v -> {
             isChecked[0] = !isChecked[0];
             if (isChecked[0]) {
                 checkBox.setText("✓");
                 checkBox.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 6, SYSTEM_GREEN));
                 checkCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 12, Color.parseColor("#6630D158")));
+                acceptBtn.setAlpha(1.0f);
             } else {
                 checkBox.setText("");
                 checkBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
                 checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+                acceptBtn.setAlpha(0.42f);
             }
-            syncAcceptAlpha.run();
-        });
-
-        privacyCard.setOnClickListener(v -> {
-            isPrivacyChecked[0] = !isPrivacyChecked[0];
-            if (isPrivacyChecked[0]) {
-                privacyBox.setText("✓");
-                privacyBox.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 6, SYSTEM_GREEN));
-                privacyCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 12, Color.parseColor("#6630D158")));
-            } else {
-                privacyBox.setText("");
-                privacyBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
-                privacyCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
-            }
-            syncAcceptAlpha.run();
         });
 
         acceptBtn.setOnClickListener(v -> {
-            String enteredName = nameInput.getText() != null ? nameInput.getText().toString() : "";
-            String enteredCompany = compInput.getText() != null ? compInput.getText().toString() : "";
-
-            String validationError = auditConsentIdentity(activity, enteredName, enteredCompany);
-            if (validationError != null) {
-                errorBanner.setText("⚠ " + validationError);
-                errorBanner.setVisibility(View.VISIBLE);
-                scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
-                Toast.makeText(activity, validationError, Toast.LENGTH_LONG).show();
-                return;
-            }
-            errorBanner.setVisibility(View.GONE);
-
-            if (!isChecked[0] || !isPrivacyChecked[0]) {
+            if (!isChecked[0]) {
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
                 Toast.makeText(activity, tr(activity,
-                        "Please tick both mandatory agreement checkboxes (1 & 2) to continue.",
-                        "يرجى تحديد مربعي الموافقة الإلزاميين (1 و 2) للمتابعة.",
-                        "تکایە هەردوو نیشانەی ڕەزامەندی (١ و ٢) دابگرە بۆ بەردەوامبوون."), Toast.LENGTH_SHORT).show();
+                        "Please tick the agreement checkbox to continue.",
+                        "يرجى تحديد مربع الموافقة على الشروط وإخلاء المسؤولية للمتابعة.",
+                        "تکایە نیشانەی ڕەزامەندی دابگرە بۆ بەردەوامبوون."), Toast.LENGTH_SHORT).show();
                 return;
             }
-            JSONObject receipt = recordTermsAccepted(activity, enteredName, enteredCompany);
+            recordTermsAccepted(activity);
             dialog.dismiss();
             if (onAccepted != null) {
-                onAccepted.onAccepted(receipt);
+                onAccepted.onAccepted();
             }
         });
 

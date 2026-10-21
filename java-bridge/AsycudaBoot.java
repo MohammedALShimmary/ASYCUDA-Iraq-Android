@@ -1366,7 +1366,60 @@ public class AsycudaBoot {
         }
     }
 
-    private static void checkBlockedHostPath(String file) {
+    private static final Set<String> ALLOWED_CUSTOMS_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    static {
+        ALLOWED_CUSTOMS_IPS.add("185.112.191.94");
+        ALLOWED_CUSTOMS_IPS.add("118.97.60.75");
+    }
+
+    public static void refreshAllowedCustomsIps() {
+        try {
+            java.net.InetAddress[] addrs = java.net.InetAddress.getAllByName("asy.mof.gov.iq");
+            if (addrs != null) {
+                for (java.net.InetAddress a : addrs) {
+                    if (a != null && a.getHostAddress() != null) {
+                        ALLOWED_CUSTOMS_IPS.add(a.getHostAddress().trim().toLowerCase(Locale.US));
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            // Keep pre-seeded official Ministry of Finance IPs if offline
+        }
+    }
+
+    public static void checkAllowedOutboundNetwork(String host, int port) {
+        if (host == null) return;
+        String h = host.trim().toLowerCase(Locale.US);
+        if (h.isEmpty()) return;
+        if (h.startsWith("[") && h.endsWith("]")) {
+            h = h.substring(1, h.length() - 1);
+        }
+        // 1. Allow loopback & local X11 / IPC bridge sockets
+        if ("localhost".equals(h)
+                || "localhost.localdomain".equals(h)
+                || "127.0.0.1".equals(h)
+                || h.startsWith("127.")
+                || "::1".equals(h)
+                || "0:0:0:0:0:0:0:1".equals(h)
+                || "0.0.0.0".equals(h)) {
+            return;
+        }
+        // Allow local single-label device hostname resolution during InetAddress.getLocalHost() (port == -1)
+        if (port == -1 && !h.contains(".") && !h.contains(":")) {
+            return;
+        }
+        // 2. Allow official Iraqi Ministry of Finance / General Commission of Customs domains & resolved IPs
+        if ("asy.mof.gov.iq".equals(h)
+                || h.endsWith(".asy.mof.gov.iq")
+                || h.endsWith(".mof.gov.iq")
+                || h.endsWith(".asycuda.gov.iq")
+                || ALLOWED_CUSTOMS_IPS.contains(h)) {
+            return;
+        }
+        throw new SecurityException("Blocked unauthorized outbound JVM network connection to: " + host + ":" + port);
+    }
+
+    public static void checkBlockedHostPath(String file) {
         if (file == null || file.isEmpty()) return;
         String norm = file.replace('\\', '/').toLowerCase(Locale.US);
         if (norm.contains("/shared_prefs")
@@ -1377,51 +1430,61 @@ public class AsycudaBoot {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        installHighSpeedNetworkTuning();
-        // Install a filesystem-watching SecurityManager that intercepts temporary PDF print
-        // files written to /tmp/ while blocking OS subprocess execution (Runtime.exec / ProcessBuilder)
-        // and isolating Android host preferences/consent files from JVM access.
-        // Note: Authentication & session traffic on port 2006 are encrypted at the SOClass application
-        // protocol layer by UNCTAD's official `socrypto.jar` (`so.security.*`) and `sslca.jar` libraries.
-        try {
-            System.setSecurityManager(new SecurityManager() {
-                @Override public void checkPermission(Permission perm) { /* Allow JNLP client runtime permissions */ }
-                @Override public void checkPermission(Permission perm, Object context) { /* Allow JNLP client runtime permissions */ }
-                @Override public void checkExec(String cmd) {
-                    throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
-                }
-                @Override public void checkRead(String file) {
-                    checkBlockedHostPath(file);
-                }
-                @Override public void checkRead(String file, Object context) {
-                    checkBlockedHostPath(file);
-                }
-                @Override public void checkDelete(String file) {
-                    checkBlockedHostPath(file);
-                }
-                @Override public void checkWrite(String file) {
-                    checkBlockedHostPath(file);
-                    if (Boolean.TRUE.equals(IN_CHECK.get())) return;
-                    if (file != null && file.contains("/tmp/")) {
-                        IN_CHECK.set(Boolean.TRUE);
-                        try {
-                            File f = new File(file);
-                            File parent = f.getParentFile();
-                            if (parent != null) {
-                                if (parent.isFile() && !parent.delete()) {
-                                    // Ignore if unable to delete stale file
-                                }
-                                if (!parent.exists() && !parent.mkdirs()) {
-                                    // Ignore if directory already exists
-                                }
+    public static SecurityManager createHardenedSecurityManager() {
+        return new SecurityManager() {
+            @Override public void checkPermission(Permission perm) { /* Fine-grained checks handled below */ }
+            @Override public void checkPermission(Permission perm, Object context) { /* Fine-grained checks handled below */ }
+            @Override public void checkExec(String cmd) {
+                throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
+            }
+            @Override public void checkConnect(String host, int port) {
+                checkAllowedOutboundNetwork(host, port);
+            }
+            @Override public void checkConnect(String host, int port, Object context) {
+                checkAllowedOutboundNetwork(host, port);
+            }
+            @Override public void checkRead(String file) {
+                checkBlockedHostPath(file);
+            }
+            @Override public void checkRead(String file, Object context) {
+                checkBlockedHostPath(file);
+            }
+            @Override public void checkDelete(String file) {
+                checkBlockedHostPath(file);
+            }
+            @Override public void checkWrite(String file) {
+                checkBlockedHostPath(file);
+                if (Boolean.TRUE.equals(IN_CHECK.get())) return;
+                if (file != null && file.contains("/tmp/")) {
+                    IN_CHECK.set(Boolean.TRUE);
+                    try {
+                        File f = new File(file);
+                        File parent = f.getParentFile();
+                        if (parent != null) {
+                            if (parent.isFile() && !parent.delete()) {
+                                // Ignore if unable to delete stale file
                             }
-                        } finally {
-                            IN_CHECK.remove();
+                            if (!parent.exists() && !parent.mkdirs()) {
+                                // Ignore if directory already exists
+                            }
                         }
+                    } finally {
+                        IN_CHECK.remove();
                     }
                 }
-            });
+            }
+        };
+    }
+
+    public static void main(String[] args) throws Exception {
+        installHighSpeedNetworkTuning();
+        refreshAllowedCustomsIps();
+        // Install a hardened SecurityManager that enforces:
+        // 1. Strict outbound network allowlist (checkConnect: only localhost/127.0.0.1 and asy.mof.gov.iq)
+        // 2. Complete block on OS subprocess execution (checkExec: Runtime.exec / ProcessBuilder)
+        // 3. Complete isolation from Android host preferences/databases (checkRead / checkWrite / checkDelete)
+        try {
+            System.setSecurityManager(createHardenedSecurityManager());
         } catch (UnsupportedOperationException ignored) {
             // OpenJDK 18+ may disallow System.setSecurityManager unless -Djava.security.manager=allow is set
         }

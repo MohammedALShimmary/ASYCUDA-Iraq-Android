@@ -30,7 +30,7 @@ jobs:
       - name: Run Automated Adversarial Security Verification Suite
         run: |
           mkdir -p /tmp/sec-tests
-          javac -d /tmp/sec-tests scripts/SecurityVerificationTest.java
+          javac -d /tmp/sec-tests java-bridge/AsycudaBoot.java scripts/SecurityVerificationTest.java
           java -cp /tmp/sec-tests SecurityVerificationTest
 
       - name: Install Snyk CLI

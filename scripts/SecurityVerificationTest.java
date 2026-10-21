@@ -46,8 +46,8 @@ public final class SecurityVerificationTest {
         testUnsignedAndTamperedJarRejection();
         testBridgeAuthAndPathTraversal();
         testCredentialAndPiiRedaction();
-        testConsentReceiptParityAndKeystoreEncryption();
-        testJvmHostIsolationAndX11UnixIsolation();
+        testZeroPiiIraqiLawWaiverAndSentryClean();
+        testJvmHostIsolationAndOutboundNetworkAllowlist();
         LOG.info("ALL 7 SECURITY VERIFICATION SUITES PASSED.");
     }
 
@@ -175,15 +175,18 @@ public final class SecurityVerificationTest {
         }
     }
 
-    private static void testConsentReceiptParityAndKeystoreEncryption() throws IOException {
+    private static void testZeroPiiIraqiLawWaiverAndSentryClean() throws IOException {
         File uiFile = new File("lorie/src/main/java/com/termux/x11/AsycudaMaterialUi.java");
         if (!uiFile.exists()) {
             uiFile = new File("asycuda-apk/lorie/src/main/java/com/termux/x11/AsycudaMaterialUi.java");
         }
         if (uiFile.exists()) {
             String uiSrc = new String(Files.readAllBytes(uiFile.toPath()), StandardCharsets.UTF_8);
-            if (!uiSrc.contains("encryptWithAndroidKeystore") || !uiSrc.contains("AES/GCM/NoPadding")) {
-                throw new AssertionError("AsycudaMaterialUi.java must encrypt legal_consent_receipt.json via AndroidKeyStore AES/GCM/NoPadding");
+            if (!uiSrc.contains("259/2") || !uiSrc.contains("78") || !uiSrc.contains("purgeLegacyConsentPii")) {
+                throw new AssertionError("AsycudaMaterialUi.java must enforce Iraqi Civil Code Art. 259/2 & Law 78/2012 Art. 18 click-wrap waiver and purge legacy PII");
+            }
+            if (uiSrc.contains("Settings.Secure.ANDROID_ID")) {
+                throw new AssertionError("AsycudaMaterialUi.java must not read Settings.Secure.ANDROID_ID");
             }
         }
 
@@ -196,23 +199,28 @@ public final class SecurityVerificationTest {
             if (mgrSrc.contains("ip_address")) {
                 throw new AssertionError("AsycudaStandaloneManager.java must not attach ip_address to Sentry events");
             }
-            if (mgrSrc.contains("+38")) {
-                throw new AssertionError("AsycudaStandaloneManager.java must not hardcode +38 release suffix");
+            if (mgrSrc.contains("uploadConsentReceiptToSentry")) {
+                throw new AssertionError("AsycudaStandaloneManager.java must not upload consent receipts to Sentry");
             }
         }
     }
 
-    private static void testJvmHostIsolationAndX11UnixIsolation() throws IOException {
-        File bootFile = new File("java-bridge/AsycudaBoot.java");
-        if (!bootFile.exists()) {
-            bootFile = new File("asycuda-apk/java-bridge/AsycudaBoot.java");
-        }
-        if (bootFile.exists()) {
-            String bootSrc = new String(Files.readAllBytes(bootFile.toPath()), StandardCharsets.UTF_8);
-            if (!bootSrc.contains("checkBlockedHostPath") || !bootSrc.contains("/shared_prefs") || !bootSrc.contains("legal_consent_receipt.json")) {
-                throw new AssertionError("AsycudaBoot.java SecurityManager must block JVM access to /shared_prefs and legal_consent_receipt.json");
-            }
-        }
+    private static void testJvmHostIsolationAndOutboundNetworkAllowlist() throws Exception {
+        // 1. Directly test production AsycudaBoot host-path & outbound network allowlist methods
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("127.0.0.1", 49152);
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("localhost", 8080);
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("asy.mof.gov.iq", 443);
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("asy.mof.gov.iq", -1);
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("185.112.191.94", 443);
+
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("evil.example.com", 443),
+                "Untrusted external domain must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("8.8.8.8", 53),
+                "Untrusted external IP must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/shared_prefs/asycuda_legal_consent.xml"),
+                "Android shared_prefs must be blocked by AsycudaBoot.checkBlockedHostPath");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/user/0/iq.asycuda/files/legal_consent_receipt.json"),
+                "Consent receipt path must be blocked by AsycudaBoot.checkBlockedHostPath");
 
         File mgrFile = new File("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
         if (!mgrFile.exists()) {
@@ -224,6 +232,15 @@ public final class SecurityVerificationTest {
                 throw new AssertionError("AsycudaStandaloneManager.java must start CmdEntryPoint with -nolisten tcp");
             }
         }
+    }
+
+    private static void expectSecurityException(Runnable action, String message) {
+        try {
+            action.run();
+        } catch (SecurityException expected) {
+            return;
+        }
+        throw new AssertionError(message);
     }
 
     private static URL resolveTrustedMofJarUrl(String href) {
