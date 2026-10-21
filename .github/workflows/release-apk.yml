@@ -89,14 +89,26 @@ jobs:
           echo "TAR_SHA256=${TAR_SHA256}"
           echo "RUN_SHA256=${RUN_SHA256}"
 
+          export TAG APK_SHA256 TAR_SHA256 RUN_SHA256
           # Sync exact CI-built SHA-256 digests into README.md and SECURITY.md on main
-          python3 - << PYEOF
-          import re
+          python3 - << 'PYEOF'
+          import os, re
+          tag = os.environ["TAG"]
+          apk_sha = os.environ["APK_SHA256"]
+          tar_sha = os.environ["TAR_SHA256"]
           for path in ["README.md", "SECURITY.md"]:
               with open(path, "r") as f:
                   txt = f.read()
-              txt = re.sub(r'(\[\*\*`ASYCUDA_Iraq_' + "${TAG}" + r'\.apk`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64}|TBD_ON_RELEASE_BUILD)(`)', r'\g<1>' + "${APK_SHA256}" + r'\3', txt)
-              txt = re.sub(r'(\[\*\*`asycuda-iraq\.tar\.xz`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64})(`)', r'\g<1>' + "${TAR_SHA256}" + r'\3', txt)
+              txt = re.sub(
+                  r'(\[\*\*`ASYCUDA_Iraq_' + re.escape(tag) + r'\.apk`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64}|TBD_ON_RELEASE_BUILD)(`)',
+                  lambda m: m.group(1) + apk_sha + m.group(3),
+                  txt
+              )
+              txt = re.sub(
+                  r'(\[\*\*`asycuda-iraq\.tar\.xz`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64})(`)',
+                  lambda m: m.group(1) + tar_sha + m.group(3),
+                  txt
+              )
               with open(path, "w") as f:
                   f.write(txt)
           PYEOF
