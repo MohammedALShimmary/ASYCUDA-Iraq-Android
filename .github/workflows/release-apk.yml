@@ -1,0 +1,160 @@
+name: Build & Publish Signed Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to build and publish (e.g. v4.0.5)'
+        required: true
+        default: 'v4.0.5'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build, Sign & Publish Release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run 7-Suite Adversarial Security Verification
+        run: |
+          mkdir -p /tmp/sec-tests
+          javac -d /tmp/sec-tests java-bridge/AsycudaBoot.java scripts/SecurityVerificationTest.java
+          java -cp /tmp/sec-tests SecurityVerificationTest
+
+      - name: Prepare Runtime & Recompile Open-Source Java Bridge JARs
+        run: |
+          mkdir -p lorie-app/src/main/assets /tmp/asycuda-repack
+          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.0/runtime-arm64.tar.xz" \
+            -o lorie-app/src/main/assets/runtime-arm64.tar.xz
+          echo "f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1  lorie-app/src/main/assets/runtime-arm64.tar.xz" | sha256sum -c -
+
+          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.0/asycuda-iraq.tar.xz" \
+            -o /tmp/base-asycuda-iraq.tar.xz
+          tar -xJf /tmp/base-asycuda-iraq.tar.xz -C /tmp/asycuda-repack
+
+          bash java-bridge/build-bridge.sh
+          cp java-bridge/build/00_boot.jar /tmp/asycuda-repack/jars/00_boot.jar
+          cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/jars/00_bootpatch.jar
+          cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/00_bootpatch.jar
+          cp java-bridge/build/00_jnlp.jar /tmp/asycuda-repack/jars/00_jnlp.jar
+          tar -cJf lorie-app/src/main/assets/asycuda-iraq.tar.xz -C /tmp/asycuda-repack .
+
+      - name: Decode Release Keystore & Build Signed Release APK
+        env:
+          ASYCUDA_KEYSTORE_B64: ${{ secrets.ASYCUDA_KEYSTORE_B64 }}
+          ASYCUDA_KEYSTORE_PASS: ${{ secrets.ASYCUDA_KEYSTORE_PASS }}
+          ASYCUDA_KEY_PASS: ${{ secrets.ASYCUDA_KEY_PASS }}
+        run: |
+          echo "$ASYCUDA_KEYSTORE_B64" | base64 -d > lorie-app/asycuda_release.jks
+          sed -i '/org.gradle.java.home/d' gradle.properties
+          chmod +x gradlew
+          ./gradlew :lorie-app:assembleRelease --no-daemon
+          rm -f lorie-app/asycuda_release.jks
+          git checkout -- gradle.properties
+
+      - name: Verify APK Signature & Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
+        run: |
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          if [[ "$TAG" != v* ]]; then
+            TAG="v4.0.5"
+          fi
+          APK_NAME="ASYCUDA_Iraq_${TAG}.apk"
+          cp lorie-app/build/outputs/apk/release/lorie-app-release.apk "/tmp/${APK_NAME}"
+
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --print-certs "/tmp/${APK_NAME}"
+
+          APK_SHA256=$(sha256sum "/tmp/${APK_NAME}" | awk '{print $1}')
+          TAR_SHA256=$(sha256sum lorie-app/src/main/assets/asycuda-iraq.tar.xz | awk '{print $1}')
+          RUN_SHA256=$(sha256sum lorie-app/src/main/assets/runtime-arm64.tar.xz | awk '{print $1}')
+          echo "APK_SHA256=${APK_SHA256}"
+          echo "TAR_SHA256=${TAR_SHA256}"
+          echo "RUN_SHA256=${RUN_SHA256}"
+
+          # Sync exact CI-built SHA-256 digests into README.md and SECURITY.md on main
+          python3 - << PYEOF
+          import re
+          for path in ["README.md", "SECURITY.md"]:
+              with open(path, "r") as f:
+                  txt = f.read()
+              txt = re.sub(r'(\[\*\*`ASYCUDA_Iraq_' + "${TAG}" + r'\.apk`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64}|TBD_ON_RELEASE_BUILD)(`)', r'\g<1>' + "${APK_SHA256}" + r'\3', txt)
+              txt = re.sub(r'(\[\*\*`asycuda-iraq\.tar\.xz`\*\*\]\([^\)]+\)\s*\|\s*(?:[^\|]+\|\s*)?`)([0-9a-f]{64})(`)', r'\g<1>' + "${TAR_SHA256}" + r'\3', txt)
+              with open(path, "w") as f:
+                  f.write(txt)
+          PYEOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet README.md SECURITY.md; then
+            git add README.md SECURITY.md
+            git commit -m "Docs: Sync CI-built SHA-256 checksums for ${TAG} [skip ci]"
+            git push origin HEAD:main
+          fi
+
+          # Publish or update the GitHub Release and upload all 4 assets
+          cat << EOF > /tmp/release_notes.md
+          ## ASYCUDA World — Republic of Iraq (\`${TAG}\` • \`versionCode 42\`)
+
+          ### Highlights & Multi-AI Security Audit Enhancements (\`${TAG}\`)
+          1. **Zero-PII Iraqi Law Click-Wrap Liability Waiver (\`Iraqi Civil Code Art. 259/2\` & \`Law No. 78 of 2012 Art. 18/1\`)**:
+             - Enforces a binding first-launch electronic Click-Wrap Terms & Conditions and Contractual Liability Waiver governed by **Article 259(2) of the Iraqi Civil Code No. 40 of 1951** (\`المادة 259/2 من القانون المدني العراقي رقم 40 لسنة 1951\`) and **Article 18(1) of the Iraqi Electronic Signature and Electronic Transactions Law No. 78 of 2012** (\`قانون التوقيع الإلكتروني والمعاملات الإلكترونية رقم 78 لسنة 2012\`).
+             - Collects **zero personal names, zero company names, and zero hardware device IDs (\`ANDROID_ID\`)**, and transmits **zero consent receipts** to any external server (\`accepted = true\` is stored strictly as a local boolean flag on the device; legacy PII fields are automatically purged on startup).
+          2. **Enforced JVM Outbound Network Allowlist (\`SecurityManager.checkConnect\`) & Virtualized MOF RMI Support**:
+             - \`AsycudaBoot.createHardenedSecurityManager()\` and \`checkAllowedOutboundNetwork()\` enforce a strict outbound socket allowlist inside the embedded OpenJDK 8 runtime, permitting connections **exclusively** to \`localhost\`/\`127.0.0.1\` (for the local Android IPC bridge) and \`asy.mof.gov.iq\` (including its internal \`ClientTransportLayer\` virtualized RMI endpoint \`10.25.25.10\`) and throwing \`SecurityException\` for any other host or IP.
+          3. **7-Suite Direct CI Adversarial Security Verification & Private Bug Report Attachments**:
+             - \`scripts/SecurityVerificationTest.java\` compiles and invokes the production \`asycuda.AsycudaBoot\` class directly in GitHub Actions on every commit across 7 suites.
+             - Voluntary bug report attachments/screenshots are strictly optional (with an explicit UI privacy warning) and remain private inside the developer-authenticated Sentry dashboard (never uploaded to public GitHub Issues).
+          4. **Zero Pre-Bundled Government JARs, Android 14 (\`targetSdkVersion 34\`) & Zero Broad Storage Permissions**:
+             - Zero government JARs are bundled inside the APK; all 131 official ASYCUDA World JARs are downloaded directly from \`https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\` on first launch and verified against UNCTAD/SOClass's pinned X.509 certificate (\`META-INF/SOCODE.RSA\`).
+
+          ---
+
+          ### SHA-256 Checksums (\`sha256sum\`)
+
+          | Release Asset | SHA-256 Digest |
+          | :--- | :--- |
+          | **\`${APK_NAME}\`** | \`${APK_SHA256}\` |
+          | **\`asycuda-iraq.tar.xz\`** | \`${TAR_SHA256}\` |
+          | **\`runtime-arm64.tar.xz\`** | \`${RUN_SHA256}\` |
+
+          ### APK X.509 Signing Certificate (\`apksigner verify --print-certs\`)
+          - **Signer DN**: \`CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ\`
+          - **SHA-256 Digest**: \`d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023\`
+          EOF
+          sed -i 's/^          //' /tmp/release_notes.md
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "ASYCUDA World — Republic of Iraq ${TAG}" --notes-file /tmp/release_notes.md
+            gh release upload "$TAG" \
+              "/tmp/${APK_NAME}" \
+              lorie-app/src/main/assets/asycuda-iraq.tar.xz \
+              lorie-app/src/main/assets/runtime-arm64.tar.xz \
+              sbom.cdx.json \
+              --clobber
+          else
+            gh release create "$TAG" \
+              "/tmp/${APK_NAME}" \
+              lorie-app/src/main/assets/asycuda-iraq.tar.xz \
+              lorie-app/src/main/assets/runtime-arm64.tar.xz \
+              sbom.cdx.json \
+              --title "ASYCUDA World — Republic of Iraq ${TAG}" \
+              --notes-file /tmp/release_notes.md
+          fi

@@ -1370,6 +1370,8 @@ public class AsycudaBoot {
     static {
         ALLOWED_CUSTOMS_IPS.add("185.112.191.94");
         ALLOWED_CUSTOMS_IPS.add("118.97.60.75");
+        // Internal virtualized RMI endpoint IP returned by asy.mof.gov.iq:2006 (ClientTransportLayer)
+        ALLOWED_CUSTOMS_IPS.add("10.25.25.10");
     }
 
     public static void refreshAllowedCustomsIps() {
@@ -1384,6 +1386,45 @@ public class AsycudaBoot {
             }
         } catch (Throwable ignored) {
             // Keep pre-seeded official Ministry of Finance IPs if offline
+        }
+    }
+
+    private static boolean isRegisteredMofVirtualEndpoint(String hostIp) {
+        if (Boolean.TRUE.equals(IN_CHECK.get())) return false;
+        IN_CHECK.set(Boolean.TRUE);
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) cl = ClassLoader.getSystemClassLoader();
+            Class<?> ctlClass = Class.forName("so.rmi.transport.client.ClientTransportLayer", false, cl);
+            java.lang.reflect.Field hooksField = ctlClass.getDeclaredField("hooks");
+            hooksField.setAccessible(true);
+            java.lang.reflect.Field remoteHostField = ctlClass.getDeclaredField("remoteHost");
+            remoteHostField.setAccessible(true);
+            java.lang.reflect.Field transportsField = ctlClass.getDeclaredField("transports");
+            transportsField.setAccessible(true);
+            Object hooksObj = hooksField.get(null);
+            if (hooksObj instanceof java.util.Collection) {
+                for (Object ctl : (java.util.Collection<?>) hooksObj) {
+                    if (ctl == null) continue;
+                    Object rhObj = remoteHostField.get(ctl);
+                    String rh = rhObj != null ? rhObj.toString().trim().toLowerCase(Locale.US) : "";
+                    if ("asy.mof.gov.iq".equals(rh) || rh.endsWith(".mof.gov.iq") || ALLOWED_CUSTOMS_IPS.contains(rh)) {
+                        Object trMap = transportsField.get(ctl);
+                        if (trMap instanceof java.util.Map) {
+                            for (Object k : ((java.util.Map<?, ?>) trMap).keySet()) {
+                                if (k != null) {
+                                    ALLOWED_CUSTOMS_IPS.add(k.toString().trim().toLowerCase(Locale.US));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return ALLOWED_CUSTOMS_IPS.contains(hostIp);
+        } catch (Throwable ignored) {
+            return false;
+        } finally {
+            IN_CHECK.remove();
         }
     }
 
@@ -1408,12 +1449,13 @@ public class AsycudaBoot {
         if (port == -1 && !h.contains(".") && !h.contains(":")) {
             return;
         }
-        // 2. Allow official Iraqi Ministry of Finance / General Commission of Customs domains & resolved IPs
+        // 2. Allow official Iraqi Ministry of Finance / General Commission of Customs domains & resolved/virtual IPs
         if ("asy.mof.gov.iq".equals(h)
                 || h.endsWith(".asy.mof.gov.iq")
                 || h.endsWith(".mof.gov.iq")
                 || h.endsWith(".asycuda.gov.iq")
-                || ALLOWED_CUSTOMS_IPS.contains(h)) {
+                || ALLOWED_CUSTOMS_IPS.contains(h)
+                || isRegisteredMofVirtualEndpoint(h)) {
             return;
         }
         throw new SecurityException("Blocked unauthorized outbound JVM network connection to: " + host + ":" + port);

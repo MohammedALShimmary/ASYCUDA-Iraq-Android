@@ -212,11 +212,14 @@ public final class SecurityVerificationTest {
         asycuda.AsycudaBoot.checkAllowedOutboundNetwork("asy.mof.gov.iq", 443);
         asycuda.AsycudaBoot.checkAllowedOutboundNetwork("asy.mof.gov.iq", -1);
         asycuda.AsycudaBoot.checkAllowedOutboundNetwork("185.112.191.94", 443);
+        asycuda.AsycudaBoot.checkAllowedOutboundNetwork("10.25.25.10", 2006);
 
         expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("evil.example.com", 443),
                 "Untrusted external domain must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("8.8.8.8", 53),
                 "Untrusted external IP must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("10.0.0.1", 2006),
+                "Untrusted private IP must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/shared_prefs/asycuda_legal_consent.xml"),
                 "Android shared_prefs must be blocked by AsycudaBoot.checkBlockedHostPath");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/user/0/iq.asycuda/files/legal_consent_receipt.json"),

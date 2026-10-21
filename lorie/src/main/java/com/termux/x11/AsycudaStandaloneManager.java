@@ -801,7 +801,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_5");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_5_r2");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -849,6 +849,7 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_4"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_5"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_0_0"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_0_5"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
             }
