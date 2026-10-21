@@ -16,9 +16,9 @@ android {
     defaultConfig {
         applicationId "iq.asycuda"
         minSdkVersion 24
-        targetSdkVersion 28
-        versionCode 40
-        versionName "3.9.5"
+        targetSdkVersion 34
+        versionCode 41
+        versionName "4.0.0"
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -40,6 +40,7 @@ android {
     compileOptions.sourceCompatibility JavaVersion.VERSION_1_9
     compileOptions.targetCompatibility JavaVersion.VERSION_1_9
     packagingOptions.jniLibs.useLegacyPackaging true
+    packagingOptions.jniLibs.keepDebugSymbols += ['**/libld_linux_aarch64.so']
 
     androidResources {
         noCompress 'xz'

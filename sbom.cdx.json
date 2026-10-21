@@ -4,13 +4,13 @@
   "serialNumber": "urn:uuid:3900a5ca-9e42-49d0-9b41-a5ca20261020",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-21T00:15:00Z",
+    "timestamp": "2026-10-21T04:40:00Z",
     "component": {
       "type": "application",
       "name": "ASYCUDA-Iraq-Android",
       "group": "iq.asycuda",
-      "version": "3.9.5",
-      "description": "Standalone Android X11 & OpenJDK 8 Runtime Client for Iraqi Customs ASYCUDA World (asy.mof.gov.iq)",
+      "version": "4.0.0",
+      "description": "Standalone Android 14 (SDK 34) X11 & Eclipse Temurin OpenJDK 8u504-b01 LTS Runtime Client for Iraqi Customs ASYCUDA World (asy.mof.gov.iq)",
       "licenses": [
         {
           "license": {
@@ -18,7 +18,7 @@
           }
         }
       ],
-      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v3.9.5"
+      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v4.0.0"
     }
   },
   "components": [
@@ -65,18 +65,11 @@
       "purl": "pkg:maven/org.tukaani/xz@1.9"
     },
     {
-      "type": "library",
-      "name": "HiddenApiBypass",
-      "group": "org.lsposed.hiddenapibypass",
-      "version": "4.3",
-      "purl": "pkg:maven/org.lsposed.hiddenapibypass/hiddenapibypass@4.3"
-    },
-    {
       "type": "framework",
-      "name": "openjdk-jre-arm64",
-      "group": "org.openjdk",
-      "version": "1.8.0_402",
-      "description": "Embedded ARM64 Linux OpenJDK 8 Runtime Environment (runtime-arm64.tar.xz) for executing legacy JNLP/Swing ASYCUDA World client JARs locally on Android"
+      "name": "eclipse-temurin-openjdk-jre-arm64",
+      "group": "net.adoptium",
+      "version": "1.8.0_504-b01",
+      "description": "Embedded ARM64 Linux Eclipse Temurin OpenJDK 8u504-b01 LTS Runtime Environment (runtime-arm64.tar.xz) for executing JNLP/Swing ASYCUDA World client JARs locally on Android"
     },
     {
       "type": "library",
@@ -89,7 +82,7 @@
       "type": "library",
       "name": "asycuda-java-bridge",
       "group": "iq.asycuda",
-      "version": "3.9.5",
+      "version": "4.0.0",
       "description": "Open-source Android-to-Java8 bridge (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) compiled from java-bridge/build-bridge.sh"
     },
     {
@@ -97,7 +90,7 @@
       "name": "asycuda-world-iraq-client-jars",
       "group": "iq.gov.mof.asy",
       "version": "4.2.2",
-      "description": "37 unmodified official Iraqi Ministry of Finance / UNCTAD ASYCUDA World client JAR archives signed by META-INF/SOCODE.RSA"
+      "description": "131 unmodified official Iraqi Ministry of Finance / UNCTAD ASYCUDA World client JAR archives downloaded on first launch from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp and verified against META-INF/SOCODE.RSA (zero government JARs pre-bundled in APK)"
     }
   ]
 }

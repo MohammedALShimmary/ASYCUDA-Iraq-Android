@@ -4,6 +4,7 @@
     android:installLocation="internalOnly">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -74,7 +75,12 @@
         <service
             android:name=".AsycudaKeepAliveService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the active customs declaration RMI/TCP session and embedded X11 display engine alive while the user views or shares exported PDF documents." />
+        </service>
 
         <receiver android:name=".LoriePreferences$Receiver" android:exported="false" android:enabled="true">
             <intent-filter>

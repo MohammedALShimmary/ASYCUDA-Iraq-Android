@@ -46,6 +46,7 @@ public class AsycudaBoot {
     private static final Map<String, Long> SEEN_PATHS = new ConcurrentHashMap<String, Long>();
     private static final AtomicBoolean SOCLASS_ALERT_SENT = new AtomicBoolean(false);
     private static volatile Object wrappedRejectHandler = null;
+    private static volatile Object hookedMultiLinguisticElements = null;
     private static volatile JFileChooser activeFileChooser = null;
     private static volatile Dialog activeFileChooserDialog = null;
     private static volatile long lastAutoPickTime = 0L;
@@ -572,6 +573,10 @@ public class AsycudaBoot {
                         notifySoClassUpdateRequired(txt);
                         return;
                     }
+                    if (isBenignAsycudaPopupText(txt)) {
+                        dismissBenignErrorInfoDialog(root);
+                        return;
+                    }
                 }
                 if (c instanceof Container) {
                     checkForSoClassUpdateAlert((Container) c);
@@ -582,12 +587,284 @@ public class AsycudaBoot {
         }
     }
 
+    private static boolean isBenignAsycudaPopupText(String text) {
+        if (text == null || text.isEmpty()) return false;
+        return text.contains("R_Load_SadItmAdm.execute(")
+                || text.contains("R_Load_HisWriteOff.execute(")
+                || text.contains("VisualFacetJTableSDS.updateComponent(");
+    }
+
+    private static void dismissBenignErrorInfoDialog(Container root) {
+        try {
+            Window win = (root instanceof Window) ? (Window) root : SwingUtilities.getWindowAncestor(root);
+            if (win != null && win.getClass().getName().startsWith("so.kernel.core.ErrorPrintStream")) {
+                try {
+                    Class<?> epsClass = Class.forName("so.kernel.core.ErrorPrintStream", false, win.getClass().getClassLoader());
+                    Method finishMethod = epsClass.getDeclaredMethod("finishDialog");
+                    finishMethod.setAccessible(true);
+                    finishMethod.invoke(null);
+                    return;
+                } catch (Throwable ignored) {
+                    // Fallback to direct window disposal
+                }
+            }
+            if (win != null) {
+                win.setVisible(false);
+                win.dispose();
+            }
+        } catch (Throwable ignored) {
+            // Ignore dialog dismissal errors
+        }
+    }
+
     private static boolean isSoClassUpdateText(String text) {
         if (text == null || text.isEmpty()) return false;
         String lower = text.toLowerCase(Locale.US);
         return (lower.contains("soclass") && (lower.contains("update") || lower.contains("shutdown")))
                 || lower.contains("soclass client have to be updated")
                 || lower.contains("client have to be updated");
+    }
+
+    private static boolean isBenignAsycudaThrowable(Throwable t) {
+        if (!(t instanceof NullPointerException)) return false;
+        StackTraceElement[] stack = t.getStackTrace();
+        if (stack == null || stack.length == 0) return false;
+        int limit = Math.min(stack.length, 4);
+        for (int i = 0; i < limit; i++) {
+            String cls = stack[i].getClassName();
+            String mth = stack[i].getMethodName();
+            if (("un.broker.asysad.client.rules.R_Load_SadItmAdm".equals(cls) && "execute".equals(mth))
+                    || ("un.broker.asysad.client.rules.R_Load_HisWriteOff".equals(cls) && "execute".equals(mth))
+                    || ("so.kernel.core.client.facets.VisualFacetJTableSDS".equals(cls) && "updateComponent".equals(mth))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final class BenignNpeFilteringPrintStream extends PrintStream {
+        private final PrintStream delegate;
+        private final ThreadLocal<Boolean> suppressingStack = new ThreadLocal<Boolean>();
+
+        BenignNpeFilteringPrintStream(PrintStream delegate) {
+            super(delegate, true);
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void println(Object x) {
+            if (x instanceof Throwable) {
+                Throwable t = (Throwable) x;
+                if (isBenignAsycudaThrowable(t)) {
+                    suppressingStack.set(Boolean.TRUE);
+                    StackTraceElement top = t.getStackTrace()[0];
+                    System.out.println("[ASYCUDA-Bridge] Suppressed benign UNCTAD client NPE popup at "
+                            + top.getClassName() + "." + top.getMethodName() + ":" + top.getLineNumber());
+                    return;
+                }
+                suppressingStack.remove();
+            } else if (Boolean.TRUE.equals(suppressingStack.get())) {
+                String s = String.valueOf(x);
+                if (s.startsWith("\tat ") || s.startsWith("\t... ") || s.startsWith("Caused by:")) {
+                    return;
+                }
+                suppressingStack.remove();
+            }
+            delegate.println(x);
+        }
+
+        @Override
+        public void println(String x) {
+            if (Boolean.TRUE.equals(suppressingStack.get())) {
+                if (x != null && (x.startsWith("\tat ") || x.startsWith("\t... ") || x.startsWith("Caused by:"))) {
+                    return;
+                }
+                suppressingStack.remove();
+            }
+            delegate.println(x);
+        }
+    }
+
+    private static void installErrorPrintStreamFilterHook() {
+        try {
+            PrintStream currentErr = System.err;
+            if (currentErr != null
+                    && !(currentErr instanceof BenignNpeFilteringPrintStream)
+                    && "so.kernel.core.ErrorPrintStream".equals(currentErr.getClass().getName())) {
+                System.setErr(new BenignNpeFilteringPrintStream(currentErr));
+            }
+        } catch (Throwable ignored) {
+            // Ignore if System.setErr is not yet initialized
+        }
+    }
+
+    private static final class GuardedMultiLinguisticList extends ArrayList<java.lang.ref.WeakReference<Object>> {
+        private final transient ClassLoader cl;
+        private final transient Class<?> visualPageClass;
+        private final transient Class<?> listenerInterface;
+        private final transient Class<?> subDocClass;
+        private final transient Class<?> abstractFacetClass;
+        private final transient Method getDocumentMethod;
+        private final transient Method getConnectedDocsIterMethod;
+        private final transient java.lang.reflect.Field facetsField;
+        private final transient java.lang.reflect.Field procSupportField;
+        private final transient java.lang.reflect.Field guiHasBeenInit1Field;
+        private final transient java.lang.reflect.Field subDocGuiInitField;
+        private final transient Method isGuiInitMethod;
+        private final transient Method dataGUIInitMethod;
+        private final transient Map<Object, Object> strongProxyCache =
+                Collections.synchronizedMap(new WeakHashMap<Object, Object>());
+
+        GuardedMultiLinguisticList(Collection<java.lang.ref.WeakReference<Object>> initial, ClassLoader cl) throws Exception {
+            super(initial);
+            this.cl = cl;
+            this.visualPageClass = Class.forName("so.kernel.client.VisualPage", false, cl);
+            this.listenerInterface = Class.forName("so.i18n.MultiLinguisticListener", false, cl);
+            Class<?> docClass = Class.forName("so.kernel.core.Document", false, cl);
+            Class<?> procSupportClass = Class.forName("so.kernel.core.DocProcSupport", false, cl);
+            this.subDocClass = Class.forName("so.kernel.core.SubDocument", false, cl);
+            this.abstractFacetClass = Class.forName("so.kernel.core.client.facets.AbstractVisualFacet", false, cl);
+
+            this.getDocumentMethod = visualPageClass.getMethod("getDocument");
+            this.getConnectedDocsIterMethod = visualPageClass.getMethod("getConnectedDocumentsIter");
+            this.facetsField = visualPageClass.getDeclaredField("facets");
+            this.facetsField.setAccessible(true);
+
+            this.procSupportField = docClass.getDeclaredField("procSupport");
+            this.procSupportField.setAccessible(true);
+
+            this.guiHasBeenInit1Field = procSupportClass.getDeclaredField("guiHasBeenInit1");
+            this.guiHasBeenInit1Field.setAccessible(true);
+
+            this.subDocGuiInitField = subDocClass.getDeclaredField("guiHasBeenInit");
+            this.subDocGuiInitField.setAccessible(true);
+
+            this.isGuiInitMethod = abstractFacetClass.getDeclaredMethod("isGuiInit");
+            this.isGuiInitMethod.setAccessible(true);
+            this.dataGUIInitMethod = abstractFacetClass.getMethod("dataGUIInit");
+        }
+
+        @Override
+        public java.lang.ref.WeakReference<Object> get(int index) {
+            java.lang.ref.WeakReference<Object> ref = super.get(index);
+            if (ref == null) return null;
+            final Object target = ref.get();
+            if (target == null || !visualPageClass.isInstance(target) || Proxy.isProxyClass(target.getClass())) {
+                return ref;
+            }
+            Object proxy = strongProxyCache.get(target);
+            if (proxy == null) {
+                proxy = Proxy.newProxyInstance(
+                        cl,
+                        new Class<?>[] { listenerInterface },
+                        new InvocationHandler() {
+                            @Override
+                            public Object invoke(Object proxyObj, Method method, Object[] args) throws Throwable {
+                                if (!"languageChanged".equals(method.getName())) {
+                                    return method.invoke(target, args);
+                                }
+                                Object procSupport = null;
+                                boolean origDocGuiInit = false;
+                                List<Object> resetSubDocs = new ArrayList<Object>();
+                                try {
+                                    Object doc = getDocumentMethod.invoke(target);
+                                    if (doc != null) {
+                                        procSupport = procSupportField.get(doc);
+                                        if (procSupport != null && guiHasBeenInit1Field.getBoolean(procSupport)) {
+                                            origDocGuiInit = true;
+                                            guiHasBeenInit1Field.setBoolean(procSupport, false);
+                                        }
+                                    }
+                                    Iterator<?> iter = (Iterator<?>) getConnectedDocsIterMethod.invoke(target);
+                                    if (iter != null) {
+                                        while (iter.hasNext()) {
+                                            Object item = iter.next();
+                                            if (item != null && subDocClass.isInstance(item)
+                                                    && subDocGuiInitField.getBoolean(item)) {
+                                                resetSubDocs.add(item);
+                                                subDocGuiInitField.setBoolean(item, false);
+                                            }
+                                        }
+                                    }
+                                    return method.invoke(target, args);
+                                } catch (java.lang.reflect.InvocationTargetException ite) {
+                                    throw ite.getTargetException();
+                                } finally {
+                                    try {
+                                        if (procSupport != null && origDocGuiInit) {
+                                            guiHasBeenInit1Field.setBoolean(procSupport, true);
+                                        }
+                                        for (Object sd : resetSubDocs) {
+                                            subDocGuiInitField.setBoolean(sd, true);
+                                        }
+                                        if (origDocGuiInit || !resetSubDocs.isEmpty()) {
+                                            Object rawFacets = facetsField.get(target);
+                                            if (rawFacets instanceof List<?>) {
+                                                List<?> facetsCopy = new ArrayList<Object>((List<?>) rawFacets);
+                                                for (Object facet : facetsCopy) {
+                                                    if (facet != null && abstractFacetClass.isInstance(facet)) {
+                                                        try {
+                                                            if (Boolean.FALSE.equals(isGuiInitMethod.invoke(facet))) {
+                                                                dataGUIInitMethod.invoke(facet);
+                                                            }
+                                                        } catch (Throwable ignored) {
+                                                            // Ignore individual facet post-init errors
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (Throwable ignored) {
+                                        // Ignore state restoration errors
+                                    }
+                                }
+                            }
+                        });
+                strongProxyCache.put(target, proxy);
+            }
+            return new java.lang.ref.WeakReference<Object>(proxy);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void installLanguageChangeFacetGuardHook() {
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) cl = ClassLoader.getSystemClassLoader();
+            Class<?> resClass = Class.forName("so.kernel.client.Resources", false, cl);
+            java.lang.reflect.Field mlField = resClass.getDeclaredField("multiLinguisticListeners");
+            mlField.setAccessible(true);
+            Object weakColl = mlField.get(null);
+            if (weakColl == null) return;
+
+            Class<?> wcClass = weakColl.getClass();
+            java.lang.reflect.Field elementsField = wcClass.getDeclaredField("elements");
+            elementsField.setAccessible(true);
+            Object currentElements = elementsField.get(weakColl);
+            if (currentElements == null || currentElements == hookedMultiLinguisticElements
+                    || currentElements instanceof GuardedMultiLinguisticList) {
+                return;
+            }
+
+            java.lang.reflect.Field lockField = wcClass.getDeclaredField("lock");
+            lockField.setAccessible(true);
+            java.util.concurrent.locks.ReentrantReadWriteLock rwLock =
+                    (java.util.concurrent.locks.ReentrantReadWriteLock) lockField.get(weakColl);
+            rwLock.writeLock().lock();
+            try {
+                Collection<java.lang.ref.WeakReference<Object>> orig =
+                        (Collection<java.lang.ref.WeakReference<Object>>) elementsField.get(weakColl);
+                if (!(orig instanceof GuardedMultiLinguisticList)) {
+                    GuardedMultiLinguisticList guarded = new GuardedMultiLinguisticList(orig, cl);
+                    elementsField.set(weakColl, guarded);
+                    hookedMultiLinguisticElements = guarded;
+                }
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+        } catch (Throwable ignored) {
+            // Resources class may not be initialized until desktop startup
+        }
     }
 
     private static void installSoClassRejectHandlerHook() {
@@ -703,6 +980,8 @@ public class AsycudaBoot {
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         installSoClassRejectHandlerHook();
+                        installErrorPrintStreamFilterHook();
+                        installLanguageChangeFacetGuardHook();
                         scanTmpDir(tmpDir, 0);
                         scanDownloadsForSo(dlDir);
                         checkWorkspaceImportSignal(dlDir);
@@ -1087,39 +1366,65 @@ public class AsycudaBoot {
         }
     }
 
+    private static void checkBlockedHostPath(String file) {
+        if (file == null || file.isEmpty()) return;
+        String norm = file.replace('\\', '/').toLowerCase(Locale.US);
+        if (norm.contains("/shared_prefs")
+                || norm.contains("legal_consent_receipt.json")
+                || norm.contains("/databases/")
+                || norm.contains("/datastore/")) {
+            throw new SecurityException("JVM access to Android host storage path is blocked: " + file);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         installHighSpeedNetworkTuning();
         // Install a filesystem-watching SecurityManager that intercepts temporary PDF print
-        // files written to /tmp/ while blocking OS subprocess execution (Runtime.exec / ProcessBuilder).
+        // files written to /tmp/ while blocking OS subprocess execution (Runtime.exec / ProcessBuilder)
+        // and isolating Android host preferences/consent files from JVM access.
         // Note: Authentication & session traffic on port 2006 are encrypted at the SOClass application
         // protocol layer by UNCTAD's official `socrypto.jar` (`so.security.*`) and `sslca.jar` libraries.
-        System.setSecurityManager(new SecurityManager() {
-            @Override public void checkPermission(Permission perm) { /* Allow JNLP client runtime permissions */ }
-            @Override public void checkPermission(Permission perm, Object context) { /* Allow JNLP client runtime permissions */ }
-            @Override public void checkExec(String cmd) {
-                throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
-            }
-            @Override public void checkWrite(String file) {
-                if (Boolean.TRUE.equals(IN_CHECK.get())) return;
-                if (file != null && file.contains("/tmp/")) {
-                    IN_CHECK.set(Boolean.TRUE);
-                    try {
-                        File f = new File(file);
-                        File parent = f.getParentFile();
-                        if (parent != null) {
-                            if (parent.isFile() && !parent.delete()) {
-                                // Ignore if unable to delete stale file
+        try {
+            System.setSecurityManager(new SecurityManager() {
+                @Override public void checkPermission(Permission perm) { /* Allow JNLP client runtime permissions */ }
+                @Override public void checkPermission(Permission perm, Object context) { /* Allow JNLP client runtime permissions */ }
+                @Override public void checkExec(String cmd) {
+                    throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
+                }
+                @Override public void checkRead(String file) {
+                    checkBlockedHostPath(file);
+                }
+                @Override public void checkRead(String file, Object context) {
+                    checkBlockedHostPath(file);
+                }
+                @Override public void checkDelete(String file) {
+                    checkBlockedHostPath(file);
+                }
+                @Override public void checkWrite(String file) {
+                    checkBlockedHostPath(file);
+                    if (Boolean.TRUE.equals(IN_CHECK.get())) return;
+                    if (file != null && file.contains("/tmp/")) {
+                        IN_CHECK.set(Boolean.TRUE);
+                        try {
+                            File f = new File(file);
+                            File parent = f.getParentFile();
+                            if (parent != null) {
+                                if (parent.isFile() && !parent.delete()) {
+                                    // Ignore if unable to delete stale file
+                                }
+                                if (!parent.exists() && !parent.mkdirs()) {
+                                    // Ignore if directory already exists
+                                }
                             }
-                            if (!parent.exists() && !parent.mkdirs()) {
-                                // Ignore if directory already exists
-                            }
+                        } finally {
+                            IN_CHECK.remove();
                         }
-                    } finally {
-                        IN_CHECK.remove();
                     }
                 }
-            }
-        });
+            });
+        } catch (UnsupportedOperationException ignored) {
+            // OpenJDK 18+ may disallow System.setSecurityManager unless -Djava.security.manager=allow is set
+        }
 
         try {
             final PrintService pdfPrinter = new DirectPdfPrintService();

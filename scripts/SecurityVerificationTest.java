@@ -46,7 +46,9 @@ public final class SecurityVerificationTest {
         testUnsignedAndTamperedJarRejection();
         testBridgeAuthAndPathTraversal();
         testCredentialAndPiiRedaction();
-        LOG.info("ALL 5 SECURITY VERIFICATION SUITES PASSED.");
+        testConsentReceiptParityAndKeystoreEncryption();
+        testJvmHostIsolationAndX11UnixIsolation();
+        LOG.info("ALL 7 SECURITY VERIFICATION SUITES PASSED.");
     }
 
     private static void testManifestZeroBroadPermissions() throws IOException {
@@ -134,11 +136,12 @@ public final class SecurityVerificationTest {
         }
     }
 
-    private static void testCredentialAndPiiRedaction() {
+    private static void testCredentialAndPiiRedaction() throws Exception {
         String token = "bridge-secret-token-12345";
         String rawLog = "Connecting to https://customs_user:MySuperSecretPass!@asy.mof.gov.iq/aw/\n"
                 + "<login>iraq_broker_01</login><password>Passw0rd#2026</password>\n"
                 + "TIN=7788990011, jsessionid=ABCDEF0123456789, Authorization: Bearer eyJhbGciOiJIUzI1NiJ9\n"
+                + "{\"password\":\"MySecret123\",\"username\":\"broker01\",\"TIN\":\"1234567890\"}\n"
                 + "BridgeToken=" + token;
         String scrubbed = redactSensitiveLogContent(rawLog, token);
         String[] mustNotContain = new String[] {
@@ -148,11 +151,77 @@ public final class SecurityVerificationTest {
             "7788990011",
             "ABCDEF0123456789",
             "eyJhbGciOiJIUzI1NiJ9",
+            "MySecret123",
+            "broker01",
+            "1234567890",
             token
         };
         for (String secret : mustNotContain) {
             if (scrubbed.contains(secret)) {
                 throw new AssertionError("Sensitive value leaked through redaction filter: " + secret);
+            }
+        }
+
+        // Verify production AsycudaStandaloneManager.java contains the exact same quoted+unquoted regex
+        File prodFile = new File("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        if (!prodFile.exists()) {
+            prodFile = new File("asycuda-apk/lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        }
+        if (prodFile.exists()) {
+            String prodSrc = new String(Files.readAllBytes(prodFile.toPath()), StandardCharsets.UTF_8);
+            if (!prodSrc.contains("[^'\\\\\\\\])*+'")) {
+                throw new AssertionError("Production AsycudaStandaloneManager.java is missing quoted-JSON redaction regex!");
+            }
+        }
+    }
+
+    private static void testConsentReceiptParityAndKeystoreEncryption() throws IOException {
+        File uiFile = new File("lorie/src/main/java/com/termux/x11/AsycudaMaterialUi.java");
+        if (!uiFile.exists()) {
+            uiFile = new File("asycuda-apk/lorie/src/main/java/com/termux/x11/AsycudaMaterialUi.java");
+        }
+        if (uiFile.exists()) {
+            String uiSrc = new String(Files.readAllBytes(uiFile.toPath()), StandardCharsets.UTF_8);
+            if (!uiSrc.contains("encryptWithAndroidKeystore") || !uiSrc.contains("AES/GCM/NoPadding")) {
+                throw new AssertionError("AsycudaMaterialUi.java must encrypt legal_consent_receipt.json via AndroidKeyStore AES/GCM/NoPadding");
+            }
+        }
+
+        File mgrFile = new File("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        if (!mgrFile.exists()) {
+            mgrFile = new File("asycuda-apk/lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        }
+        if (mgrFile.exists()) {
+            String mgrSrc = new String(Files.readAllBytes(mgrFile.toPath()), StandardCharsets.UTF_8);
+            if (mgrSrc.contains("ip_address")) {
+                throw new AssertionError("AsycudaStandaloneManager.java must not attach ip_address to Sentry events");
+            }
+            if (mgrSrc.contains("+38")) {
+                throw new AssertionError("AsycudaStandaloneManager.java must not hardcode +38 release suffix");
+            }
+        }
+    }
+
+    private static void testJvmHostIsolationAndX11UnixIsolation() throws IOException {
+        File bootFile = new File("java-bridge/AsycudaBoot.java");
+        if (!bootFile.exists()) {
+            bootFile = new File("asycuda-apk/java-bridge/AsycudaBoot.java");
+        }
+        if (bootFile.exists()) {
+            String bootSrc = new String(Files.readAllBytes(bootFile.toPath()), StandardCharsets.UTF_8);
+            if (!bootSrc.contains("checkBlockedHostPath") || !bootSrc.contains("/shared_prefs") || !bootSrc.contains("legal_consent_receipt.json")) {
+                throw new AssertionError("AsycudaBoot.java SecurityManager must block JVM access to /shared_prefs and legal_consent_receipt.json");
+            }
+        }
+
+        File mgrFile = new File("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        if (!mgrFile.exists()) {
+            mgrFile = new File("asycuda-apk/lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
+        }
+        if (mgrFile.exists()) {
+            String mgrSrc = new String(Files.readAllBytes(mgrFile.toPath()), StandardCharsets.UTF_8);
+            if (!mgrSrc.contains("\"-nolisten\", \"tcp\"")) {
+                throw new AssertionError("AsycudaStandaloneManager.java must start CmdEntryPoint with -nolisten tcp");
             }
         }
     }
@@ -238,7 +307,7 @@ public final class SecurityVerificationTest {
                 "<$1>[REDACTED]</$1>");
         redacted = redacted.replaceAll("(?i)\\b(bearer|basic)\\s++[^\\s,;\"'&<>\\]}]++", "$1 [REDACTED]");
         redacted = redacted.replaceAll(
-                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|declarant|tin|tax_id|secret|token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|credential|private_key)[\"']?+\\s*+[:=]\\s*+)[^\\s,;\"'&<>\\]}]++",
+                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|login_id|declarant|declarant_id|tin|tax_id|secret|client_secret|token|auth_token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|cvv|credential|private_key|account_no|iban|customs_decl|declaration_no|sad_no|awb_no|bl_no)[\"']?+\\s*+[:=]\\s*+)(?:\"(?:\\\\.|[^\"\\\\])*+\"|'(?:\\\\.|[^'\\\\])*+'|[^\\s,;\"'&<>\\]}]++)",
                 "$1\"[REDACTED]\"");
         return redacted;
     }

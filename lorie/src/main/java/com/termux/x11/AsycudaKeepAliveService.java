@@ -43,7 +43,12 @@ public class AsycudaKeepAliveService extends Service {
             AsycudaStandaloneManager.shutdownApp(this);
             return START_NOT_STICKY;
         }
-        startForeground(FG_NOTIFICATION_ID, buildForegroundNotification());
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(FG_NOTIFICATION_ID, buildForegroundNotification(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(FG_NOTIFICATION_ID, buildForegroundNotification());
+        }
         acquireLocks();
         return START_STICKY;
     }

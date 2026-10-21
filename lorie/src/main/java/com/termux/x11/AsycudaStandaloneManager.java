@@ -814,7 +814,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v3_9_5");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_0");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -860,6 +860,7 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_2"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_3"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_4"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v3_9_5"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
             }
@@ -885,7 +886,32 @@ public class AsycudaStandaloneManager {
             }
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
-            syncGovernmentJars(clientDir, false, null);
+            // On initial install, zero government JARs are bundled in the APK — all 131 official JARs
+            // are fetched directly from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp and verified against SOCODE.RSA.
+            boolean initialDownloadRequired = !new File(clientDir, "jars/client.jar").exists();
+            syncGovernmentJars(clientDir, initialDownloadRequired, null);
+
+            if (!new File(clientDir, "jars/client.jar").exists()) {
+                updateStatus(AsycudaMaterialUi.tr(activity,
+                        "Internet connection to asy.mof.gov.iq is required for initial installation of official ASYCUDA packages.",
+                        "يلزم الاتصال بخادم الكمارك الرسمي (asy.mof.gov.iq) لتحميل ملفات نظام أسيكودا لأول مرة.",
+                        "پێویستە پەیوەندی بە ڕاژەی فەرمی گومرگ (asy.mof.gov.iq) هەبێت بۆ داگرتنی پەڕگەکانی ئەسیکۆدا بۆ یەکەم جار."));
+                UI.post(() -> {
+                    if (mSplashProgress != null) mSplashProgress.setVisibility(View.GONE);
+                    if (mActionBtn != null) {
+                        mActionBtn.setText(AsycudaMaterialUi.tr(activity,
+                                "Retry Official Package Download",
+                                "إعادة محاولة التحميل من الخادم الرسمي",
+                                "دووبارە هەوڵدانەوە بۆ داگرتن"));
+                        mActionBtn.setVisibility(View.VISIBLE);
+                        mActionBtn.setOnClickListener(v -> {
+                            hideSplashButton();
+                            new Thread(() -> bootstrapEnvironmentAndStart(activity), "Asycuda-BootstrapRetry").start();
+                        });
+                    }
+                });
+                return;
+            }
 
             // Background Startup App Update Check (checks GitHub releases without blocking startup)
             checkStartupAppUpdateQuietly(activity);
@@ -916,7 +942,7 @@ public class AsycudaStandaloneManager {
                     System.loadLibrary("Xlorie");
                     CmdEntryPoint.ctx = activity.getApplicationContext();
                     if (sCmdEntry == null) {
-                        sCmdEntry = new CmdEntryPoint(new String[] { ":0" });
+                        sCmdEntry = new CmdEntryPoint(new String[] { ":0", "-nolisten", "tcp" });
                     }
                     MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
                     act.connectToService(sCmdEntry);
@@ -1029,7 +1055,7 @@ public class AsycudaStandaloneManager {
                 String name = entry.getName();
                 if (name.startsWith("./")) name = name.substring(2);
                 if (BOOT_JAR_REL.equals(name) || JNLP_JAR_REL.equals(name)
-                        || BOOTPATCH_JAR_NAME.equals(name) || "jars/client.jar".equals(name)) {
+                        || BOOTPATCH_JAR_NAME.equals(name) || "mof.crt".equals(name)) {
                     File outFile = new File(destDir, name);
                     if (!outFile.getCanonicalPath().startsWith(destCanonPrefix)) {
                         continue;
@@ -1243,20 +1269,47 @@ public class AsycudaStandaloneManager {
                 }
             }
 
-            for (int d = 0; d < toDownloadUrls.size(); d++) {
-                if (sApkDownloadActive.get()) {
-                    break;
+            if (!toDownloadUrls.isEmpty()) {
+                final int dlTotal = toDownloadUrls.size();
+                final AtomicInteger dlDoneCounter = new AtomicInteger(0);
+                final AtomicInteger dlSuccessCounter = new AtomicInteger(0);
+                ExecutorService dlPool = Executors.newFixedThreadPool(8);
+                List<Future<Boolean>> dlFutures = new ArrayList<>(dlTotal);
+
+                for (int d = 0; d < dlTotal; d++) {
+                    final String jarUrl = toDownloadUrls.get(d);
+                    final File targetJar = toDownloadFiles.get(d);
+                    dlFutures.add(dlPool.submit(() -> {
+                        if (sApkDownloadActive.get()) return false;
+                        boolean ok = false;
+                        for (int attempt = 1; attempt <= 3 && !sApkDownloadActive.get(); attempt++) {
+                            if (downloadJarAtomically(jarUrl, targetJar, sslFactory)) {
+                                ok = true;
+                                break;
+                            }
+                        }
+                        int doneNow = dlDoneCounter.incrementAndGet();
+                        if (ok) dlSuccessCounter.incrementAndGet();
+                        String msg = "Downloading official packages from asy.mof.gov.iq (" + doneNow + "/" + dlTotal + ")...";
+                        updateStatus(msg);
+                        if (modalCtrl != null) {
+                            modalCtrl.setMofUpdateStatus(msg, targetJar.getName(), doneNow, dlTotal, false);
+                        }
+                        return ok;
+                    }));
                 }
-                String jarUrl = toDownloadUrls.get(d);
-                File targetJar = toDownloadFiles.get(d);
-                String msg = "Downloading " + targetJar.getName() + " (" + (d + 1) + "/" + toDownloadUrls.size() + ")...";
-                updateStatus(msg);
-                if (modalCtrl != null) {
-                    modalCtrl.setMofUpdateStatus(msg, targetJar.getName(), d + 1, toDownloadUrls.size(), false);
+                dlPool.shutdown();
+                for (Future<Boolean> f : dlFutures) {
+                    try {
+                        f.get();
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (ExecutionException ignored) {
+                        // Individual download failure handled by counter
+                    }
                 }
-                if (downloadJarAtomically(jarUrl, targetJar, sslFactory)) {
-                    updatedCount++;
-                }
+                updatedCount = dlSuccessCounter.get();
             }
 
             // Rebuild classpath.txt with preserved bridge jars first
@@ -1471,7 +1524,7 @@ public class AsycudaStandaloneManager {
         conn.setConnectTimeout(connTimeout);
         conn.setReadTimeout(readTimeout);
         conn.setUseCaches(false);
-        conn.setRequestProperty(HEADER_USER_AGENT, "JNLP/1.7.0 javaws/1.8.0_402 (b06) Java/1.8.0_402");
+        conn.setRequestProperty(HEADER_USER_AGENT, "JNLP/1.7.0 javaws/1.8.0_504 (b01) Java/1.8.0_504");
         return conn;
     }
 
@@ -1589,9 +1642,11 @@ public class AsycudaStandaloneManager {
                     javaBin = new File(jreDir, "bin/java");
                 }
                 setExecutableOwnerOnly(javaBin);
+                patchLibJliForTargetSdk34(jreDir);
 
                 File ldLinux = new File(filesDir, "usr/glibc/lib/ld-linux-aarch64.so.1");
                 setExecutableOwnerOnly(ldLinux);
+                File nativeLdLinux = new File(activity.getApplicationInfo().nativeLibraryDir, "libld_linux_aarch64.so");
 
                 File tmpDir = new File(clientDir, "tmp");
                 deleteRecursive(tmpDir);
@@ -1629,6 +1684,11 @@ public class AsycudaStandaloneManager {
                 }
 
                 List<String> cmd = new ArrayList<>();
+                if (nativeLdLinux.exists()) {
+                    cmd.add(nativeLdLinux.getAbsolutePath());
+                    cmd.add("--argv0");
+                    cmd.add(javaBin.getAbsolutePath());
+                }
                 cmd.add(javaBin.getAbsolutePath());
                 cmd.add("-Dasycuda.running=1");
                 cmd.add("-Dasycuda.bridge.token=" + BRIDGE_AUTH_TOKEN);
@@ -1663,7 +1723,9 @@ public class AsycudaStandaloneManager {
                 Map<String, String> env = pb.environment();
                 env.remove("LD_PRELOAD");
                 env.remove("LD_LIBRARY_PATH");
-                env.put("JAVA_HOME", new File(jreDir, "jre").getAbsolutePath());
+                File javaHomeDir = new File(jreDir, "jre");
+                if (!javaHomeDir.exists()) javaHomeDir = jreDir;
+                env.put("JAVA_HOME", javaHomeDir.getAbsolutePath());
                 env.put("HOME", fastInternalHome.getAbsolutePath());
                 env.put("PREFIX", new File(filesDir, "usr").getAbsolutePath());
                 env.put("TMPDIR", new File(filesDir, "usr/tmp").getAbsolutePath());
@@ -1690,6 +1752,55 @@ public class AsycudaStandaloneManager {
             Thread.currentThread().interrupt();
         } catch (Exception t) {
             updateStatus("JVM status error: " + t.getMessage());
+        }
+    }
+
+    private static void patchLibJliForTargetSdk34(File jreDir) {
+        if (jreDir == null || !jreDir.exists()) return;
+        String[] candidates = new String[] {
+            "jre/lib/aarch64/jli/libjli.so",
+            "lib/aarch64/jli/libjli.so",
+            "lib/jli/libjli.so",
+            "lib/libjli.so"
+        };
+        byte[] needle = "/proc/self/exe".getBytes(StandardCharsets.US_ASCII);
+        byte[] replacement = "/proc/self/exX".getBytes(StandardCharsets.US_ASCII);
+        for (String rel : candidates) {
+            File f = new File(jreDir, rel);
+            if (!f.exists() || !f.isFile()) continue;
+            try {
+                byte[] data = readFileBytes(f);
+                boolean modified = false;
+                for (int i = 0; i <= data.length - needle.length; i++) {
+                    boolean match = true;
+                    for (int j = 0; j < needle.length; j++) {
+                        if (data[i + j] != needle[j]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        System.arraycopy(replacement, 0, data, i, replacement.length);
+                        modified = true;
+                    }
+                }
+                if (modified) {
+                    setWritableOwnerOnly(f);
+                    try (FileOutputStream fos = new FileOutputStream(f)) {
+                        fos.write(data);
+                        fos.getFD().sync();
+                    }
+                    setExecutableOwnerOnly(f);
+                }
+            } catch (Exception ignored) {
+                // Best-effort binary patch for targetSdk 34 loader
+            }
+        }
+    }
+
+    private static void setWritableOwnerOnly(File f) {
+        if (f != null && f.exists() && !f.setWritable(true, true)) {
+            // Ignore if filesystem does not support POSIX permissions
         }
     }
 
@@ -2700,10 +2811,11 @@ public class AsycudaStandaloneManager {
     /**
      * Strictly scrubs any ASYCUDA login credentials, usernames, passwords, session IDs,
      * cookies, authorization headers, TIN/declarant identifiers, XML auth tags, and tokens
-     * before any log text is written to a diagnostic report.
+     * (including both quoted JSON strings and unquoted key-value pairs) before any log text
+     * is written to a diagnostic report.
      */
     @SuppressWarnings({"java:S5852", "java:S5843", "java:S5998", "java:S6353"})
-    private static String redactSensitiveLogContent(String raw) {
+    public static String redactSensitiveLogContent(String raw) {
         if (raw == null || raw.isEmpty()) return "";
         String redacted = raw.replace(BRIDGE_AUTH_TOKEN, "[REDACTED_BRIDGE_TOKEN]");
         // Scrub URL user:password@host credentials
@@ -2714,16 +2826,29 @@ public class AsycudaStandaloneManager {
                 "<$1>[REDACTED]</$1>");
         // Scrub Bearer / Basic authorization tokens
         redacted = redacted.replaceAll("(?i)\\b(bearer|basic)\\s++[^\\s,;\"'&<>\\]}]++", "$1 [REDACTED]");
-        // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys
+        // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys (both quoted and unquoted values)
         redacted = redacted.replaceAll(
-                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|declarant|tin|tax_id|secret|token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|credential|private_key)[\"']?+\\s*+[:=]\\s*+)[^\\s,;\"'&<>\\]}]++",
+                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|login_id|declarant|declarant_id|tin|tax_id|secret|client_secret|token|auth_token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|cvv|credential|private_key|account_no|iban|customs_decl|declaration_no|sad_no|awb_no|bl_no)[\"']?+\\s*+[:=]\\s*+)(?:\"(?:\\\\.|[^\"\\\\])*+\"|'(?:\\\\.|[^'\\\\])*+'|[^\\s,;\"'&<>\\]}]++)",
                 "$1\"[REDACTED]\"");
         return redacted;
+    }
+
+    private static long getAppVersionCode(Context ctx) {
+        try {
+            android.content.pm.PackageInfo pInfo = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return pInfo.getLongVersionCode();
+            }
+            return pInfo.versionCode;
+        } catch (Exception ignored) {
+            return 41L;
+        }
     }
 
     /**
      * Records a tamper-evident cloud consent audit event in Sentry when a user accepts the
      * Terms & Conditions and Liability Policy on initial launch.
+     * Transmits strictly the 8 fields previewed by the user in the UI.
      */
     private void uploadConsentReceiptToSentry(Context ctx, JSONObject receipt) {
         if (ctx == null || receipt == null) return;
@@ -2746,8 +2871,8 @@ public class AsycudaStandaloneManager {
                 String deviceHash = receipt.optString(KEY_DEVICE_HASH, "unknown_device");
                 String policyVer = receipt.optString(KEY_POLICY_VERSION, AsycudaMaterialUi.CURRENT_POLICY_VERSION);
                 String appVer = receipt.optString(KEY_APP_VERSION, AsycudaMaterialUi.getAppVersionLabel(ctx));
-                String devModel = receipt.optString(KEY_DEVICE_MODEL, Build.MANUFACTURER + " " + Build.MODEL);
                 String sha256 = receipt.optString(KEY_SHA256_SIG, "");
+                long verCode = getAppVersionCode(ctx);
 
                 JSONObject envHeader = new JSONObject();
                 envHeader.put(KEY_EVENT_ID, eventId);
@@ -2759,7 +2884,7 @@ public class AsycudaStandaloneManager {
                 eventObj.put("timestamp", nowIso);
                 eventObj.put("platform", "java");
                 eventObj.put("level", "info");
-                eventObj.put("release", "iq.asycuda@" + appVer.replaceFirst("^v", "") + "+38");
+                eventObj.put("release", "iq.asycuda@" + appVer.replaceFirst("^v", "") + "+" + verCode);
                 eventObj.put("environment", "production");
 
                 JSONArray fingerprint = new JSONArray();
@@ -2768,14 +2893,12 @@ public class AsycudaStandaloneManager {
                 eventObj.put("fingerprint", fingerprint);
 
                 JSONObject msgObj = new JSONObject();
-                msgObj.put("formatted", "[Terms Accepted] " + sigName + " (" + compName + ") • Receipt #"
-                        + consentId + " • " + devModel);
+                msgObj.put("formatted", "[Terms Accepted] " + sigName + " (" + compName + ") • Receipt #" + consentId);
                 eventObj.put("message", msgObj);
 
                 JSONObject userObj = new JSONObject();
                 userObj.put("id", deviceHash);
                 userObj.put("username", sigName + " (" + compName + ")");
-                userObj.put("ip_address", "{{auto}}");
                 eventObj.put("user", userObj);
 
                 JSONObject tags = new JSONObject();
@@ -2785,17 +2908,11 @@ public class AsycudaStandaloneManager {
                 tags.put(KEY_CONSENT_ID, consentId);
                 tags.put(KEY_POLICY_VERSION, policyVer);
                 tags.put(KEY_APP_VERSION, appVer);
-                tags.put(KEY_DEVICE_MODEL, devModel);
                 tags.put(KEY_DEVICE_HASH, deviceHash);
-                tags.put("locale", receipt.optString("locale", "ar"));
                 eventObj.put("tags", tags);
-
-                eventObj.put("contexts", buildSentryContexts(ctx, appVer));
 
                 JSONObject extra = new JSONObject();
                 extra.put("consent_receipt", receipt.toString());
-                extra.put(KEY_SIGNATORY_NAME, sigName);
-                extra.put(KEY_COMPANY_NAME, compName);
                 extra.put(KEY_SHA256_SIG, sha256);
                 eventObj.put("extra", extra);
 
@@ -2823,7 +2940,7 @@ public class AsycudaStandaloneManager {
                 envelope.write('\n');
 
                 String endpoint = "https://" + parts.host + "/api/" + parts.projectId
-                        + "/envelope/?sentry_key=" + parts.publicKey + "&sentry_version=7&sentry_client=asycuda.android/3.8.0";
+                        + "/envelope/?sentry_key=" + parts.publicKey + "&sentry_version=7&sentry_client=asycuda.android/" + BuildConfig.VERSION_NAME;
                 conn = (HttpURLConnection) new URL(endpoint).openConnection();
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
@@ -2906,7 +3023,7 @@ public class AsycudaStandaloneManager {
             eventObj.put("timestamp", nowIso);
             eventObj.put("platform", "java");
             eventObj.put("level", "info");
-            eventObj.put("release", "iq.asycuda@" + verLabel.replaceFirst("^v", "") + "+38");
+            eventObj.put("release", "iq.asycuda@" + verLabel.replaceFirst("^v", "") + "+" + getAppVersionCode(ctx));
             eventObj.put("environment", "production");
 
             JSONObject msgObj = new JSONObject();

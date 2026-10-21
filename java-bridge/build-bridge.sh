@@ -25,12 +25,13 @@ javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
 cp "${SCRIPT_DIR}/bootpatch/java/awt/Desktop.java" "${OUT_DIR}/classes_bootpatch/java/awt/Desktop.java"
 jar cf "${OUT_DIR}/00_bootpatch.jar" -C "${OUT_DIR}/classes_bootpatch" .
 
-echo "[2/3] Compiling 00_jnlp.jar (javax.jnlp.ServiceManager & BasicService)..."
+echo "[2/3] Compiling 00_jnlp.jar (javax.jnlp.* compatibility layer)..."
 javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
     -d "${OUT_DIR}/classes_jnlp" \
-    "${SCRIPT_DIR}/jnlp/javax/jnlp/BasicService.java" \
     "${SCRIPT_DIR}/jnlp/javax/jnlp/UnavailableServiceException.java" \
+    "${SCRIPT_DIR}/jnlp/javax/jnlp/BasicService.java" \
     "${SCRIPT_DIR}/jnlp/javax/jnlp/ServiceManager.java"
+mkdir -p "${OUT_DIR}/classes_jnlp/javax/jnlp"
 cp "${SCRIPT_DIR}/jnlp/javax/jnlp/"*.java "${OUT_DIR}/classes_jnlp/javax/jnlp/"
 jar cf "${OUT_DIR}/00_jnlp.jar" -C "${OUT_DIR}/classes_jnlp" .
 

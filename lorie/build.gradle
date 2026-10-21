@@ -28,7 +28,7 @@ android {
     ndkVersion termuxX11NdkVersion
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 28
+        targetSdkVersion 34
         def localProps = new Properties()
         def localPropsFile = rootProject.file('local.properties')
         if (localPropsFile.exists()) {
@@ -46,6 +46,7 @@ android {
     compileOptions.sourceCompatibility JavaVersion.VERSION_1_9
     compileOptions.targetCompatibility JavaVersion.VERSION_1_9
     packagingOptions.jniLibs.useLegacyPackaging true
+    packagingOptions.jniLibs.keepDebugSymbols += ['**/libld_linux_aarch64.so']
     buildFeatures.aidl true
     buildFeatures.buildConfig true
 }
