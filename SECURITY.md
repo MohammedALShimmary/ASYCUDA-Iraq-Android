@@ -25,7 +25,7 @@ Every asset published on the [official `v4.0.5` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.0.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 42`, `targetSdkVersion 34`) | `TBD_ON_RELEASE_BUILD` |
+| [**`ASYCUDA_Iraq_v4.0.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 42`, `targetSdkVersion 34`) | `74e0981fc3a1838041e22280d53d1a0f133f8372f10c6bc812cfd51bd883c490` |
 | [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`) & config (`zero` government JARs bundled; all 131 official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `d2ecba110abc3b8843723a06d031b1d1f054d698d142e707c4d863feb57868d5` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + Eclipse Temurin OpenJDK `8u504-b01` LTS (`1.8.0_504-b01`) runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
