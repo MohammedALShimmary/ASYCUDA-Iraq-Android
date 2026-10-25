@@ -932,11 +932,7 @@ public class AsycudaBoot {
     }
 
     private static void waitForX11DisplaySocket() {
-        String tmpDir = System.getenv("TMPDIR");
-        if (tmpDir == null || tmpDir.trim().isEmpty()) {
-            tmpDir = "/data/data/iq.asycuda/files/usr/tmp";
-        }
-        File x0Socket = new File(new File(tmpDir, ".X11-unix"), "X0");
+        File x0Socket = new File("/data/data/iq.asycuda/files/usr/tmp/.X11-unix/X0");
         for (int i = 0; i < 50; i++) {
             if (x0Socket.exists()) {
                 return;
