@@ -881,14 +881,6 @@ public class AsycudaStandaloneManager {
             }
 
             File clientJarFile = new File(clientDir, PREFIX_JARS + "client.jar");
-            if (!clientJarFile.exists()) {
-                updateStatus(AsycudaMaterialUi.tr(activity,
-                        "Unpacking ASYCUDA World components (2/2)...",
-                        "جاري استخراج مكونات نظام أسيكودا (2/2)...",
-                        "دەرهێنانی پێکهاتەکانی سیستەمی ئەسیکۆدا (2/2)..."));
-                ensureDir(clientDir);
-                extractTarXzAsset(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
-            }
 
             // Migrate any files from legacy workspace folder into unified prints vault
             File legacyWorkspace = new File(filesDir, DIR_LEGACY_WORKSPACE);
