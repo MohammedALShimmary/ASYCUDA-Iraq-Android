@@ -62,7 +62,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
-@SuppressWarnings({"java:S3776", "java:S107", "java:S1141", "java:S1192"})
+@SuppressWarnings({"java:S3776", "java:S107", "java:S1141", "java:S1192", "java:S9439"})
 public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
@@ -612,7 +612,7 @@ public class AsycudaMaterialUi {
 
         if (MODE_SCALED.equals(curResMode) && prefs != null) {
             int curScale = Math.max(60, Math.min(200, prefs.displayScale.get()));
-            final long[] lastScaleTick = new long[] { 0 };
+            final long[] lastScaleTick = { 0 };
             LinearLayout scaleSlider = createLivePreviewSliderCard(
                     activity, dialog, root, scroll, body,
                     tr(activity,
@@ -659,7 +659,7 @@ public class AsycudaMaterialUi {
             exLp.bottomMargin = dp(activity, 12);
             exactRow.setLayoutParams(exLp);
 
-            String[] presets = new String[] { "1280x720", "1366x768", "1600x900", "1920x1080" };
+            String[] presets = { "1280x720", "1366x768", "1600x900", "1920x1080" };
             for (String p : presets) {
                 addSegmentedChoice(activity, exactRow, p, p.equals(curExact), () -> {
                     prefs.displayResolutionExact.put(p);
@@ -745,7 +745,7 @@ public class AsycudaMaterialUi {
                 tr(activity, "FUNCTION & ARROW KEYS BAR OPACITY", "شفافية شريط أزرار الوظائف والأسهم", "ڕووناکی شریتی دوگمەکانی فرمانی و تیرەکان")));
 
         int curOpacity = prefs != null ? Math.max(15, Math.min(100, prefs.opacityEKBar.get())) : 80;
-        final boolean[] wasBarHiddenBeforePreview = new boolean[] { false };
+        final boolean[] wasBarHiddenBeforePreview = { false };
         LinearLayout opacitySlider = createLivePreviewSliderCard(
                 activity, dialog, root, scroll, body,
                 tr(activity,
@@ -957,8 +957,8 @@ public class AsycudaMaterialUi {
 
         boolean clipSync = prefs == null || prefs.clipboardEnable.get();
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_documents,
-                tr(activity, "Automatic Clipboard Sync", "المزامنة التلقائية للحافظة", "هاوکاتکردنی خۆکاری کلیپبۆرد"),
-                tr(activity, "Copy and paste text seamlessly between Android and ASYCUDA", "نسخ ولصق النصوص مباشرة بين تطبيقات الهاتف ونظام أسيكودا", "کۆپی و پەیستکردنی دەق لە نێوان مۆبایل و سیستەمی ئەسیکۆدا"),
+                tr(activity, "Paste from Phone Clipboard", "اللصق من حافظة الهاتف", "لکاندنی دەق لە کلیپبۆردی مۆبایلەوە"),
+                tr(activity, "Allow pasting text copied on your phone directly into ASYCUDA fields", "السماح بلصق النصوص المنسوخة من الهاتف مباشرة داخل حقول نظام أسيكودا", "ڕێگەدان بە لکاندنی دەقی کۆپیکراوی مۆبایل لەناو خانەکانی ئەسیکۆدا"),
                 clipSync ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 clipSync, false, () -> {
                     if (prefs != null) prefs.clipboardEnable.put(!clipSync);
@@ -1055,7 +1055,7 @@ public class AsycudaMaterialUi {
         barRow.addView(maxTv);
         sliderCard.addView(barRow);
 
-        final boolean[] inPeek = new boolean[] { false };
+        final boolean[] inPeek = { false };
         final Runnable enterPeekMode = () -> {
             if (inPeek[0]) return;
             inPeek[0] = true;
@@ -1345,7 +1345,7 @@ public class AsycudaMaterialUi {
         dialog.setContentView(root);
         dialog.show();
 
-        final boolean[] apkDownloadActive = new boolean[] { false };
+        final boolean[] apkDownloadActive = { false };
 
         return new UpdateCenterController() {
             @Override
@@ -1520,7 +1520,7 @@ public class AsycudaMaterialUi {
         // Block offensive, profane, insulting, hostile, or harmful words/phrases (English, Arabic, Kurdish)
         // Checked BEFORE test words so mixed reports like "Test3 , Harm sentences , the developer is awful lol"
         // get flagged specifically for disrespectful/harmful content.
-        String[] harmfulOrInsulting = new String[] {
+        String[] harmfulOrInsulting = {
                 // Profanity
                 "fuck", "fucking", "fucker", "shit", "shitty", "bitch", "asshole", "bastard", "dick", "pussy",
                 "cunt", "whore", "slut", "motherfucker", "stfu", "wtf", "retard", "retarded",
@@ -1550,14 +1550,14 @@ public class AsycudaMaterialUi {
         }
 
         // Block test / dummy / placeholder reports or casual chatter
-        String[] testTokens = new String[] {
+        String[] testTokens = {
                 "test", "test1", "test2", "test3", "test4", "testing", "tester",
                 "asdf", "asdfg", "qwer", "qwerty", "zxcv", "lol", "lmao", "rofl", "haha", "hahaha", "hehe",
                 "dummy", "placeholder", "hello", "hi there",
                 "تجربة", "تجربه", "تست", "تيست", "فحص تجريبي", "بلاغ تجريبي", "للتجربة",
                 "تاقیکردنەوە", "تێست"
         };
-        String[] testPhrases = new String[] {
+        String[] testPhrases = {
                 "test report", "this is a test", "this a test", "for testing", "for development purposes",
                 "just testing", "sample report", "ignore this", "فقط للتجربة", "بلاغ للتجربة"
         };
@@ -1721,9 +1721,9 @@ public class AsycudaMaterialUi {
 
         TextView imgPrivacyNote = new TextView(activity);
         imgPrivacyNote.setText(tr(activity,
-                "Privacy Notice: Attached screenshots are raw images (not passed through text redaction) and are sent only to the private developer Sentry dashboard (never public GitHub Issues). Do not attach screenshots showing visible passwords, TINs, or confidential live customs declarations.",
-                "تنبيه الخصوصية: الصور المرفقة هي صور خام (لا تخضع للفلترة النصية) وتُرسل فقط إلى لوحة فحص المطور الخاصة في Sentry (ولا تُنشر أبداً في GitHub العام). لا ترفق صوراً تُظهر كلمات مرور أو أرقاماً ضريبية أو تصاريح جمركية سرية.",
-                "ئاگاداری تایبەتمەندی: وێنە هاوپێچکراوەکان وێنەی خاون و تەنها بۆ پانێڵی تایبەتی گەشەپێدەر لە Sentry دەنێردرێن (لە GitHub بڵاوناکرێنەوە). وێنەی وشەی نهێنی یان زانیاری گومرگی نهێنی هاوپێچ مەکە."));
+                "Privacy Note: Attached screenshots are sent as original images directly to the developer's private error tracker to help diagnose visual issues, and are never posted publicly. Please make sure your screenshot does not show passwords, tax numbers, or confidential declaration details before attaching it.",
+                "ملاحظة الخصوصية: يتم إرسال لقطات الشاشة المرفقة كصور أصلية إلى لوحة الصيانة الخاصة بالمطور فقط للمساعدة في تشخيص المشكلة، ولا يتم نشرها للعامة أبداً. يرجى التأكد من عدم ظهور كلمات المرور أو الأرقام الضريبية أو تفاصيل التصاريح السرية في الصورة قبل إرفاقها.",
+                "تێبینی تایبەتمەندی: وێنە هاوپێچکراوەکان تەنها بۆ بەشی چاککردنەوەی تایبەت بە گەشەپێدەر دەنێردرێن بۆ چارەسەرکردنی کێشەکە و هەرگیز بە شێوەی گشتی بڵاوناکرێنەوە. تکایە دڵنیابەرەوە کە وشەی نهێنی یان زانیاری تایبەتی گومرگی لەناو وێنەکەدا دیار نییە پێش ناردنی."));
         imgPrivacyNote.setTextColor(Color.parseColor("#FFFF9F0A"));
         imgPrivacyNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         LinearLayout.LayoutParams ipnLp = new LinearLayout.LayoutParams(
@@ -1733,7 +1733,7 @@ public class AsycudaMaterialUi {
         imgTextCol.addView(imgPrivacyNote);
         imgCard.addView(imgTextCol);
 
-        final File[] currentImageHolder = new File[] { null };
+        final File[] currentImageHolder = { null };
         final FeedbackModalController[] controllerRef = new FeedbackModalController[1];
 
         View captureBtn = createIconButton(activity, R.drawable.ic_action_camera,
@@ -1779,7 +1779,7 @@ public class AsycudaMaterialUi {
 
         body.addView(imgCard);
 
-        // Diagnostics Bundle Info Row + 100% In-RAM Diagnostic Data Preview Button
+        // Diagnostics Bundle Info Row + Diagnostic Data Preview Button
         LinearLayout zipInfoRow = new LinearLayout(activity);
         zipInfoRow.setOrientation(LinearLayout.VERTICAL);
         zipInfoRow.setPadding(dp(activity, 12), dp(activity, 9), dp(activity, 12), dp(activity, 9));
@@ -1787,18 +1787,18 @@ public class AsycudaMaterialUi {
 
         TextView zipInfoText = new TextView(activity);
         zipInfoText.setText(tr(activity,
-                "Voluntary Report Disclosure: Submitting a report sends your device model, Android version, app version, installed JAR file list, and redacted runtime logs in RAM over HTTPS to Sentry (redacted text summaries are mirrored to GitHub Issues). Zero local ZIP files are saved and your ASYCUDA credentials are scrubbed.",
-                "إفصاح البلاغ الطوعي: عند الإرسال يتم تضمين طراز الجهاز، إصدار الأندرويد، إصدار التطبيق، قائمة أسماء ملفات JAR، وسجلات التشغيل المنقّاة في الذاكرة العشوائية (RAM) عبر اتصال مشفّر إلى Sentry (مع نسخ ملخص النص المنقّى إلى بلاغات GitHub). لا يتم حفظ أي ملف ZIP محلي ويتم حجب كافة بيانات الدخول.",
-                "ئاشکراکردنی ڕاپۆرتی خۆبەخشانە: لە کاتی ناردندا جۆری ئامێر، وەشانی ئەندرۆید، لیستی پەڕگەکانی JAR و تۆمارە پاککراوەکان لە بیرگەی کاتی (RAM) دەگوازرێنەوە بەبێ پاشەکەوتکردنی هیچ پەڕگەیەکی ناوخۆیی."));
+                "What gets sent with your report: When you submit this form, the app includes your phone model, Android version, app version, the list of installed system files, and recent error logs so the issue can be fixed quickly. Your login details, usernames, passwords, and tax numbers are automatically removed before sending, and no log files are saved on your phone.",
+                "ما الذي يتم إرساله مع البلاغ: عند إرسال هذا النموذج، يرفق التطبيق طراز الهاتف، وإصدار الأندرويد، وإصدار التطبيق، وقائمة ملفات النظام المثبتة، وسجلات الأخطاء الأخيرة للمساعدة في حل المشكلة بسرعة. يتم تلقائياً حذف وإخفاء بيانات الدخول وأسماء المستخدمين وكلمات المرور والأرقام الضريبية قبل الإرسال، ولا يتم ترك أي ملفات سجلات محفوظة على هاتفك.",
+                "چی لەگەڵ ڕاپۆرتەکەت دەنێردرێت: لە کاتی ناردنی ئەم فۆڕمەدا، جۆری مۆبایل، وەشانی ئەندرۆید، وەشانی بەرنامەکە، لیستی پەڕگەکانی سیستەم و تۆماری هەڵەکانی کۆتایی هاوپێچ دەکرێن بۆ چارەسەرکردنی خێرای کێشەکە. زانیاری چوونەژوورەوە و ناوی بەکارهێنەر و وشەی نهێنی بە شێوەی خۆکار لادەبرێن پێش ناردن."));
         zipInfoText.setTextColor(TEXT_SECONDARY);
         zipInfoText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
         zipInfoRow.addView(zipInfoText);
 
         TextView previewRamBtn = createCupertinoButton(activity,
                 tr(activity,
-                        "Preview Diagnostic Data (Viewed in RAM Only — Auto-Erased on Close)",
-                        "معاينة البيانات التشخيصية (تُعرض في الذاكرة RAM فقط وتُمسح فور الإغلاق)",
-                        "بینینی زانیارییە تەکنیکییەکان (تەنها لە RAM دەردەکەوێت و دەسڕدرێتەوە)"),
+                        "Review Diagnostic Logs Before Sending",
+                        "مراجعة السجلات التشخيصية قبل الإرسال",
+                        "پێداچوونەوەی تۆمارە تەکنیکییەکان پێش ناردن"),
                 false, false, v -> {
                     if (handler != null) {
                         String curDesc = descInput.getText() != null ? descInput.getText().toString().trim() : "";
@@ -1927,9 +1927,9 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "Preview Diagnostic Data (In-RAM Only)",
-                "معاينة البيانات التشخيصية (في الذاكرة العشوائية فقط)",
-                "بینینی زانیارییە تەکنیکییەکان (تەنها لە بیرگەی RAM)"));
+                "Diagnostic Logs Preview",
+                "معاينة السجلات التشخيصية",
+                "پێداچوونەوەی تۆمارە تەکنیکییەکان"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -1937,16 +1937,16 @@ public class AsycudaMaterialUi {
 
         TextView sub = new TextView(activity);
         sub.setText(tr(activity,
-                "Zero files written to storage — buffer is wiped from RAM as soon as you close this window",
-                "لا يتم حفظ أي ملف في الهاتف — يتم مسح وتصفير هذا النص من الذاكرة فور إغلاق هذه النافذة",
-                "هیچ پەڕگەیەک پاشەکەوت ناکرێت — لەگەڵ داخستنی ئەم پەنجەرەیە ڕاستەوخۆ لە RAM دەسڕدرێتەوە"));
+                "Shown temporarily so you can verify what will be included in your report. Nothing is saved to your device storage.",
+                "تُعرض هذه السجلات مؤقتاً لتتمكن من مراجعة البيانات التي ستُرفق مع البلاغ، ولا يتم حفظ أي نسخة منها على ذاكرة هاتفك.",
+                "ئەم تۆمارانە بە شێوەی کاتی پیشان دەدرێن بۆ ئەوەی بزانیت چ زانیارییەک لەگەڵ ڕاپۆرتەکەت دەنێردرێت، و هیچ پەڕگەیەک لەسەر مۆبایلەکەت پاشەکەوت ناکرێت."));
         sub.setTextColor(SYSTEM_GREEN);
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         titleCol.addView(sub);
         header.addView(titleCol);
 
         header.addView(createIconButton(activity, R.drawable.ic_action_close,
-                tr(activity, "Close & Wipe RAM", "إغلاق ومسح الذاكرة", "داخستن و سڕینەوە"),
+                tr(activity, "Close", "إغلاق", "داخستن"),
                 false, false, v -> dialog.dismiss()));
         root.addView(header);
         root.addView(createHairlineDivider(activity));
@@ -2001,7 +2001,7 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "Security Sandbox Protection Triggered",
+                "Session Stopped for Your Security",
                 "تم إيقاف الجلسة لحماية أمان بياناتك",
                 "دانیشتنەکە ڕاگیرا بۆ پاراستنی ئاسایشی زانیارییەکانت"));
         title.setTextColor(SYSTEM_RED);
@@ -2014,9 +2014,9 @@ public class AsycudaMaterialUi {
 
         TextView body = new TextView(activity);
         body.setText(tr(activity,
-                "The embedded Java SecurityManager network firewall could not be verified during startup. To protect your ASYCUDA credentials and enforce strict isolation to asy.mof.gov.iq, the session was halted automatically.\n\nDetails: " + (reason != null ? reason : "Unknown error"),
-                "تعذر تفعيل جدار الحماية البرمجي لبيئة الجافا (SecurityManager) عند بدء التشغيل. ولضمان حماية بيانات الدخول الخاصة بك وحصر الاتصال بالخادم الحكومي (asy.mof.gov.iq) فقط، تم إيقاف الجلسة تلقائياً.\n\nالتفاصيل: " + (reason != null ? reason : ""),
-                "نەتوانرا دیواری پاراستنی جاڤا (SecurityManager) چالاک بکرێت. بۆ پاراستنی نهێنی زانیارییەکانت، دانیشتنەکە بە شێوەی خۆکار ڕاگیرا.\n\nوردەکاری: " + (reason != null ? reason : "")));
+                "The built-in security protection could not be started properly during launch. To keep your ASYCUDA account safe and ensure the app only communicates with the official Iraqi Customs server (asy.mof.gov.iq), the session was stopped automatically. Please restart the session to try again.\n\nTechnical details: " + (reason != null ? reason : "Unknown error"),
+                "تعذر تشغيل نظام الحماية الداخلي بشكل صحيح عند بدء التشغيل. وللحفاظ على أمان حسابك في نظام أسيكودا وضمان اتصال التطبيق بخادم الكمارك العراقية الرسمي (asy.mof.gov.iq) فقط، تم إيقاف الجلسة تلقائياً. يرجى إعادة تشغيل الجلسة للمحاولة مرة أخرى.\n\nالتفاصيل الفنية: " + (reason != null ? reason : ""),
+                "سیستەمی پاراستنی ناوخۆیی لە کاتی دەستپێکردندا بە دروستی کارینەکرد. بۆ پاراستنی هەژماری ئەسیکۆداکەت و دڵنیابوون لەوەی بەرنامەکە تەنها پەیوەندی بە ڕاژەی فەرمی گومرگی عێراق (asy.mof.gov.iq) دەکات، دانیشتنەکە بە شێوەی خۆکار ڕاگیرا. تکایە دانیشتنەکە دووبارە پێبکەرەوە.\n\nوردەکاری تەکنیکی: " + (reason != null ? reason : "")));
         body.setTextColor(TEXT_PRIMARY);
         body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         int pad = dp(activity, 12);
@@ -2341,7 +2341,7 @@ public class AsycudaMaterialUi {
         TextView subPath = new TextView(activity);
         String relPath = getRelativeVaultPath(vaultRoot, currentDir);
         subPath.setText(isAtRoot
-                ? tr(activity, "Encrypted App Storage  •  /Vault", "التخزين المشفر للتطبيق  •  /الخزنة", "بیرگەی پارێزراو  •  /قاسە")
+                ? tr(activity, "Private Document Storage  •  /Vault", "خزنة المستندات الخاصة  •  /الخزنة", "بیرگەی بەڵگەنامە تایبەتەکان  •  /قاسە")
                 : "📁 /Vault/" + relPath);
         subPath.setTextColor(isAtRoot ? TEXT_SECONDARY : SYSTEM_BLUE);
         subPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
@@ -2476,6 +2476,20 @@ public class AsycudaMaterialUi {
             selectedCountView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             batchBar.addView(selectedCountView);
 
+            View renameSelectedBtn = createIconButton(activity, R.drawable.ic_action_edit,
+                    tr(activity, "Rename", "إعادة تسمية", "گۆڕینی ناو"),
+                    false, false, v -> {
+                        if (selectedItems.size() != 1) return;
+                        File singleTarget = selectedItems.iterator().next();
+                        showRenameItemDialog(activity, singleTarget, () -> {
+                            dialog.dismiss();
+                            showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                        });
+                    });
+            LinearLayout.LayoutParams rsLp = (LinearLayout.LayoutParams) renameSelectedBtn.getLayoutParams();
+            rsLp.setMarginEnd(dp(activity, 8));
+            batchBar.addView(renameSelectedBtn);
+
             View copySelectedBtn = createIconButton(activity, R.drawable.ic_action_copy,
                     tr(activity, "Copy Selected", "نسخ المحدد", "کۆپیکردنی دیاریکراو"),
                     false, false, v -> {
@@ -2561,6 +2575,7 @@ public class AsycudaMaterialUi {
                             count + " selected",
                             "تم تحديد " + count,
                             count + " دیاریکراوە"));
+                    renameSelectedBtn.setVisibility(count == 1 ? View.VISIBLE : View.GONE);
                     boolean hasSelectedFolder = false;
                     for (File sel : selectedItems) {
                         if (sel.isDirectory()) {
@@ -2709,6 +2724,16 @@ public class AsycudaMaterialUi {
                     ofLp.setMarginEnd(dp(activity, 8));
                     row.addView(openFolderBtn);
 
+                    View renameFolderBtn = createIconButton(activity, R.drawable.ic_action_edit,
+                            tr(activity, "Rename Folder", "إعادة تسمية المجلد", "گۆڕینی ناوی بوخچە"),
+                            false, false, v -> showRenameItemDialog(activity, f, () -> {
+                                dialog.dismiss();
+                                showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                            }));
+                    LinearLayout.LayoutParams rnfLp = (LinearLayout.LayoutParams) renameFolderBtn.getLayoutParams();
+                    rnfLp.setMarginEnd(dp(activity, 8));
+                    row.addView(renameFolderBtn);
+
                     View moveCopyFolderBtn = createIconButton(activity, R.drawable.ic_action_move,
                             tr(activity, "Move or Copy Folder", "نقل أو نسخ المجلد", "گواستنەوە یان کۆپیکردنی بوخچە"),
                             false, false, v -> showCopyMoveDestinationDialog(activity, dialog, vaultRoot, currentDir,
@@ -2726,6 +2751,16 @@ public class AsycudaMaterialUi {
                     LinearLayout.LayoutParams olp = (LinearLayout.LayoutParams) openBtn.getLayoutParams();
                     olp.setMarginEnd(dp(activity, 8));
                     row.addView(openBtn);
+
+                    View renameFileBtn = createIconButton(activity, R.drawable.ic_action_edit,
+                            tr(activity, "Rename File", "إعادة تسمية الملف", "گۆڕینی ناوی پەڕگە"),
+                            false, false, v -> showRenameItemDialog(activity, f, () -> {
+                                dialog.dismiss();
+                                showVaultFileManagerModal(activity, vaultRoot, currentDir, cb);
+                            }));
+                    LinearLayout.LayoutParams rnfLp = (LinearLayout.LayoutParams) renameFileBtn.getLayoutParams();
+                    rnfLp.setMarginEnd(dp(activity, 8));
+                    row.addView(renameFileBtn);
 
                     View moveCopyBtn = createIconButton(activity, R.drawable.ic_action_move,
                             tr(activity, "Move or Copy", "نقل أو نسخ", "گواستنەوە یان کۆپیکردن"),
@@ -2875,6 +2910,116 @@ public class AsycudaMaterialUi {
         LinearLayout.LayoutParams cbLp = (LinearLayout.LayoutParams) createBtn.getLayoutParams();
         cbLp.setMarginEnd(dp(activity, 8));
         header.addView(createBtn, header.getChildCount() - 1);
+
+        dlg.setContentView(root);
+        dlg.show();
+    }
+
+    private static void showRenameItemDialog(MainActivity activity, File targetItem, Runnable onRenamed) {
+        if (targetItem == null || !targetItem.exists()) return;
+        final boolean isDir = targetItem.isDirectory();
+        final String currentName = targetItem.getName();
+        final int dotIdx = (!isDir && currentName.lastIndexOf('.') > 0) ? currentName.lastIndexOf('.') : -1;
+        final String origExt = dotIdx > 0 ? currentName.substring(dotIdx) : "";
+
+        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.85f : 0.65f, 420, true);
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        }
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(R.drawable.ic_action_edit);
+        icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
+        icLp.setMarginEnd(dp(activity, 10));
+        header.addView(icon, icLp);
+
+        TextView title = new TextView(activity);
+        title.setText(isDir
+                ? tr(activity, "Rename Folder", "إعادة تسمية المجلد", "گۆڕینی ناوی بوخچە")
+                : tr(activity, "Rename File", "إعادة تسمية الملف", "گۆڕینی ناوی پەڕگە"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        header.addView(title);
+
+        header.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Cancel", "إلغاء", "پاشگەزبوونەوە"),
+                false, false, v -> dlg.dismiss()));
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        EditText input = new EditText(activity);
+        input.setText(currentName);
+        input.setHint(isDir
+                ? tr(activity, "New folder name...", "اسم المجلد الجديد...", "ناوی نوێی بوخچە...")
+                : tr(activity, "New file name...", "اسم الملف الجديد...", "ناوی نوێی پەڕگە..."));
+        input.setHintTextColor(TEXT_TERTIARY);
+        input.setTextColor(TEXT_PRIMARY);
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        input.setSingleLine(true);
+        input.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
+        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
+        if (dotIdx > 0) {
+            input.setSelection(0, dotIdx);
+        } else {
+            input.selectAll();
+        }
+        LinearLayout.LayoutParams inLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        inLp.topMargin = dp(activity, 14);
+        inLp.bottomMargin = dp(activity, 14);
+        root.addView(input, inLp);
+
+        View saveBtn = createIconButton(activity, R.drawable.ic_action_check,
+                tr(activity, "Save Name", "حفظ الاسم", "پاشەکەوتکردنی ناو"),
+                true, false, v -> {
+                    String raw = input.getText() != null ? input.getText().toString().trim() : "";
+                    String safe = raw.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe) || safe.startsWith(".")) {
+                        input.setError(tr(activity, "Please enter a valid name", "يرجى إدخال اسم صحيح", "تکایە ناوێکی دروست بنووسە"));
+                        return;
+                    }
+                    if (!isDir && !origExt.isEmpty() && !safe.contains(".")) {
+                        safe = safe + origExt;
+                    }
+                    if (safe.equals(currentName)) {
+                        dlg.dismiss();
+                        return;
+                    }
+                    File parentDir = targetItem.getParentFile();
+                    File destFile = new File(parentDir, safe);
+                    if (destFile.exists()) {
+                        input.setError(tr(activity,
+                                "An item with this name already exists in this folder",
+                                "يوجد ملف أو مجلد بنفس الاسم في هذا المجلد",
+                                "پەڕگە یان بوخچەیەک بەم ناوە هەیە"));
+                        return;
+                    }
+                    if (targetItem.renameTo(destFile)) {
+                        Toast.makeText(activity, tr(activity,
+                                "Renamed to: " + safe,
+                                "تم تغيير الاسم إلى: " + safe,
+                                "ناوەکە گۆڕدرا بۆ: " + safe), Toast.LENGTH_SHORT).show();
+                        dlg.dismiss();
+                        if (onRenamed != null) onRenamed.run();
+                    } else {
+                        Toast.makeText(activity, tr(activity,
+                                "Could not rename item",
+                                "تعذر إعادة التسمية",
+                                "نەتوانرا ناوەکە بگۆڕدرێت"), Toast.LENGTH_SHORT).show();
+                    }
+                });
+        LinearLayout.LayoutParams sbLp = (LinearLayout.LayoutParams) saveBtn.getLayoutParams();
+        sbLp.setMarginEnd(dp(activity, 8));
+        header.addView(saveBtn, header.getChildCount() - 1);
 
         dlg.setContentView(root);
         dlg.show();
@@ -3291,9 +3436,9 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "OS-Encrypted Sandbox Vault (FBE + 0700 UID)",
-                "حماية سرية الملفات داخل الخزنة المعزولة (تشفير النظام FBE + عزل 0700)",
-                "پاراستنی نهێنی پەڕگەکان لەناو بیرگەی تایبەتی بەرنامە (FBE + 0700)"));
+                "About the Private Document Vault",
+                "حول خزنة المستندات الخاصة",
+                "دەربارەی قاسەی تایبەتی بەڵگەنامەکان"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -3318,18 +3463,18 @@ public class AsycudaMaterialUi {
 
         TextView msg = new TextView(activity);
         msg.setText(tr(activity,
-                "For your security and trade confidentiality, all printed PDFs and downloaded customs documents are saved exclusively inside this app's isolated private Vault (/data/data/iq.asycuda/files/prints), protected by Android OS File-Based Encryption (FBE) and Linux 0700 UID isolation.\n\n"
-                        + "• Complete Confidentiality: No other app on your phone can read, scan, or access your customs declarations.\n"
-                        + "• Direct Java File Chooser Compatibility: Keeps POSIX files readable to the embedded Java JFileChooser inside the 0700 UID sandbox with zero PII or external consent tracking.\n"
-                        + "• Zero Broad Storage Permissions: Operates without requesting all-files access to your personal phone storage.",
-                "حفاظاً على أمانك وسرية معاملاتك الكمركية، يتم حفظ جميع ملفات PDF المطبوعة والمستندات المحمّلة حصرياً داخل الخزنة الخاصة والمعزولة للتطبيق، المحمية بتشفير ملفات نظام أندرويد (FBE) وعزل الصلاحيات (0700 UID).\n\n"
-                        + "• سرية تامة: لا يمكن لأي تطبيق آخر على هاتفك قراءة أو فحص أو الوصول إلى تصاريحك ومستنداتك الكمركية.\n"
-                        + "• توافق مباشر مع منتقي ملفات الجافا: تظل ملفات الخزنة متوافقة مع نافذة اختيار الملفات داخل بيئة التطبيق المعزولة (0700 UID) دون جمع أي بيانات شخصية.\n"
-                        + "• بدون صلاحيات وصول عامة: يعمل التطبيق بأمان تام دون طلب صلاحية الوصول الشامل لملفات هاتفك الشخصية.",
-                "بۆ پاراستنی ئاسایش و نهێنی مامەڵە گومرگییەکانت، هەموو پەڕگە چاپکراوەکانی PDF و بەڵگەنامەکان تەنها لەناو بیرگەی تایبەت و پارێزراوی ئەم بەرنامەیەدا پاشەکەوت دەکرێن (Android FBE + 0700 UID).\n\n"
-                        + "• نهێنی تەواو: هیچ بەرنامەیەکی تر لەسەر مۆبایلەکەت ناتوانێت دەستی بگات بە بەڵگەنامە گومرگییەکانت.\n"
-                        + "• گونجاندن لەگەڵ هەڵبژێرەری پەڕگەی جاڤا: پەڕگەکان لەناو ژینگەی دابڕاوی بەرنامەکەدا دەپارێزرێن بەبێ کۆکردنەوەی هیچ زانیارییەکی کەسی.\n"
-                        + "• بەبێ مۆڵەتی گشتی پەڕگەکان: بەرنامەکە داوای مۆڵەتی گەیشتن بە پەڕگە تایبەتییەکانی مۆبایلەکەت ناکات."));
+                "To keep your customs declarations and business records private, every PDF you print and every document you import is stored inside a dedicated Vault folder built into this app rather than in your phone's public Downloads folder.\n\n"
+                        + "• Protected from Other Apps: Files saved in the Vault are kept inside this app's private storage space, so other apps on your phone cannot view or scan your customs paperwork.\n\n"
+                        + "• Ready for ASYCUDA Uploads & Printing: Documents placed in the Vault appear directly inside ASYCUDA World's file window whenever you need to attach supporting paperwork to a declaration or save a printed form.\n\n"
+                        + "• Your Personal Files Stay Separate: The app does not ask for full access to your phone's personal photos or storage. Only the specific files you choose to import are copied into the Vault, and you can open, rename, organize, or share them anytime from this screen.",
+                "للحفاظ على خصوصية تصاريحك الكمركية ومستندات عملك، يتم حفظ جميع ملفات PDF التي تطبعها والمستندات التي تستوردها داخل خزنة خاصة مدمجة في هذا التطبيق بدلاً من تركها في مجلد التنزيلات العام على هاتفك.\n\n"
+                        + "• محمية من التطبيقات الأخرى: تُحفظ ملفات الخزنة داخل المساحة الخاصة بالتطبيق، مما يمنع أي تطبيقات أخرى على هاتفك من الاطلاع على معاملاتك أو فحص مستنداتك الكمركية.\n\n"
+                        + "• جاهزة للرفع والطباعة داخل أسيكودا: تظهر الملفات الموجودة في الخزنة مباشرة داخل نافذة اختيار الملفات في نظام أسيكودا العالمي كلما احتجت إلى إرفاق مستندات مع التصريح أو حفظ استمارة مطبوعة.\n\n"
+                        + "• خصوصية ملفات هاتفك الشخصية: لا يطلب التطبيق صلاحية الوصول الشامل إلى صورك أو ملفات هاتفك الشخصية، بل يتم فقط نسخ الملفات التي تختار استيرادها بنفسك إلى الخزنة، ويمكنك فتحها أو إعادة تسميتها أو تنظيمها في مجلدات أو مشاركتها في أي وقت من هذه النافذة.",
+                "بۆ پاراستنی تایبەتمەندی مامەڵە گومرگییەکانت و بەڵگەنامەکانی کارەکەت، هەموو ئەو پەڕگە PDFانەی چاپیان دەکەیت و ئەو بەڵگەنامانەی هاوردەیان دەکەیت لەناو قاسەیەکی تایبەتی ناو ئەم بەرنامەیەدا هەڵدەگیرێن نەک لەناو بوخچەی گشتی مۆبایلەکەت.\n\n"
+                        + "• پارێزراو لە بەرنامەکانی تر: پەڕگەکانی ناو قاسەکە لە شوێنی تایبەتی بەرنامەکەدا هەڵدەگیرێن، بۆیە هیچ بەرنامەیەکی تر لەسەر مۆبایلەکەت ناتوانێت بەڵگەنامە گومرگییەکانت ببینێت.\n\n"
+                        + "• ئامادەیە بۆ هاوپێچکردن و چاپکردن: هەر بەڵگەنامەیەک لەناو قاسەکەدا بێت ڕاستەوخۆ لە پەنجەرەی هەڵبژاردنی پەڕگەی ئەسیکۆدا دەردەکەوێت کاتێک دەتەوێت بەڵگەنامە هاوپێچ بکەیت.\n\n"
+                        + "• جیاکردنەوەی پەڕگە کەسییەکانت: بەرنامەکە داوای مۆڵەتی گەیشتن بە وێنە و پەڕگە تایبەتییەکانی مۆبایلەکەت ناکات، تەنها ئەو پەڕگانەی خۆت هەڵیاندەبژێریت دەخرێنە ناو قاسەکە و دەتوانیت لە هەر کاتێکدا بیانکەیتەوە، ناویان بگۆڕیت، یان هاوبەشیان پێبکەیت."));
         msg.setTextColor(TEXT_PRIMARY);
         msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
         card.addView(msg);
@@ -3421,7 +3566,7 @@ public class AsycudaMaterialUi {
         heroTextCol.addView(appTitle);
 
         TextView verPill = new TextView(activity);
-        verPill.setText("Release " + getAppVersionLabel(activity) + "  |  Standalone ARM64 Desktop Client");
+        verPill.setText("Version " + getAppVersionLabel(activity) + "  •  Android Desktop Environment");
         verPill.setTextColor(SYSTEM_BLUE);
         verPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         verPill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
@@ -3431,9 +3576,9 @@ public class AsycudaMaterialUi {
 
         TextView appDesc = new TextView(activity);
         appDesc.setText(tr(activity,
-                "A standalone Android runtime environment that runs the official Iraqi Customs ASYCUDA World desktop client on ARM64 phones and tablets with integrated PDF printing and local package verification.",
-                "بيئة تشغيل مستقلة تتيح فتح واستخدام نظام أسيكودا العالمي التابع للهيئة العامة للكمارك العراقية على هواتف وأجهزة الأندرويد، مع دعم طباعة وتصدير ملفات PDF والتحديث التلقائي لحزم النظام.",
-                "ژینگەیەکی سەربەخۆ بۆ کارپێکردنی سیستەمی ئەسیکۆدای جیهانی سەر بە گومرگی عێراق لەسەر مۆبایل و تابلێتی ئەندرۆید، لەگەڵ پشتگیری چاپکردنی PDF و نوێکردنەوەی خۆکاری پەڕگەکان."));
+                "Runs the full Iraqi Customs ASYCUDA World desktop system on Android phones and tablets, complete with built-in PDF printing, a private document vault, and automatic updates from the official customs server.",
+                "يتيح تشغيل النظام الكامل لأسيكودا العالمي التابع للهيئة العامة للكمارك العراقية على الهواتف والأجهزة اللوحية بنظام أندرويد، مع دعم مدمج لطباعة ملفات PDF وخزنة خاصة للمستندات وتحديث تلقائي من خادم الكمارك الرسمي.",
+                "سیستەمی تەواوی ئەسیکۆدای جیهانی سەر بە گومرگی عێراق لەسەر مۆبایل و تابلێتی ئەندرۆید کارپێدەکات، لەگەڵ چاپکردنی ڕاستەوخۆی PDF، قاسەی تایبەتی بەڵگەنامەکان و نوێکردنەوەی خۆکار لە ڕاژەی فەرمی گومرگەوە."));
         appDesc.setTextColor(TEXT_SECONDARY);
         appDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
         LinearLayout.LayoutParams descLp = new LinearLayout.LayoutParams(
@@ -3465,9 +3610,9 @@ public class AsycudaMaterialUi {
         secCard.setLayoutParams(cardLp);
 
         secCard.addView(createSectionHeader(activity,
-                tr(activity, "SECURITY, PRIVACY & LIVE AUDIT BADGES",
-                        "الأمان والخصوصية وشارات الفحص المباشرة",
-                        "ئاسایش و تایبەتمەندی و نیشانەکانی پشکنین")));
+                tr(activity, "SECURITY, PRIVACY & CODE QUALITY",
+                        "الأمان والخصوصية وجودة البرمجة",
+                        "ئاسایش و تایبەتمەندی و کوالێتی کۆد")));
 
         TextView secBody = new TextView(activity);
         secBody.setText(tr(activity,
@@ -3503,9 +3648,9 @@ public class AsycudaMaterialUi {
 
         TextView liveStatusView = new TextView(activity);
         liveStatusView.setText(tr(activity,
-                "● Fetching live metrics from SonarQube Cloud...",
-                "● جاري جلب نتائج الفحص المباشرة من SonarQube Cloud...",
-                "● وەرگرتنی ئەنجامی ڕاستەوخۆ لە SonarQube Cloud..."));
+                "Checking current code quality status on SonarQube Cloud...",
+                "جاري التحقق من حالة فحص الكود على SonarQube Cloud...",
+                "پشکنینی دۆخی کوالێتی کۆد لە SonarQube Cloud..."));
         liveStatusView.setTextColor(TEXT_SECONDARY);
         liveStatusView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         LinearLayout.LayoutParams lsLp = new LinearLayout.LayoutParams(
@@ -3518,18 +3663,18 @@ public class AsycudaMaterialUi {
         LinearLayout secBtnsRow = new LinearLayout(activity);
         secBtnsRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView secBtn = createCupertinoButton(activity,
-                tr(activity, "Open Repo Security Policy (SECURITY.md)",
-                        "فتح وثيقة الأمان في المستودع (SECURITY.md)",
-                        "کردنەوەی بەڵگەنامەی ئاسایش (SECURITY.md)"),
+                tr(activity, "Security Policy (SECURITY.md)",
+                        "سياسة الأمان (SECURITY.md)",
+                        "سیاسەتی ئاسایش (SECURITY.md)"),
                 true, false, v -> openSecurityMd.run());
         LinearLayout.LayoutParams sb1Lp = (LinearLayout.LayoutParams) secBtn.getLayoutParams();
         sb1Lp.setMarginEnd(dp(activity, 8));
         secBtnsRow.addView(secBtn);
 
         TextView sonarBtn = createCupertinoButton(activity,
-                tr(activity, "Live SonarQube Dashboard",
-                        "لوحة فحص SonarQube المباشرة",
-                        "پانێڵی ڕاستەوخۆی SonarQube"),
+                tr(activity, "SonarQube Report",
+                        "تقرير SonarQube",
+                        "ڕاپۆرتی SonarQube"),
                 false, false, v -> openSonar.run());
         secBtnsRow.addView(sonarBtn);
 
@@ -3545,7 +3690,7 @@ public class AsycudaMaterialUi {
         devCard.setLayoutParams(cardLp);
 
         TextView devSectionLabel = createSectionHeader(activity,
-                tr(activity, "LEAD DEVELOPER & ARCHITECT", "مطور ومهندس التطبيق", "گەشەپێدەر و ئەندازیاری بەرنامە"));
+                tr(activity, "DEVELOPER", "مطور التطبيق", "گەشەپێدەری بەرنامە"));
         devCard.addView(devSectionLabel);
 
         TextView devName = new TextView(activity);
@@ -3849,16 +3994,26 @@ public class AsycudaMaterialUi {
                         final String fSec = secRating + " • " + vulns + " Issues";
                         final String fRel = relRating + " • " + bugs + " Bugs";
                         final String fMaint = sqaleRating + " • " + smells + " Smells";
+                        final int gateColor = passed ? SYSTEM_GREEN
+                                : ("WARN".equalsIgnoreCase(gate) ? Color.parseColor("#FFFF9F0A") : SYSTEM_RED);
+                        final int secColor = getBadgeColorForRating(secRating, vulns);
+                        final int relColor = getBadgeColorForRating(relRating, bugs);
+                        final int maintColor = getBadgeColorForRating(sqaleRating, smells);
+                        final boolean allClean = passed && secColor == SYSTEM_GREEN && relColor == SYSTEM_GREEN;
                         activity.runOnUiThread(() -> {
                             gateView.setText(fGate);
+                            gateView.setBackground(createCardDrawable(activity, gateColor, 7, 0));
                             secView.setText(fSec);
+                            secView.setBackground(createCardDrawable(activity, secColor, 7, 0));
                             relView.setText(fRel);
+                            relView.setBackground(createCardDrawable(activity, relColor, 7, 0));
                             maintView.setText(fMaint);
+                            maintView.setBackground(createCardDrawable(activity, maintColor, 7, 0));
                             statusView.setText(tr(activity,
-                                    "● Live from SonarQube Cloud & Snyk — Verified right now (Tap any badge to inspect)",
-                                    "● متصل مباشرة بـ SonarQube Cloud و Snyk — تم التحقق الآن (اضغط على أي شارة للفحص)",
-                                    "● ڕاستەوخۆ لە SonarQube Cloud و Snyk — ئێستا پشتڕاستکرایەوە"));
-                            statusView.setTextColor(SYSTEM_GREEN);
+                                    "Updated from SonarQube Cloud — tap any badge to view the full report",
+                                    "تم التحديث من SonarQube Cloud — اضغط على أي شارة لعرض التقرير الكامل",
+                                    "نوێکرایەوە لە SonarQube Cloud — گرتە لە هەر نیشانەیەک بکە بۆ بینینی ڕاپۆرتی تەواو"));
+                            statusView.setTextColor(allClean ? SYSTEM_GREEN : Color.parseColor("#FFFF9F0A"));
                         });
                         return;
                     }
@@ -3870,11 +4025,27 @@ public class AsycudaMaterialUi {
             }
             activity.runOnUiThread(() ->
                 statusView.setText(tr(activity,
-                        "● Tap any badge to open live SonarQube Cloud & Snyk reports",
-                        "● اضغط على أي شارة لفتح تقارير SonarQube Cloud و Snyk المباشرة",
-                        "● گرتە لە هەر نیشانەیەک بکە بۆ کردنەوەی ڕاپۆرتی ڕاستەوخۆ"))
+                        "Tap any badge to open the SonarQube Cloud or Snyk security reports",
+                        "اضغط على أي شارة لفتح تقارير SonarQube Cloud و Snyk",
+                        "گرتە لە هەر نیشانەیەک بکە بۆ کردنەوەی ڕاپۆرتەکان"))
             );
         }, "Asycuda-SonarBadgeFetcher").start();
+    }
+
+    private static int getBadgeColorForRating(String rating, String countStr) {
+        int count = 0;
+        try {
+            count = Integer.parseInt(countStr != null ? countStr.trim() : "0");
+        } catch (NumberFormatException ignored) {
+            // Default to 0
+        }
+        if ("A".equalsIgnoreCase(rating) && count == 0) {
+            return SYSTEM_GREEN;
+        }
+        if ("D".equalsIgnoreCase(rating) || "E".equalsIgnoreCase(rating)) {
+            return SYSTEM_RED;
+        }
+        return Color.parseColor("#FFFF9F0A");
     }
 
     /**
@@ -3911,9 +4082,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Dynamic Server Resolution, Hardened Security Sandbox, One-Way Clipboard Paste & Zero Disk Storage",
-                "الاتصال الديناميكي بخادم الكمارك، تشديد صندوق الأمان، النسخ أحادي الاتجاه وعدم حفظ البيانات",
-                "پەیوەندی داینامیکی بە سێرڤەری گومرگ، تووندوتۆڵکردنی ساندبۆکسی ئاسایش و لەبەرگرتنەوەی یەک ئاراستە"));
+                "Reliable Connection Handling, Stronger Account Protection, Vault File Renaming & Better Reporting",
+                "تحسين استقرار الاتصال، وتعزيز حماية الحساب، وإعادة تسمية ملفات الخزنة، وتطوير مركز البلاغات",
+                "باشترکردنی پەیوەندی، پاراستنی زیاتری هەژمار، گۆڕینی ناوی پەڕگەکان و باشترکردنی ناردنی ڕاپۆرت"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         titleCol.addView(subtitle);
@@ -3946,53 +4117,53 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "1. Dynamic Host & Port Discovery via Official AWIQWorld.jnlp (Zero Hardcoded IPs/Ports)",
-                        "1. الاكتشاف الديناميكي التلقائي للنطاق والمنافذ عبر ملف AWIQWorld.jnlp الرسمي (دون عناوين أو منافذ ثابتة)",
-                        "١. دۆزینەوەی خۆکاری ناونیشان و دەرچەکان لە ڕێگەی پەڕگەی فەرمی AWIQWorld.jnlp"),
+                        "1. Automatic Connection Setup from the Official Customs Server",
+                        "1. الضبط التلقائي للاتصال من خادم الكمارك الرسمي",
+                        "١. ڕێکخستنی خۆکاری پەیوەندی لە ڕاژەی فەرمی گومرگەوە"),
                 tr(activity,
-                        "Eliminated all hardcoded IP addresses and fallback ports. The client dynamically extracts the RMI port and virtualized endpoints directly from the official AWIQWorld.jnlp manifest and resolves server IPs exclusively via system DNS.",
-                        "إزالة كافة عناوين IP وأرقام المنافذ الثابتة بالكامل؛ حيث يستخرج التطبيق منفذ RMI والنقاط الافتراضية تلقائياً من ملف AWIQWorld.jnlp الرسمي ويعتمد حصرياً على نظام DNS الرسمي.",
-                        "لابردنی هەموو ناونیشانی IP و دەرچە جێگیرەکان و پشتبەستن بە پەڕگەی فەرمی AWIQWorld.jnlp و سیستەمی DNS."));
+                        "The app now reads server connection settings and communication ports directly from the official Ministry of Finance configuration file (AWIQWorld.jnlp) and automatically reconnects when switching between Wi-Fi and mobile data.",
+                        "يقرأ التطبيق الآن إعدادات الاتصال وأرقام المنافذ مباشرة من ملف الإعدادات الرسمي لوزارة المالية (AWIQWorld.jnlp)، ويعيد ربط الاتصال تلقائياً عند التنقل بين شبكة الواي فاي وبيانات الهاتف.",
+                        "بەرنامەکە ئێستا ڕێکخستنەکانی پەیوەندی و دەرچەکان ڕاستەوخۆ لە پەڕگەی فەرمی وەزارەتی دارایی (AWIQWorld.jnlp) وەردەگرێت و لە کاتی گۆڕینی نێوان وایفای و ئینتەرنێتی مۆبایلدا پەیوەندییەکە نوێ دەکاتەوە."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "2. Hardened JVM SecurityManager Sandbox & Immutability Protection",
-                        "2. تشديد صندوق أمان الجافا (SecurityManager) وحماية ملفات النظام من التعديل",
-                        "٢. تووندوتۆڵکردنی ساندبۆکسی ئاسایشی جاڤا (SecurityManager) و پاراستنی پەڕگەکان"),
+                        "2. File & Folder Renaming in the Document Vault",
+                        "2. ميزة تعديل أسماء الملفات والمجلدات داخل الخزنة",
+                        "٢. تایبەتمەندی گۆڕینی ناوی پەڕگە و بوخچەکان لەناو قاسەدا"),
                 tr(activity,
-                        "Enforced canonical path protection against relative-path traversal, locked all extracted JARs as read-only, restricted native JNI libraries to an explicit JRE allowlist, and blocked unauthorized reflection and socket listeners.",
-                        "تطبيق الحماية الكاملة للمسارات ضد التلاعب بالمسارات النسبية، وقفل جميع حزم الجافا للقراءة فقط، وحصر مكتبات النظام بقائمة موثوقة، ومنع الانعكاس البرمجي أو فتح منافذ استماع غير مصرح بها.",
-                        "پاراستنی تەواوی ڕێڕەوەکان، قفڵکردنی پەڕگەکانی جاڤا تەنها بۆ خوێندنەوە، و ڕێگریکردن لە هەموو دەستکارییەکی نایاسایی."));
+                        "You can now rename any saved PDF, imported document, or folder directly inside the Vault File Manager so your customs declarations and attachments stay neatly organized.",
+                        "يمكنك الآن تعديل وإعادة تسمية أي ملف PDF مطبوع أو مستند مستورد أو مجلد مباشرة من داخل مدير ملفات الخزنة لترتيب معاملاتك ومرفقاتك الكمركية بسهولة.",
+                        "ئێستا دەتوانیت ناوی هەر پەڕگەیەکی PDF، بەڵگەنامەی هاوردەکراو، یان بوخچەیەک ڕاستەوخۆ لەناو بەڕێوەبەری پەڕگەکانی قاسەدا بگۆڕیت بۆ ڕێکخستنی باشتری مامەڵەکانت."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "3. One-Way Clipboard Paste (Android to ASYCUDA Only) with Zero Logging",
-                        "3. النسخ واللصق أحادي الاتجاه (من أندرويد إلى أسيكودا فقط) دون تسجيل أي محتوى",
-                        "٣. لەبەرگرتنەوە و دانانی یەک ئاراستە (تەنها لە ئەندرۆیدەوە بۆ ئەسیکۆدا)"),
+                        "3. Safe One-Way Clipboard Paste into ASYCUDA",
+                        "3. لصق النصوص بأمان من الهاتف إلى داخل أسيكودا",
+                        "٣. لکاندنی پارێزراوی دەق لە مۆبایلەوە بۆ ناو ئەسیکۆدا"),
                 tr(activity,
-                        "Seamless text pasting from Android into ASYCUDA via both Java Paste and keyboard clipboard paste, while strictly blocking clipboard export from ASYCUDA back to Android and ensuring zero clipboard or keystroke logging.",
-                        "دعم لصق النصوص بسلاسة من نظام أندرويد إلى داخل أسيكودا (عبر لصق الجافا أو حافظة لوحة المفاتيح)، مع حظر نسخ البيانات من أسيكودا إلى خارج التطبيق وعدم تسجيل أي مدخلات في السجلات.",
-                        "پاڵپشتی دانانی دەق لە ئەندرۆیدەوە بۆ ناو ئەسیکۆدا بە ئاسانی، لەگەڵ قەدەغەکردنی دەرچوونی زانیاری لە ئەسیکۆداوە بۆ دەرەوە."));
+                        "Text copied on your phone can be pasted directly into ASYCUDA World fields using either the keyboard clipboard or the Paste menu, while keeping data inside your ASYCUDA session private and never recording what you type or paste.",
+                        "يمكنك لصق النصوص المنسوخة من هاتفك مباشرة داخل حقول نظام أسيكودا سواء عبر حافظة الكيبورد أو قائمة اللصق، مع الحفاظ على خصوصية البيانات داخل الجلسة وعدم تسجيل أي نصوص مكتوبة أو منسوخة.",
+                        "دەتوانیت ئەو دەقانەی لەسەر مۆبایلەکەت کۆپیت کردوون ڕاستەوخۆ لەناو خانەکانی ئەسیکۆدا دابنێیت، لەگەڵ پاراستنی تەواوی نهێنی زانیارییەکانی ناو دانیشتنەکەت."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "4. Zero Persistent Credential Storage & Scrubbed Diagnostic Previews",
-                        "4. عدم تخزين بيانات الدخول نهائياً وتنقيح المعاينة التشخيصية في الذاكرة العشوائية",
-                        "٤. پاشەکەوتنەکردنی زانیاری چوونەژوورەوە و پاککردنەوەی ڕاپۆرتە تەکنیکییەکان"),
+                        "4. Stronger System File Protection & Package Verification",
+                        "4. تعزيز حماية ملفات النظام والتحقق من سلامة الحزم",
+                        "٤. پاراستنی باشتری پەڕگەکانی سیستەم و پشتڕاستکردنەوەی پاکێجەکان"),
                 tr(activity,
-                        "Credentials and legal consent details are never stored on disk. Diagnostic log previews are generated 100% in RAM with automatic redaction of TIN codes, cache serials, usernames, tokens, and session IDs.",
-                        "عدم حفظ كلمات المرور أو بيانات الموافقة القانونية على القرص نهائياً، وتنقيح أرقام الضريبة (TIN) والمعرفات وأسماء المستخدمين تلقائياً عند معاينة البيانات التشخيصية في الذاكرة العشوائية (RAM).",
-                        "پاشەکەوتنەکردنی وشەی نهێنی لەسەر بیرگە و شاردنەوەی خۆکاری ژمارەی باج (TIN) و زانیارییە تایبەتەکان لە ڕاپۆرتەکاندا."));
+                        "All official customs client packages are verified against their digital signature on startup and locked against unauthorized modification while the session is running.",
+                        "يتم التحقق من التوقيع الرقمي لجميع حزم نظام الكمارك الرسمية عند كل تشغيل، مع قفل ملفات النظام لمنع أي تعديل غير مصرح به أثناء عمل الجلسة.",
+                        "هەموو پەڕگە فەرمییەکانی سیستەمی گومرگ لە کاتی دەستپێکردندا واژۆی دیجیتاڵییان دەپشکنرێت و دەپارێزرێن لە هەر دەستکارییەکی ڕێگەپێنەدراو."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "5. Startup Cryptographic JAR Verification & Strict GitHub Release Pinning",
-                        "5. التحقق التشفيري من سلامة الحزم عند التشغيل وتقييد تحديثات GitHub الرسمية",
-                        "٥. پشکنینی پارێزراوی پەڕگەکان لە کاتی دەستپێکردن و نوێکردنەوەی فەرمی GitHub"),
+                        "5. Improved Issue Reporting & Privacy Filtering",
+                        "5. تطوير نافذة الإبلاغ عن المشاكل وتنقية السجلات تلقائياً",
+                        "٥. باشترکردنی بەشی ناردنی ڕاپۆرتی کێشەکان و پاراستنی تایبەتمەندی"),
                 tr(activity,
-                        "Every cached government JAR is verified for ZIP/JAR integrity and SHA-256 digest on every startup, and in-app APK updates strictly validate the repository path and SHA-256 signature before and after redirects.",
-                        "فحص سلامة وتكامل جميع حزم الكمارك المخزنة عند كل تشغيل للتطبيق، والتحقق الصارم من مسار المستودع الرسمي وبصمة SHA-256 عند تنزيل تحديثات التطبيق.",
-                        "پشکنینی سەلامەتی هەموو پەڕگەکان لە کاتی کردنەوەی بەرنامەکە و دڵنیابوونەوە لە واژۆی فەرمی SHA-256."));
+                        "Fixed issue report delivery and added a clear log preview window that automatically removes usernames, passwords, tax numbers, and session details before any diagnostic report is sent.",
+                        "إصلاح إرسال البلاغات الفنية وإضافة نافذة واضحة لمعاينة السجلات تقوم تلقائياً بحذف أسماء المستخدمين وكلمات المرور والأرقام الضريبية وتفاصيل الجلسة قبل إرسال أي بلاغ.",
+                        "چارەسەرکردنی ناردنی ڕاپۆرتی کێشەکان و زیادکردنی پەنجەرەی پێداچوونەوەی تۆمارەکان کە بە شێوەی خۆکار ناوی بەکارهێنەر و وشەی نهێنی و ژمارەی باج لادەبات پێش ناردن."));
 
         scroll.addView(card);
         root.addView(scroll);
@@ -4066,15 +4237,15 @@ public class AsycudaMaterialUi {
         SharedPreferences sp = ctx.getSharedPreferences(CONSENT_PREFS_NAME, Context.MODE_PRIVATE);
         if (!sp.getBoolean(KEY_ACCEPTED, false)) {
             return tr(ctx,
-                    "Electronic click-wrap agreement required on initial launch (Zero personal data collected).",
-                    "يتطلب الموافقة الإلكترونية عند بدء التشغيل (دون جمع أي بيانات شخصية).",
-                    "ڕەزامەندی ئەلیکترۆنی لە کاتی دەستپێکردندا پێویستە (بەبێ کۆکردنەوەی زانیاری کەسی).");
+                    "Requires one-time acceptance on first launch. No personal information is collected.",
+                    "يتطلب الموافقة لمرة واحدة عند التشغيل الأول، ولا يتم جمع أي معلومات شخصية.",
+                    "پێویستی بە پەسەندکردن هەیە لە یەکەم کارپێکردندا، و هیچ زانیارییەکی کەسی کۆناکرێتەوە.");
         }
         String localDate = sp.getString(KEY_ACCEPTED_LOCAL, "");
         return tr(ctx,
-                "Accepted on " + localDate + "  •  Zero-PII Local Waiver (Policy v" + CURRENT_POLICY_VERSION + ")",
-                "تاريخ الموافقة: " + localDate + "  •  إقرار إلكتروني محلي دون جمع بيانات شخصية (الإصدار " + CURRENT_POLICY_VERSION + ")",
-                "بەرواری پەسەندکردن: " + localDate + "  •  بەبێ کۆکردنەوەی زانیاری کەسی (وەشانی " + CURRENT_POLICY_VERSION + ")");
+                "Accepted on " + localDate + "  •  Saved locally on this device (Policy v" + CURRENT_POLICY_VERSION + ")",
+                "تمت الموافقة بتاريخ " + localDate + "  •  محفوظة محلياً على هذا الجهاز (الإصدار " + CURRENT_POLICY_VERSION + ")",
+                "پەسەندکراوە لە " + localDate + "  •  لەسەر ئەم ئامێرە پاشەکەوتکراوە (وەشانی " + CURRENT_POLICY_VERSION + ")");
     }
 
     public static String getTermsConsentSummaryForDiagnostics(Context ctx) {
@@ -4139,7 +4310,7 @@ public class AsycudaMaterialUi {
         LinearLayout langBar = new LinearLayout(activity);
         langBar.setOrientation(LinearLayout.HORIZONTAL);
         String curLang = getAppLanguage(activity);
-        String[][] langs = new String[][] {
+        String[][] langs = {
                 { "ar", "عربي" },
                 { "en", "EN" },
                 { "ku", "کوردی" }
@@ -4219,18 +4390,18 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "4. Zero Personal Data Collection & Strict Privacy Guarantee",
-                        "4. عدم جمع أي بيانات شخصية وضمان الخصوصية التامة",
-                        "٤. کۆنەکردنەوەی هیچ زانیارییەکی کەسی و گەرەنتی تایبەتمەندی"),
+                        "4. Privacy & Personal Data Protection",
+                        "4. حماية الخصوصية وعدم جمع البيانات الشخصية",
+                        "٤. پاراستنی تایبەتمەندی و کۆنەکردنەوەی زانیاری کەسی"),
                 tr(activity,
-                        "This application collects ZERO personal data, ZERO personal names, ZERO company names, ZERO hardware device IDs, and ZERO ASYCUDA login credentials. Your acceptance of these terms is stored strictly as a local boolean flag on your device — nothing is transmitted to any external server upon acceptance. Diagnostic logs are only sent if you manually submit a support ticket via 'Report a Technical Issue'.",
-                        "لا يقوم هذا التطبيق بجمع أو طلب أو تخزين أي بيانات شخصية، ولا يطلب اسمك أو اسم شركتك أو معرفات جهازك، ولا يطّلع إطلاقاً على كلمات مرور أو تصاريح نظام أسيكودا. يتم حفظ موافقتك على هذه الشروط كإشارة محلية فقط داخل جهازك دون إرسال أي بيانات إلى أي خادم خارجي عند الموافقة.",
-                        "ئەم بەرنامەیە هیچ زانیارییەکی کەسی، ناوی کەسی، ناوی کۆمپانیا، یان وشەی نهێنی ئەسیکۆدا کۆناکاتەوە و پاشەکەوتی ناکات. پەسەندکردنی ئەم مەرجانە تەنها لەناو ئامێرەکەتدا دەمێنێتەوە و هیچ زانیارییەک لە کاتی پەسەندکردندا نانێردرێت بۆ هیچ سێرڤەرێکی دەرەکی."));
+                        "This application does not collect personal information, names, company details, hardware identifiers, or ASYCUDA login credentials. Your acceptance of these terms is saved only as a simple setting on your phone, and nothing is sent to any external server when you accept. Technical logs are only shared if you choose to submit a report through the 'Report a Technical Issue' screen.",
+                        "لا يقوم هذا التطبيق بجمع أي معلومات شخصية أو أسماء للأفراد أو الشركات أو معرفات للأجهزة أو بيانات دخول لنظام أسيكودا. يتم حفظ موافقتك على هذه الشروط كإعداد بسيط داخل هاتفك فقط، ولا يتم إرسال أي بيانات إلى أي جهة خارجية عند الموافقة. ولا تُرسل السجلات الفنية إلا إذا قمت بنفسك بإرسال بلاغ عبر نافذة «الإبلاغ عن مشكلة فنية».",
+                        "ئەم بەرنامەیە هیچ زانیارییەکی کەسی، ناوی کەسەکان، زانیاری کۆمپانیا، ناسنامەی ئامێر، یان زانیاری چوونەژوورەوەی ئەسیکۆدا کۆناکاتەوە. پەسەندکردنی ئەم مەرجانە تەنها وەک ڕێکخستنێکی سادە لەناو مۆبایلەکەتدا هەڵدەگیرێت و هیچ زانیارییەک لە کاتی پەسەندکردندا نانێردرێت. تۆمارە تەکنیکییەکان تەنها کاتێک دەنێردرێن کە خۆت ڕاپۆرتێک لە ڕێگەی بەشی «ناردنی ڕاپۆرتی کێشەی تەکنیکی» بنێریت."));
 
         scrollContent.addView(bodyCard);
 
         // Mandatory Click-Wrap Agreement Checkbox
-        final boolean[] isChecked = new boolean[] { false };
+        final boolean[] isChecked = { false };
 
         LinearLayout checkCard = new LinearLayout(activity);
         checkCard.setOrientation(LinearLayout.HORIZONTAL);
@@ -4666,9 +4837,9 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "Vault File Bridge",
-                "جسر ملفات الخزنة",
-                "پردی پەڕگەکانی قاسە"));
+                "Choose a File for ASYCUDA",
+                "اختيار ملف لنظام أسيكودا",
+                "هەڵبژاردنی پەڕگە بۆ ئەسیکۆدا"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));

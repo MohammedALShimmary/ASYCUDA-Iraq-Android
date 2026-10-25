@@ -170,7 +170,7 @@ public class TermuxX11ExtraKeys implements ExtraKeysView.IExtraKeysView {
         if ("KEYBOARD".equals(key))
             mActivity.toggleKeyboardVisibility();
         else if ("DRAWER".equals(key) || "PREFERENCES".equals(key))
-            mActivity.startActivity(new Intent(mActivity, LoriePreferences.class).setAction(ACTION_START_PREFERENCES_ACTIVITY));
+            com.termux.x11.AsycudaStandaloneManager.openDisplaySettings(mActivity);
         else if ("EXIT".equals(key))
             mActivity.finish();
         else if ("PASTE".equals(key)) {

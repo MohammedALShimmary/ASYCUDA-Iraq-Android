@@ -132,19 +132,13 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
     protected void onCreate(Bundle savedInstanceState) {
         prefs = ((LorieApp) getApplication()).getPrefs(this);
         super.onCreate(savedInstanceState);
-        getSupportFragmentManager().beginTransaction().replace(android.R.id.content, new LoriePreferenceFragment(null)).commit();
-
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(true);
-            actionBar.setHomeButtonEnabled(true);
+        MainActivity active = MainActivity.getInstance("");
+        if (active != null && !active.isFinishing()) {
+            AsycudaStandaloneManager.openDisplaySettings(active);
+        } else {
+            startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
         }
-
-        Uri ENABLED_ACCESSIBILITY_SERVICES = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        Uri ACCESSIBILITY_ENABLED = Settings.Secure.getUriFor(Settings.Secure.ACCESSIBILITY_ENABLED);
-
-        getContentResolver().registerContentObserver(ENABLED_ACCESSIBILITY_SERVICES, true, accessibilityObserver);
-        getContentResolver().registerContentObserver(ACCESSIBILITY_ENABLED, true, accessibilityObserver);
+        finish();
     }
 
     @SuppressLint("WrongConstant")
@@ -166,7 +160,11 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
 
     @Override
     protected void onDestroy() {
-        getContentResolver().unregisterContentObserver(accessibilityObserver);
+        try {
+            getContentResolver().unregisterContentObserver(accessibilityObserver);
+        } catch (Exception ignored) {
+            // Observer is not registered when redirecting immediately to ASYCUDA Settings
+        }
         super.onDestroy();
     }
 

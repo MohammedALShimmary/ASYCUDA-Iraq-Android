@@ -61,7 +61,7 @@ public final class AsycudaSecurityValidator {
                 return null;
             }
             int port = resolved.getPort();
-            int expectedDefaultPort = base.getPort() != -1 ? base.getPort() : base.getDefaultPort();
+            int expectedDefaultPort = base.getPort() == -1 ? base.getDefaultPort() : base.getPort();
             if (port != -1 && port != expectedDefaultPort) {
                 return null;
             }
@@ -96,20 +96,7 @@ public final class AsycudaSecurityValidator {
             }
 
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            boolean pkcs7MatchedPinnedSigner = false;
-            try (InputStream rsaIn = jf.getInputStream(rsaEntry)) {
-                Collection<? extends Certificate> pkcs7Certs = cf.generateCertificates(rsaIn);
-                if (pkcs7Certs != null) {
-                    for (Certificate c : pkcs7Certs) {
-                        if (expectedCertSha256.equalsIgnoreCase(sha256Hex(sha256, c.getEncoded()))) {
-                            pkcs7MatchedPinnedSigner = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!pkcs7MatchedPinnedSigner) {
+            if (!doesPkcs7ContainPinnedSigner(jf, rsaEntry, sha256, expectedCertSha256)) {
                 return false;
             }
 
@@ -118,19 +105,10 @@ public final class AsycudaSecurityValidator {
             byte[] buf = new byte[16384];
             while (entries.hasMoreElements()) {
                 JarEntry je = entries.nextElement();
-                try (InputStream is = jf.getInputStream(je)) {
-                    while (is.read(buf) != -1) {
-                        // Draining the entry stream triggers JarVerifier digest & signature validation
-                    }
-                }
-                String name = je.getName();
-                if (!je.isDirectory() && !name.toUpperCase(Locale.US).startsWith("META-INF/")) {
+                drainJarEntryStream(jf, je, buf);
+                if (isNonMetaInfFileEntry(je)) {
                     nonMetaEntryCount++;
-                    Certificate[] entryCerts = je.getCertificates();
-                    if (entryCerts == null || entryCerts.length == 0) {
-                        return false;
-                    }
-                    if (!expectedCertSha256.equalsIgnoreCase(sha256Hex(sha256, entryCerts[0].getEncoded()))) {
+                    if (!isEntrySignedByPinnedCert(je, sha256, expectedCertSha256)) {
                         return false;
                     }
                 }
@@ -139,6 +117,42 @@ public final class AsycudaSecurityValidator {
         } catch (Exception invalidJar) {
             return false;
         }
+    }
+
+    private static boolean doesPkcs7ContainPinnedSigner(
+            JarFile jf, JarEntry rsaEntry, MessageDigest sha256, String expectedCertSha256) throws Exception {
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        try (InputStream rsaIn = jf.getInputStream(rsaEntry)) {
+            Collection<? extends Certificate> pkcs7Certs = cf.generateCertificates(rsaIn);
+            if (pkcs7Certs == null) return false;
+            for (Certificate c : pkcs7Certs) {
+                if (expectedCertSha256.equalsIgnoreCase(sha256Hex(sha256, c.getEncoded()))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void drainJarEntryStream(JarFile jf, JarEntry je, byte[] buf) throws Exception {
+        try (InputStream is = jf.getInputStream(je)) {
+            while (is.read(buf) != -1) {
+                // Draining the entry stream triggers JarVerifier digest & signature validation
+            }
+        }
+    }
+
+    private static boolean isNonMetaInfFileEntry(JarEntry je) {
+        return !je.isDirectory() && !je.getName().toUpperCase(Locale.US).startsWith("META-INF/");
+    }
+
+    private static boolean isEntrySignedByPinnedCert(
+            JarEntry je, MessageDigest sha256, String expectedCertSha256) throws Exception {
+        Certificate[] entryCerts = je.getCertificates();
+        if (entryCerts == null || entryCerts.length == 0) {
+            return false;
+        }
+        return expectedCertSha256.equalsIgnoreCase(sha256Hex(sha256, entryCerts[0].getEncoded()));
     }
 
     public static String sha256Hex(MessageDigest sha256, byte[] data) {
@@ -171,9 +185,9 @@ public final class AsycudaSecurityValidator {
         // Scrub Bearer / Basic authorization tokens
         redacted = redacted.replaceAll("(?i)\\b(bearer|basic)\\s++[^\\s,;\"'&<>\\]}]++", "$1 [REDACTED]");
         // Scrub SOClassCache username folder paths (e.g. .SOClassCache/202604030102004730/User7015W/)
-        redacted = redacted.replaceAll("(\\.SOClassCache/[^/\\s]++/)+[^/\\s]++", "$1[REDACTED_USER]");
+        redacted = redacted.replaceAll("(\\.SOClassCache/[^/\\s]++/)[^/\\s]++", "$1[REDACTED_USER]");
         // Scrub "Tin code received : <value>" lines in asycuda.log
-        redacted = redacted.replaceAll("(?i)(tin\\s++code(?:\\s++received)?+\\s*+[:=]\\s*+)[^\\s\\r\\n]++", "$1\"[REDACTED]\"");
+        redacted = redacted.replaceAll("(?i)(tin\\s++code(?:\\s++received)?+\\s*+[:=]\\s*+)\\S++", "$1\"[REDACTED]\"");
         // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys (both quoted and unquoted values)
         redacted = redacted.replaceAll(
                 "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|login_id|declarant|declarant_id|tin|tax_id|secret|client_secret|token|auth_token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|cvv|credential|private_key|account_no|iban|customs_decl|declaration_no|sad_no|awb_no|bl_no)[\"']?+\\s*+[:=]\\s*+)(?:\"(?:\\\\.|[^\"\\\\])*+\"|'(?:\\\\.|[^'\\\\])*+'|[^\\s,;\"'&<>\\]}]++)",
@@ -220,13 +234,7 @@ public final class AsycudaSecurityValidator {
     public static boolean isValidSha256Hex(String sha256) {
         if (sha256 == null) return false;
         String trimmed = sha256.trim();
-        if (trimmed.length() != 64) return false;
-        for (int i = 0; i < 64; i++) {
-            char c = trimmed.charAt(i);
-            boolean hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-            if (!hex) return false;
-        }
-        return true;
+        return trimmed.length() == 64 && isHexRange(trimmed, 0, 64);
     }
 
     /**
@@ -234,27 +242,33 @@ public final class AsycudaSecurityValidator {
      * {@code digest} field was not populated by the API.
      */
     public static String extractSha256FromReleaseBody(String body) {
-        if (body == null || body.isEmpty()) return null;
+        if (body == null || body.length() < 64) return null;
         int n = body.length();
         for (int i = 0; i <= n - 64; i++) {
-            boolean allHex = true;
-            for (int j = 0; j < 64; j++) {
-                char c = body.charAt(i + j);
-                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
-                    allHex = false;
-                    i += j;
-                    break;
-                }
-            }
-            if (allHex) {
-                boolean leftBoundary = (i == 0) || !Character.isLetterOrDigit(body.charAt(i - 1));
-                boolean rightBoundary = (i + 64 == n) || !Character.isLetterOrDigit(body.charAt(i + 64));
-                if (leftBoundary && rightBoundary) {
-                    return body.substring(i, i + 64).toLowerCase(Locale.US);
-                }
+            if (isHexRange(body, i, 64) && isBoundedHexToken(body, i, 64)) {
+                return body.substring(i, i + 64).toLowerCase(Locale.US);
             }
         }
         return null;
+    }
+
+    private static boolean isHexRange(String s, int offset, int len) {
+        for (int j = 0; j < len; j++) {
+            if (!isHexChar(s.charAt(offset + j))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isHexChar(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    private static boolean isBoundedHexToken(String s, int offset, int len) {
+        boolean leftOk = (offset == 0) || !Character.isLetterOrDigit(s.charAt(offset - 1));
+        boolean rightOk = (offset + len == s.length()) || !Character.isLetterOrDigit(s.charAt(offset + len));
+        return leftOk && rightOk;
     }
 
     /**
