@@ -38,10 +38,22 @@ This directory contains **100% of the custom Java source code** compiled into th
      - Sends file-open (`OPEN|...`), browser-open (`BROWSE|...`), native file-picker (`PICK_WORKSPACE_FILE`), keyboard (`IME|SHOW`), and `SOClass` update (`SOCLASS_UPDATE|...`) events to the Android host activity using a per-session random authentication token (`-Dasycuda.bridge.token=<UUID>`).
   4. **`SOClass` Server Update Alert Listener (`installRejectHandlerHook`, `inspectDialogForSoClassUpdate`)**:
      - Hooks `so.rmi.transport.client.ClientTransportLayer`'s `RejectHandler` via a Java Dynamic Proxy and inspects modal error dialogs for `"SOClass Client have to be updated. It will be shutdown now."`, automatically opening the Android **Update Center** window.
-  5. **Hardened SecurityManager (`createHardenedSecurityManager`, `checkBlockedHostPath`, `checkAllowedOutboundNetwork`)**:
-     - Installs a hardened `SecurityManager` that explicitly **blocks OS subprocess execution** (`checkExec()` throws `SecurityException`), **blocks JVM access to Android host storage paths** (`checkBlockedHostPath()` blocks `/shared_prefs`, `/databases/`, `/datastore/`), and **enforces an outbound network allowlist** (`checkConnect()` / `checkAllowedOutboundNetwork()` restricts all JVM sockets strictly to `localhost`/`127.0.0.1` and `asy.mof.gov.iq`, throwing `SecurityException` for any other host or IP).
+  5. **Fail-Closed Hardened SecurityManager (`createHardenedSecurityManager`, `checkBlockedHostPath`, `checkAllowedOutboundNetwork`)**:
+     - Installs a fail-closed `SecurityManager` (if `System.setSecurityManager(...)` fails or is inactive, `AsycudaBoot` sends `SECURITY_ERROR|...` to the Android host to display an alert modal and immediately halts via `Runtime.getRuntime().halt(1)`).
+     - Explicitly **blocks OS subprocess execution** (`checkExec()` throws `SecurityException`), **blocks JVM access to Android host storage paths** (`checkBlockedHostPath()` blocks `/shared_prefs`, `/databases/`, `/datastore/`), and **enforces a 100% dynamic host & port outbound network allowlist with zero hardcoded IPs or ports** (`checkConnect()` / `checkAllowedOutboundNetwork()` restricts direct JVM sockets strictly to `localhost`/`127.0.0.1` and `asy.mof.gov.iq`, dynamically resolving IPs via `refreshAllowedCustomsIps()` and dynamically discovering authorized ports and virtualized RMI endpoints from `AWIQWorld.jnlp`, `so.rmi.url.port`, and `ClientTransportLayer` via `syncMofTransportState()`).
   6. **Zero Credential or Traffic Interception**:
      - `AsycudaBoot` never reads, logs, stores, or transmits ASYCUDA usernames, passwords, customs declarations, or session tokens. All customs traffic flows directly between the unmodified UNCTAD client classes and `asy.mof.gov.iq`.
+
+---
+
+## Original Java Bridge Attribution
+
+The original Java bridge modules (`00_bootpatch.jar`, `00_boot.jar`, and `00_jnlp.jar`) were authored by **Mohammed Ammar Hussein (@MohammedALShimmary)** for this project.
+
+* **Original project**: https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android
+* **Attribution terms**: See [`java-bridge/ATTRIBUTION-TERMS.md`](ATTRIBUTION-TERMS.md) (GNU GPL-3.0 Section 7).
+
+Please preserve applicable copyright and author-attribution notices, and identify modified versions, in accordance with the applicable license terms.
 
 ---
 

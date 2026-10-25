@@ -11,32 +11,32 @@ Because **ASYCUDA World — Republic of Iraq (Android)** (`iq.asycuda`) is an in
 
 ---
 
-## Supported Versions & Published Release Verification (`v4.0.5`)
+## Supported Versions & Published Release Verification (`v4.1.0`)
 
-All users should run **[v4.0.5](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5)** (`versionCode 42`). Earlier releases (`v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) have been marked as superseded on GitHub Releases following the `v4.0.5` Zero-PII Iraqi Law Click-Wrap Liability Waiver, Enforced JVM Outbound Network Allowlist (`checkConnect`), and 7-Suite Direct CI Security Verification upgrade.
+All users should run **[v4.1.0](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0)** (`versionCode 43`). Earlier releases (`v4.0.5`, `v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) have been marked as superseded on GitHub Releases following the `v4.1.0` Dynamic Host/Port Resolution, Hardened JVM Sandbox, One-Way Clipboard Paste, and Startup Cryptographic JAR Verification upgrade.
 
 | Version | Supported | Security Status | Direct Release Link |
 | :--- | :--- | :--- | :--- |
-| **v4.0.5** (`versionCode 42`) | **Yes (Recommended)** | **Zero-PII Iraqi Law Click-Wrap Liability Waiver** (Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1; zero personal/company names or `ANDROID_ID` collected, zero consent receipts transmitted), **Enforced JVM Outbound Network Allowlist** (`AsycudaBoot.checkAllowedOutboundNetwork()` restricts all JVM sockets strictly to `localhost` and `asy.mof.gov.iq`), **Zero pre-bundled government JARs** (all 131 official JARs downloaded directly from `asy.mof.gov.iq` on first launch & verified against `SOCODE.RSA`), **Android 14 (`targetSdkVersion 34`)** with verified Android Developer Console signing certificate, **Zero storage permissions** (`MANAGE_EXTERNAL_STORAGE` & `BIND_ACCESSIBILITY_SERVICE` removed), JVM Host Storage Isolation (`checkBlockedHostPath`), X11 `-nolisten tcp`, Quoted-JSON log redaction, Eclipse Temurin OpenJDK `8u504-b01` LTS, 7-Suite Adversarial CI Security Verification & CycloneDX SBOM | [**GitHub Release `v4.0.5`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5) |
-| **< v4.0.5** (`v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, `v3.6.0`) | No | Superseded — upgrade to **v4.0.5** via the in-app Update Center or direct APK download | [Download `ASYCUDA_Iraq_v4.0.5.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) |
+| **v4.1.0** (`versionCode 43`) | **Yes (Recommended)** | **Dynamic Host & Port Discovery** (zero hardcoded server IPs or fallback ports; dynamically parsed from `AWIQWorld.jnlp` and resolved via system DNS), **Hardened Fail-Closed JVM Sandbox** (canonical path protection, read-only JAR immutability, explicit JRE native library allowlist, full-stack reflection & environment variable isolation), **One-Way Clipboard Paste** (`Android -> ASYCUDA` only with zero clipboard/keystroke logging), **Zero-PII Iraqi Law Click-Wrap Liability Waiver** (Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1), **Zero pre-bundled government JARs** (downloaded directly from `asy.mof.gov.iq` & verified against `SOCODE.RSA` on every startup), **Android 14 (`targetSdkVersion 34`)**, **Zero storage permissions**, X11 `-nolisten tcp`, 100% In-RAM diagnostic preview with auto-zeroing, Eclipse Temurin OpenJDK `8u504-b01` LTS, 7-Suite Adversarial CI Security Verification & CycloneDX SBOM | [**GitHub Release `v4.1.0`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) |
+| **< v4.1.0** (`v4.0.5`, `v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, `v3.6.0`) | No | Superseded — upgrade to **v4.1.0** via the in-app Update Center or direct APK download | [Download `ASYCUDA_Iraq_v4.1.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) |
 
-### Official `v4.0.5` Release Assets & SHA-256 Checksums
-Every asset published on the [official `v4.0.5` GitHub Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5) can be verified via `sha256sum`:
+### Official `v4.1.0` Release Assets & SHA-256 Checksums
+Every asset published on the [official `v4.1.0` GitHub Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) can be verified via `sha256sum`:
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.0.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 42`, `targetSdkVersion 34`) | `130df3350a50bb011da9b2d74c3c4eb2d17bc1cd04ae9b69de3f0fefee8def44` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`) & config (`zero` government JARs bundled; all 131 official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `d7f724041d358c824af58c790c83ddf525f623450dd303995bcfbf48d8d81d52` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + Eclipse Temurin OpenJDK `8u504-b01` LTS (`1.8.0_504-b01`) runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`ASYCUDA_Iraq_v4.1.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 43`, `targetSdkVersion 34`) | `TBD_ON_RELEASE_BUILD` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`) & config (`zero` government JARs bundled; all official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `e74ac5883c8b2fa1ac6554bedc80feaa9e0baa106700dc948d88708c8d2abac2` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + Eclipse Temurin OpenJDK `8u504-b01` LTS (`1.8.0_504-b01`) runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
 
 ### Official APK X.509 Signing Certificate Fingerprint
-Every official release APK (`ASYCUDA_Iraq_v4.0.5.apk`) can be cryptographically verified prior to installation using `apksigner verify --print-certs`:
+Every official release APK (`ASYCUDA_Iraq_v4.1.0.apk`) can be cryptographically verified prior to installation using `apksigner verify --print-certs`:
 
 | Field | Value |
 | :--- | :--- |
 | **Application ID** | `iq.asycuda` |
-| **Version Name / Code** | `4.0.5` (`versionCode 42`) |
+| **Version Name / Code** | `4.1.0` (`versionCode 43`) |
 | **Signer Certificate DN** | `CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ` |
 | **Signer SHA-256 Digest** | `d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023` |
 | **Signer SHA-1 Digest** | `e1b9c91b50e50223885fd2ee5326b165f16535e7` |
@@ -95,16 +95,19 @@ flowchart TB
 
 1. **Zero Broad Storage or Accessibility Permissions (`AndroidManifest.xml`)**:
    - `MANAGE_EXTERNAL_STORAGE`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`, and `BIND_ACCESSIBILITY_SERVICE` have been **completely removed** from [`lorie/src/main/AndroidManifest.xml`](lorie/src/main/AndroidManifest.xml) (enforced on every commit by [`scripts/SecurityVerificationTest.java`](scripts/SecurityVerificationTest.java)).
-   - Below is the **complete inventory of all 6 permissions** declared in `AndroidManifest.xml` and their exact engineering purpose:
+   - Below is the **complete inventory of all 9 permissions** declared in `AndroidManifest.xml` and their exact engineering purpose:
 
    | Declared Permission | Android Protection Level | Exact Engineering Purpose |
    | :--- | :--- | :--- |
-   | `android.permission.INTERNET` | Normal | Connects directly to the Iraqi Customs server (`asy.mof.gov.iq:443` & `:2006`), checks for GitHub release updates, and sends voluntary user-submitted bug reports. |
-   | `android.permission.ACCESS_NETWORK_STATE` | Normal | Checks network reachability before attempting `AWIQWorld.jnlp` package synchronization. |
+   | `android.permission.INTERNET` | Normal | Connects directly to the Iraqi Customs server (`asy.mof.gov.iq`), checks for GitHub release updates, and sends voluntary user-submitted bug reports. |
+   | `android.permission.ACCESS_NETWORK_STATE` | Normal | Monitors active Wi-Fi and 4G network interfaces (`ConnectivityManager.getActiveNetwork()`) for seamless network handover and `AWIQWorld.jnlp` package synchronization. |
    | `android.permission.FOREGROUND_SERVICE` | Normal | Keeps the embedded X11 display server and ASYCUDA JVM alive while the user switches briefly to another app (e.g. viewing an exported PDF). |
    | `android.permission.FOREGROUND_SERVICE_SPECIAL_USE` | Normal (Android 14 / SDK 34) | Required by Android 14 (`targetSdkVersion 34`) for persistent local desktop/X11 sessions. |
+   | `android.permission.WAKE_LOCK` | Normal | Prevents CPU sleep during active customs declaration submission or multi-JAR synchronization. |
+   | `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Normal / User-Gated | Allows customs brokers to exempt the active X11/JVM desktop session from aggressive OEM background battery killers during multi-hour declarations. |
    | `android.permission.POST_NOTIFICATIONS` | Runtime (Optional) | Displays the foreground X11 session status notification (`Exit` action button). |
    | `android.permission.REQUEST_INSTALL_PACKAGES` | Signature / User-Gated | Used **exclusively** when the user taps **"Download & Install App Update"** inside the Update Center after the downloaded GitHub Release `.apk` passes both SHA-256 digest and X.509 developer certificate pinning verification. Android always prompts the user for explicit confirmation before installing. |
+   | `iq.asycuda.PERMISSION_INTERNAL_BROADCAST` | `signature` (App-Private) | Custom `signature`-level permission protecting internal X11 surface state broadcasts between `CmdEntryPoint` and `MainActivity` so no third-party app can spoof or intercept internal display intents. |
 2. **Automatic File Picker Bridge (`Zero Modification to Government Dialogs`)**:
    - Because the legacy ASYCUDA Java 8 Swing client uses `javax.swing.JFileChooser` / `java.awt.FileDialog` (which cannot invoke Android `content://` intents directly), [`AsycudaBoot.java`](java-bridge/AsycudaBoot.java) jails `JFileChooser` and `FileDialog` strictly to the unified private Vault folder `/data/data/iq.asycuda/files/prints` using `VaultFileSystemView` (preventing traversal to parent system folders while allowing subfolder management inside the Vault).
    - No buttons or custom UI components are ever injected into ASYCUDA's `JFileChooser`. Instead, when ASYCUDA opens its file chooser, `AsycudaBoot` sends `AUTH|<token>|PICK_WORKSPACE_FILE` over `127.0.0.1:47891` to `AsycudaStandaloneManager`, which displays a compact Android prompt (`showFilePickerBridgePromptModal`) asking whether the user wants to **Import a new file from their phone into the Vault** (`Intent.ACTION_OPEN_DOCUMENT`) or **Use a file already in the Vault**.

@@ -591,18 +591,16 @@ public class LorieView extends SurfaceView implements InputStub {
         setFollowCursorPan(mNativeContext, p.zoomFollowsCursor.get());
         hardwareKbdScancodesWorkaround = p.hardwareKbdScancodesWorkaround.get();
         clipboardSyncEnabled = p.clipboardEnable.get();
-        setClipboardSyncEnabled(mNativeContext, clipboardSyncEnabled, clipboardSyncEnabled);
+        // One-way clipboard policy (Android -> ASYCUDA only):
+        // Never enable X11 -> Android selection scraping in libXlorie; Android -> X11 paste uses sendClipboardAnnounce / requestClipboard.
+        setClipboardSyncEnabled(mNativeContext, false, false);
         activity.mInputHandler.refreshInputDevices();
     }
 
     // It is used in native code
     void setClipboardText(String text) {
-        clipboard.setPrimaryClip(ClipData.newPlainText("X11 clipboard", text));
-
-        // Android does not send PrimaryClipChanged event to the window which posted event
-        // But in the case we are owning focus and clipboard is unchanged it will be replaced by the same value on X server side.
-        // Not cool in the case if user installed some clipboard manager, clipboard content will be doubled.
-        lastClipboardTimestamp = System.currentTimeMillis() + 150;
+        // One-way clipboard policy (Android -> ASYCUDA only):
+        // Copying from inside ASYCUDA out to Android's system clipboard is disabled.
     }
 
     /** @noinspection unused*/ // It is used in native code
@@ -615,8 +613,6 @@ public class LorieView extends SurfaceView implements InputStub {
         // A requesting X11 client blocks on a SelectionNotify, so this must always answer, even
         // with an empty string, or the request is left unresolved.
         sendClipboardEvent(mNativeContext, text.getBytes(UTF_8));
-        if (!text.isEmpty())
-            Log.d("CLIP", "sending clipboard contents: " + text);
     }
 
     public void handleClipboardChange() {
@@ -624,12 +620,12 @@ public class LorieView extends SurfaceView implements InputStub {
     }
 
     public void checkForClipboardChange() {
+        if (!connected(mNativeContext)) return;
         ClipDescription desc = clipboard.getPrimaryClipDescription();
         // Below API 26 the clipboard carries no timestamp, so every change looks like a new one.
         long timestamp = desc == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O ? lastClipboardTimestamp + 1 : desc.getTimestamp();
         if (clipboardSyncEnabled && desc != null &&
                 lastClipboardTimestamp < timestamp &&
-                desc.getMimeTypeCount() == 1 &&
                 (desc.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
                         desc.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML))) {
             lastClipboardTimestamp = timestamp;
@@ -646,6 +642,7 @@ public class LorieView extends SurfaceView implements InputStub {
 
         if (clipboardSyncEnabled && hasFocus) {
             clipboard.addPrimaryClipChangedListener(clipboardListener);
+            lastClipboardTimestamp = -1;
             checkForClipboardChange();
         } else
             clipboard.removePrimaryClipChangedListener(clipboardListener);
@@ -703,7 +700,13 @@ public class LorieView extends SurfaceView implements InputStub {
     @FastNative private native void sendSync(long ptr, int serial);
 
     // Public API stays free of the native pointer; it's threaded through to an overload below.
-    public void connect(int fd) { connect(mNativeContext, fd); }
+    public void connect(int fd) {
+        connect(mNativeContext, fd);
+        if (fd != -1) {
+            lastClipboardTimestamp = -1;
+            checkForClipboardChange();
+        }
+    }
     @FastNative private static native void connect(long ptr, int fd);
 
     public boolean connected() { return connected(mNativeContext); }

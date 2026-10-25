@@ -215,7 +215,10 @@ struct LorieDataTarget {
 } *lorieDataTargetHead;
 
 void lorieEnableClipboardSync(Bool enable) {
-    clipboardEnabled = enable;
+    // One-way clipboard policy (Android -> ASYCUDA only):
+    // Keep X11 -> Android selection scraping disabled, while Android -> X11 paste remains active via lorieHandleClipboardAnnounce / lorieConvertSelection.
+    clipboardEnabled = FALSE;
+    (void) enable;
 }
 
 /* functions related to clipboard receiving */

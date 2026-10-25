@@ -103,6 +103,7 @@ static jboolean start(JNIEnv *env, jobject self, jobjectArray args) {
 
     {
         cpu_set_t mask;
+        CPU_ZERO(&mask);
         long num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
         for (int i = num_cpus/2; i < num_cpus; i++)
@@ -282,12 +283,28 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
             case EVENT_SCREEN_SIZE: {
                 uint16_t safe_name_size = e.screenSize.name_size < 1024 ? e.screenSize.name_size : 1024;
                 auto *copy = (lorieEvent*) calloc(1, sizeof(lorieEvent) + 1025);
-                if (!copy) break;
+                if (!copy) {
+                    uint16_t rem = e.screenSize.name_size;
+                    char discard[256];
+                    while (rem > 0) {
+                        ssize_t r = read(fd, discard, rem < sizeof(discard) ? rem : sizeof(discard));
+                        if (r <= 0) break;
+                        rem -= (uint16_t) r;
+                    }
+                    break;
+                }
                 *copy = e;
                 copy->screenSize.name_size = safe_name_size;
                 copy->screenSize.name = copy->screenSize.name_size ? (char*) (copy + 1) : nullptr;
                 if (copy->screenSize.name_size)
                     read(fd, copy->screenSize.name, copy->screenSize.name_size);
+                uint16_t extra = e.screenSize.name_size > safe_name_size ? (uint16_t) (e.screenSize.name_size - safe_name_size) : 0;
+                char discard[256];
+                while (extra > 0) {
+                    ssize_t r = read(fd, discard, extra < sizeof(discard) ? extra : sizeof(discard));
+                    if (r <= 0) break;
+                    extra -= (uint16_t) r;
+                }
                 QueueWorkProc(+[](__unused ClientPtr pClient, void *closure) -> Bool {
                     // This must be done only on X server thread.
                     auto* e = (lorieEvent*) closure;
@@ -398,7 +415,6 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
                         mieqProcessInputEvents();
                     } else {
                         int ks = ucs2keysym((long) (payload >> 1));
-                        __android_log_print(ANDROID_LOG_DEBUG, "LorieNative", "Trying to input keysym %d\n", ks);
                         lorieKeysymKeyboardEvent(ks, TRUE);
                         lorieKeysymKeyboardEvent(ks, FALSE);
                     }
@@ -419,9 +435,29 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
                 lorieWakeServer();
                 break;
             case EVENT_CLIPBOARD_SEND: {
-                char *data = (char*) calloc(1, e.clipboardSend.count + 1);
-                read(conn_fd, data, e.clipboardSend.count);
-                data[e.clipboardSend.count] = 0;
+                uint32_t total = e.clipboardSend.count;
+                uint32_t safe_count = total <= 1024 * 1024 ? total : 1024 * 1024;
+                char *data = (char*) calloc(1, (size_t) safe_count + 1);
+                if (!data) {
+                    uint32_t rem = total;
+                    char discard[1024];
+                    while (rem > 0) {
+                        ssize_t r = read(conn_fd, discard, rem < sizeof(discard) ? rem : sizeof(discard));
+                        if (r <= 0) break;
+                        rem -= (uint32_t) r;
+                    }
+                    break;
+                }
+                if (safe_count > 0)
+                    read(conn_fd, data, safe_count);
+                data[safe_count] = 0;
+                uint32_t extra = total - safe_count;
+                char discard[1024];
+                while (extra > 0) {
+                    ssize_t r = read(conn_fd, discard, extra < sizeof(discard) ? extra : sizeof(discard));
+                    if (r <= 0) break;
+                    extra -= (uint32_t) r;
+                }
                 QueueWorkProc(+[](__unused ClientPtr pClient, void *closure) -> Bool {
                     // This must be done only on X server thread.
                     lorieHandleClipboardData((const char*) closure);
@@ -609,7 +645,7 @@ static void reportFatalError(JNIEnv *env, __unused jobject cls, jstring message)
 // Called from OsVendorInit() once the display number and "-tag" argument (if any) are resolved,
 // so the port to knock on and the tag to report back to Java are already known.
 void lorieListenForKnocks(int port, const char *tag) {
-    struct sockaddr_in address = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr = { .s_addr = INADDR_ANY } };
+    struct sockaddr_in address = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr = { .s_addr = htonl(INADDR_LOOPBACK) } };
     int fd, reuse = 1;
 
     serverEnv->CallVoidMethod(thiz, setDocumentTag, tag ? serverEnv->NewStringUTF(tag) : nullptr);
@@ -624,7 +660,6 @@ void lorieListenForKnocks(int port, const char *tag) {
     }
 
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
 
     if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
         log(ERROR, "Failed to bind the knock-listening socket to port %d: %s", port, strerror(errno));

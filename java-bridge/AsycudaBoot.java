@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2026 Mohammed Ammar Hussein (@MohammedALShimmary)
+ * Original Java bridge code authored for ASYCUDA Iraq Android.
+ * Licensed under GNU GPL-3.0; see the repository LICENSE file and java-bridge/ATTRIBUTION-TERMS.md.
+ */
 package asycuda;
 
 import java.awt.*;
@@ -51,6 +56,31 @@ public class AsycudaBoot {
     private static volatile Dialog activeFileChooserDialog = null;
     private static volatile long lastAutoPickTime = 0L;
     private static volatile long lastMousePressTime = 0L;
+    private static final String BRIDGE_SESSION_TOKEN;
+    static {
+        String envTok = null;
+        try {
+            envTok = System.getenv("ASYCUDA_BRIDGE_TOKEN");
+        } catch (Throwable ignored) {
+            // Ignore getenv restriction if any
+        }
+        String propTok = null;
+        try {
+            propTok = System.getProperty("asycuda.bridge.token");
+            if (propTok != null) {
+                System.clearProperty("asycuda.bridge.token");
+            }
+        } catch (Throwable ignored) {
+            // Ignore property clear restriction if any
+        }
+        if (envTok != null && !envTok.trim().isEmpty()) {
+            BRIDGE_SESSION_TOKEN = envTok.trim();
+        } else if (propTok != null && !propTok.trim().isEmpty()) {
+            BRIDGE_SESSION_TOKEN = propTok.trim();
+        } else {
+            BRIDGE_SESSION_TOKEN = "";
+        }
+    }
 
     private AsycudaBoot() {
         // Utility entrypoint class
@@ -145,7 +175,7 @@ public class AsycudaBoot {
         java.net.InetSocketAddress loopbackAddr = new java.net.InetSocketAddress(
                 java.net.InetAddress.getLoopbackAddress(), 47891);
         try (java.nio.channels.SocketChannel ch = java.nio.channels.SocketChannel.open(loopbackAddr)) {
-            String token = System.getProperty("asycuda.bridge.token", "");
+            String token = BRIDGE_SESSION_TOKEN;
             String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
             byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
             java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(payloadBytes);
@@ -788,7 +818,11 @@ public class AsycudaBoot {
                                     }
                                     return method.invoke(target, args);
                                 } catch (java.lang.reflect.InvocationTargetException ite) {
-                                    throw ite.getTargetException();
+                                    Throwable cause = ite.getTargetException();
+                                    if (cause instanceof NullPointerException || isBenignAsycudaThrowable(cause)) {
+                                        return null;
+                                    }
+                                    throw cause;
                                 } finally {
                                     try {
                                         if (procSupport != null && origDocGuiInit) {
@@ -897,7 +931,27 @@ public class AsycudaBoot {
         }
     }
 
+    private static void waitForX11DisplaySocket() {
+        String tmpDir = System.getenv("TMPDIR");
+        if (tmpDir == null || tmpDir.trim().isEmpty()) {
+            tmpDir = "/data/data/iq.asycuda/files/usr/tmp";
+        }
+        File x0Socket = new File(new File(tmpDir, ".X11-unix"), "X0");
+        for (int i = 0; i < 50; i++) {
+            if (x0Socket.exists()) {
+                return;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
     private static void startWindowManagerAndFileWatcher() {
+        waitForX11DisplaySocket();
         Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
             @Override
             public void eventDispatched(AWTEvent event) {
@@ -1330,51 +1384,37 @@ public class AsycudaBoot {
     private static void installHighSpeedNetworkTuning() {
         try {
             System.setProperty("java.net.preferIPv4Stack", "true");
-            System.setProperty("networkaddress.cache.ttl", "-1");
-            System.setProperty("sun.net.inetaddr.ttl", "-1");
+            System.setProperty("networkaddress.cache.ttl", "30");
+            System.setProperty("sun.net.inetaddr.ttl", "30");
             System.setProperty("networkaddress.cache.negative.ttl", "0");
             System.setProperty("http.keepAlive", "true");
             System.setProperty("http.maxConnections", "32");
-            System.setProperty("sun.rmi.transport.tcp.responseTimeout", "120000");
+            System.setProperty("sun.rmi.transport.tcp.responseTimeout", "15000");
             System.setProperty("sun.rmi.transport.connectionTimeout", "15000");
-
-            final java.rmi.server.RMISocketFactory defaultFactory =
-                    java.rmi.server.RMISocketFactory.getDefaultSocketFactory();
-            java.rmi.server.RMISocketFactory.setSocketFactory(new java.rmi.server.RMISocketFactory() {
-                @Override
-                public Socket createSocket(String host, int port) throws IOException {
-                    Socket s = defaultFactory.createSocket(host, port);
-                    try {
-                        s.setTcpNoDelay(true);
-                        s.setKeepAlive(true);
-                        s.setReceiveBufferSize(1024 * 1024);
-                        s.setSendBufferSize(1024 * 1024);
-                        s.setTrafficClass(0x10 | 0x08);
-                    } catch (Throwable ignored) {
-                        // Socket options are best-effort
-                    }
-                    return s;
-                }
-
-                @Override
-                public java.net.ServerSocket createServerSocket(int port) throws IOException {
-                    return defaultFactory.createServerSocket(port);
-                }
-            });
+            System.setProperty("preload.supportedLng", "on");
+            System.setProperty("preload.licenseInfo", "on");
+            System.setProperty("preload.formatDictionary", "on");
+            System.setProperty("preload.desktop", "on");
+            System.setProperty("preload.availableRT", "on");
+            System.setProperty("preload.DL", "on");
         } catch (Throwable ignored) {
-            // RMI socket factory may already be set
+            // System properties are best-effort
         }
     }
 
     private static final Set<String> ALLOWED_CUSTOMS_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<String> ALLOWED_VIRTUAL_RMI_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<Integer> ALLOWED_MOF_PORTS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
     static {
-        ALLOWED_CUSTOMS_IPS.add("185.112.191.94");
-        ALLOWED_CUSTOMS_IPS.add("118.97.60.75");
-        // Internal virtualized RMI endpoint IP returned by asy.mof.gov.iq:2006 (ClientTransportLayer)
-        ALLOWED_CUSTOMS_IPS.add("10.25.25.10");
+        // -1 is Java SecurityManager's standard sentinel for DNS resolution in checkConnect(host, -1)
+        ALLOWED_MOF_PORTS.add(Integer.valueOf(-1));
+        refreshAllowedCustomsIps();
+        discoverPortsFromLocalJnlp();
     }
 
     public static void refreshAllowedCustomsIps() {
+        if (Boolean.TRUE.equals(IN_CHECK.get())) return;
+        IN_CHECK.set(Boolean.TRUE);
         try {
             java.net.InetAddress[] addrs = java.net.InetAddress.getAllByName("asy.mof.gov.iq");
             if (addrs != null) {
@@ -1384,16 +1424,120 @@ public class AsycudaBoot {
                     }
                 }
             }
+            File hostsFile = new File("/data/data/iq.asycuda/files/usr/glibc/etc/hosts");
+            if (hostsFile.exists()) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(hostsFile), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        String t = line.trim().toLowerCase(Locale.US);
+                        if (t.contains("asy.mof.gov.iq") && !t.startsWith("#")) {
+                            String[] parts = t.split("\\s+");
+                            if (parts.length >= 2 && !parts[0].isEmpty()) {
+                                ALLOWED_CUSTOMS_IPS.add(parts[0]);
+                            }
+                        }
+                    }
+                } catch (Throwable ignoredHosts) {
+                    // Ignore hosts read failure
+                }
+            }
         } catch (Throwable ignored) {
-            // Keep pre-seeded official Ministry of Finance IPs if offline
+            // Ignore offline DNS lookup failure
+        } finally {
+            IN_CHECK.remove();
         }
     }
 
-    private static boolean isRegisteredMofVirtualEndpoint(String hostIp) {
-        if (Boolean.TRUE.equals(IN_CHECK.get())) return false;
+    public static void discoverPortsFromLocalJnlp() {
+        if (Boolean.TRUE.equals(IN_CHECK.get())) return;
         IN_CHECK.set(Boolean.TRUE);
         try {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            // Register default HTTPS protocol port from java.net.URL handler dynamically
+            int defaultHttpsPort = new java.net.URL("https://asy.mof.gov.iq/aw/").getDefaultPort();
+            if (defaultHttpsPort > 0) {
+                ALLOWED_MOF_PORTS.add(Integer.valueOf(defaultHttpsPort));
+            }
+            File[] candidates = new File[] {
+                new File("AWIQWorld.jnlp"),
+                new File("/data/data/iq.asycuda/files/client/AWIQWorld.jnlp")
+            };
+            for (File f : candidates) {
+                if (f.exists() && f.isFile()) {
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            registerDynamicJnlpArguments(new String[] { line });
+                        }
+                    } catch (Throwable ignoredRead) {
+                        // Ignore individual JNLP read error
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            // Ignore JNLP discovery error
+        } finally {
+            IN_CHECK.remove();
+        }
+    }
+
+    public static void registerDynamicJnlpArguments(String[] args) {
+        if (args == null) return;
+        for (String arg : args) {
+            if (arg == null) continue;
+            String low = arg.trim().toLowerCase(Locale.US);
+            if (low.startsWith("https://asy.mof.gov.iq")) {
+                try {
+                    java.net.URL u = new java.net.URL(low);
+                    int p = u.getPort() != -1 ? u.getPort() : u.getDefaultPort();
+                    if (p > 0 && p <= 65535) {
+                        ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
+                    }
+                } catch (Throwable ignoredUrl) {
+                    // Ignore malformed URL
+                }
+            }
+            int idx = 0;
+            while ((idx = low.indexOf("asy.mof.gov.iq:", idx)) >= 0) {
+                int start = idx + "asy.mof.gov.iq:".length();
+                int end = start;
+                while (end < low.length() && Character.isDigit(low.charAt(end))) {
+                    end++;
+                }
+                if (end > start) {
+                    try {
+                        int p = Integer.parseInt(low.substring(start, end));
+                        if (p > 0 && p <= 65535) {
+                            ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // Ignore malformed port
+                    }
+                }
+                idx = end;
+            }
+        }
+    }
+
+    private static void syncMofTransportState() {
+        if (Boolean.TRUE.equals(IN_CHECK.get())) return;
+        IN_CHECK.set(Boolean.TRUE);
+        try {
+            String[] propKeys = new String[] { "so.rmi.url.port", "so.rmi.port" };
+            for (String pk : propKeys) {
+                String val = System.getProperty(pk);
+                if (val != null && !val.trim().isEmpty()) {
+                    try {
+                        int p = Integer.parseInt(val.trim());
+                        if (p > 0 && p <= 65535) {
+                            ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
+                        }
+                    } catch (NumberFormatException ignoredProp) {
+                        // Ignore non-numeric property
+                    }
+                }
+            }
+            ClassLoader cl = AsycudaBoot.class.getClassLoader();
+            if (cl == null) cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) cl = ClassLoader.getSystemClassLoader();
             Class<?> ctlClass = Class.forName("so.rmi.transport.client.ClientTransportLayer", false, cl);
             java.lang.reflect.Field hooksField = ctlClass.getDeclaredField("hooks");
@@ -1408,24 +1552,64 @@ public class AsycudaBoot {
                     if (ctl == null) continue;
                     Object rhObj = remoteHostField.get(ctl);
                     String rh = rhObj != null ? rhObj.toString().trim().toLowerCase(Locale.US) : "";
-                    if ("asy.mof.gov.iq".equals(rh) || rh.endsWith(".mof.gov.iq") || ALLOWED_CUSTOMS_IPS.contains(rh)) {
+                    if ("asy.mof.gov.iq".equals(rh) || ALLOWED_CUSTOMS_IPS.contains(rh)) {
                         Object trMap = transportsField.get(ctl);
                         if (trMap instanceof java.util.Map) {
-                            for (Object k : ((java.util.Map<?, ?>) trMap).keySet()) {
+                            for (java.util.Map.Entry<?, ?> entry : ((java.util.Map<?, ?>) trMap).entrySet()) {
+                                Object k = entry.getKey();
                                 if (k != null) {
-                                    ALLOWED_CUSTOMS_IPS.add(k.toString().trim().toLowerCase(Locale.US));
+                                    ALLOWED_VIRTUAL_RMI_IPS.add(k.toString().trim().toLowerCase(Locale.US));
+                                }
+                                Object ctObj = entry.getValue();
+                                if (ctObj != null) {
+                                    try {
+                                        java.lang.reflect.Field factoriesField = ctObj.getClass().getDeclaredField("factories");
+                                        factoriesField.setAccessible(true);
+                                        Object factoriesObj = factoriesField.get(ctObj);
+                                        if (factoriesObj instanceof java.util.Collection) {
+                                            synchronized (factoriesObj) {
+                                                for (Object item : (java.util.Collection<?>) factoriesObj) {
+                                                    if (item == null) continue;
+                                                    java.lang.reflect.Method getPortMethod = item.getClass().getMethod("getPort");
+                                                    getPortMethod.setAccessible(true);
+                                                    Object portVal = getPortMethod.invoke(item);
+                                                    if (portVal instanceof Number) {
+                                                        int p = ((Number) portVal).intValue();
+                                                        if (p > 0 && p <= 65535) {
+                                                            ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (Throwable ignoredInner) {
+                                        // Ignore if factories field is not yet populated
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            return ALLOWED_CUSTOMS_IPS.contains(hostIp);
         } catch (Throwable ignored) {
-            return false;
+            // ClientTransportLayer may not be loaded yet
         } finally {
             IN_CHECK.remove();
         }
+    }
+
+    private static boolean isRegisteredMofVirtualEndpoint(String hostIp) {
+        if (ALLOWED_VIRTUAL_RMI_IPS.contains(hostIp)) return true;
+        syncMofTransportState();
+        return ALLOWED_VIRTUAL_RMI_IPS.contains(hostIp);
+    }
+
+    private static boolean isAllowedMofDirectPort(int port) {
+        if (ALLOWED_MOF_PORTS.contains(Integer.valueOf(port))) {
+            return true;
+        }
+        syncMofTransportState();
+        return ALLOWED_MOF_PORTS.contains(Integer.valueOf(port));
     }
 
     public static void checkAllowedOutboundNetwork(String host, int port) {
@@ -1442,42 +1626,390 @@ public class AsycudaBoot {
                 || h.startsWith("127.")
                 || "::1".equals(h)
                 || "0:0:0:0:0:0:0:1".equals(h)
-                || "0.0.0.0".equals(h)) {
+                || ("0.0.0.0".equals(h) && port == -1)) {
             return;
         }
         // Allow local single-label device hostname resolution during InetAddress.getLocalHost() (port == -1)
         if (port == -1 && !h.contains(".") && !h.contains(":")) {
             return;
         }
-        // 2. Allow official Iraqi Ministry of Finance / General Commission of Customs domains & resolved/virtual IPs
-        if ("asy.mof.gov.iq".equals(h)
-                || h.endsWith(".asy.mof.gov.iq")
-                || h.endsWith(".mof.gov.iq")
-                || h.endsWith(".asycuda.gov.iq")
-                || ALLOWED_CUSTOMS_IPS.contains(h)
-                || isRegisteredMofVirtualEndpoint(h)) {
+        // 2. Allow exact Iraqi Customs domain & dynamically resolved public IPs on dynamically registered JNLP/RMI ports
+        if ("asy.mof.gov.iq".equals(h)) {
+            if (isAllowedMofDirectPort(port)) {
+                return;
+            }
+            throw new SecurityException("Blocked unauthorized port on asy.mof.gov.iq: " + port);
+        }
+        if (ALLOWED_CUSTOMS_IPS.contains(h)) {
+            if (isAllowedMofDirectPort(port)) {
+                return;
+            }
+            throw new SecurityException("Blocked unauthorized port on Ministry of Finance IP " + host + ":" + port);
+        }
+        // 3. Allow virtualized internal RMI endpoints multiplexed over asy.mof.gov.iq by ClientTransportLayer
+        if (ALLOWED_VIRTUAL_RMI_IPS.contains(h) || isRegisteredMofVirtualEndpoint(h)) {
             return;
+        }
+        // 4. Dynamic DNS IP rotation: if the Ministry of Finance rotates the public IP of asy.mof.gov.iq,
+        // re-resolve asy.mof.gov.iq once when an unknown IP is requested on a registered JNLP/RMI port.
+        if (isAllowedMofDirectPort(port)) {
+            refreshAllowedCustomsIps();
+            if (ALLOWED_CUSTOMS_IPS.contains(h)) {
+                return;
+            }
         }
         throw new SecurityException("Blocked unauthorized outbound JVM network connection to: " + host + ":" + port);
     }
 
-    public static void checkBlockedHostPath(String file) {
-        if (file == null || file.isEmpty()) return;
-        String norm = file.replace('\\', '/').toLowerCase(Locale.US);
-        if (norm.contains("/shared_prefs")
+    private static final ThreadLocal<Boolean> IN_PATH_CANON = new ThreadLocal<Boolean>();
+
+    private static final Set<String> ALLOWED_SHORT_JRE_LIBS = new HashSet<String>(Arrays.asList(
+            "awt", "awt_xawt", "awt_headless", "java", "net", "nio", "verify", "zip",
+            "fontmanager", "freetype", "jpeg", "lcms", "mlib_image", "management",
+            "sunec", "j2pkcs11", "j2pcsc", "j2gss", "jsound", "jsoundalsa",
+            "splashscreen", "unpack", "jawt", "jli", "jvm", "jsig", "jaas_unix",
+            "npt", "sctp", "instrument", "jules", "attach", "saproc", "jsdt", "hprof"
+    ));
+
+    private static String normalizeUnixPath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) return "";
+        String slash = rawPath.replace('\\', '/').trim();
+        if (!slash.startsWith("/")) {
+            slash = "/data/data/iq.asycuda/files/client/" + slash;
+        }
+        String[] parts = slash.split("/");
+        java.util.List<String> stack = new ArrayList<String>(parts.length);
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (part.isEmpty() || ".".equals(part)) {
+                continue;
+            }
+            if ("..".equals(part)) {
+                if (!stack.isEmpty()) {
+                    stack.remove(stack.size() - 1);
+                }
+            } else {
+                stack.add(part);
+            }
+        }
+        StringBuilder sb = new StringBuilder("/");
+        for (int i = 0; i < stack.size(); i++) {
+            if (i > 0) sb.append('/');
+            sb.append(stack.get(i));
+        }
+        return sb.toString().toLowerCase(Locale.US);
+    }
+
+    private static String resolveCanonicalPathLower(String file) {
+        if (Boolean.TRUE.equals(IN_PATH_CANON.get())) {
+            return normalizeUnixPath(file);
+        }
+        IN_PATH_CANON.set(Boolean.TRUE);
+        try {
+            File f = file.startsWith("/")
+                    ? new File(file)
+                    : new File("/data/data/iq.asycuda/files/client", file);
+            return f.getCanonicalPath().replace('\\', '/').toLowerCase(Locale.US);
+        } catch (Throwable ignored) {
+            return normalizeUnixPath(file);
+        } finally {
+            IN_PATH_CANON.remove();
+        }
+    }
+
+    private static boolean isBlockedHostPathNormalized(String norm) {
+        return norm.startsWith("/proc/self/environ")
+                || norm.startsWith("/proc/self/mem")
+                || norm.startsWith("/proc/self/maps")
+                || norm.startsWith("/proc/self/cmdline")
+                || (norm.startsWith("/proc/") && (norm.endsWith("/environ") || norm.endsWith("/mem") || norm.endsWith("/maps") || norm.endsWith("/cmdline")))
+                || norm.contains("/shared_prefs")
                 || norm.contains("legal_consent_receipt.json")
                 || norm.contains("/databases/")
-                || norm.contains("/datastore/")) {
+                || norm.endsWith("/databases")
+                || norm.contains("/datastore/")
+                || norm.endsWith("/datastore");
+    }
+
+    public static void checkBlockedHostPath(String file) {
+        if (file == null || file.isEmpty()) return;
+        String rawLower = file.replace('\\', '/').toLowerCase(Locale.US);
+        String normLower = normalizeUnixPath(file);
+        String canonLower = resolveCanonicalPathLower(file);
+        if (isBlockedHostPathNormalized(rawLower)
+                || isBlockedHostPathNormalized(normLower)
+                || isBlockedHostPathNormalized(canonLower)) {
             throw new SecurityException("JVM access to Android host storage path is blocked: " + file);
+        }
+    }
+
+    private static boolean isBlockedWritePathNormalized(String norm) {
+        return norm.contains("/files/client/jars")
+                || norm.contains("/files/client/00_bootpatch.jar")
+                || norm.contains("/files/client/00_boot.jar")
+                || norm.contains("/files/client/00_jnlp.jar")
+                || norm.contains("/files/client/classpath.txt")
+                || norm.contains("/files/client/awiqworld.jnlp")
+                || norm.contains("/files/client/mof.crt")
+                || norm.contains("/files/.extracted_")
+                || norm.contains("/files/.bootpatch_")
+                || norm.contains("/files/jre8")
+                || (norm.contains("/files/usr") && !norm.contains("/files/usr/tmp"))
+                || norm.contains("/cache/updates")
+                || norm.contains("/cache/diagnostics")
+                || norm.endsWith(".apk");
+    }
+
+    public static void checkBlockedWriteOrDeletePath(String file) {
+        checkBlockedHostPath(file);
+        if (file == null || file.isEmpty()) return;
+        String rawLower = file.replace('\\', '/').toLowerCase(Locale.US);
+        String normLower = normalizeUnixPath(file);
+        String canonLower = resolveCanonicalPathLower(file);
+        if (isBlockedWritePathNormalized(rawLower)
+                || isBlockedWritePathNormalized(normLower)
+                || isBlockedWritePathNormalized(canonLower)) {
+            throw new SecurityException("JVM write/delete access to immutable runtime/package path is blocked: " + file);
+        }
+    }
+
+    public static void checkAllowedNativeLibrary(String lib) {
+        if (lib == null || lib.isEmpty()) {
+            throw new SecurityException("Blocked empty native library load");
+        }
+        String norm = lib.replace('\\', '/').trim().toLowerCase(Locale.US);
+        if (!norm.contains("/")) {
+            if (ALLOWED_SHORT_JRE_LIBS.contains(norm)) {
+                return;
+            }
+            throw new SecurityException("Blocked untrusted short native library name: " + lib);
+        }
+        if (norm.contains("..")) {
+            throw new SecurityException("Blocked path traversal in native library load: " + lib);
+        }
+        String canon = resolveCanonicalPathLower(lib);
+        if (canon.contains("/tmp/")
+                || canon.contains("/home/")
+                || canon.contains("/prints/")
+                || canon.contains("/workspace/")
+                || canon.contains("/cache/")
+                || canon.contains("/files/client/")) {
+            throw new SecurityException("Blocked native library load from writable directory: " + lib);
+        }
+        if (canon.contains("/jre8/") || canon.contains("/usr/glibc/") || canon.startsWith("/system/lib")) {
+            return;
+        }
+        throw new SecurityException("Blocked untrusted native library path: " + lib);
+    }
+
+    private static boolean isTrustedReflectionCaller(String cn) {
+        if (cn == null) return false;
+        return cn.equals("asycuda.AsycudaBoot")
+                || cn.startsWith("asycuda.AsycudaBoot$")
+                || cn.startsWith("java.")
+                || cn.startsWith("javax.")
+                || cn.startsWith("sun.")
+                || cn.startsWith("com.sun.")
+                || cn.startsWith("jdk.")
+                || cn.startsWith("javafx.")
+                || cn.startsWith("so.")
+                || cn.startsWith("un.")
+                || cn.startsWith("org.jdesktop.swingx.")
+                || cn.startsWith("org.jfree.")
+                || cn.startsWith("org.apache.derby.")
+                || cn.startsWith("org.hsqldb.");
+    }
+
+    private static boolean isBootstrapJdkCaller(String cn) {
+        if (cn == null) return false;
+        return cn.startsWith("java.")
+                || cn.startsWith("javax.")
+                || cn.startsWith("sun.")
+                || cn.startsWith("com.sun.")
+                || cn.startsWith("jdk.")
+                || cn.startsWith("javafx.");
+    }
+
+    private static void enforceSandboxPermission(Permission perm, Class<?>[] classContext) {
+        if (perm == null) return;
+        String name = perm.getName();
+        if (name == null) return;
+        if ("setSecurityManager".equals(name) || "manageProcess".equals(name)) {
+            throw new SecurityException("Blocked sandbox escape permission: " + name);
+        }
+        if (perm instanceof java.nio.file.LinkPermission) {
+            throw new SecurityException("Blocked NIO symlink/hardlink creation inside JVM sandbox: " + name);
+        }
+        if (perm instanceof java.security.SecurityPermission && "setPolicy".equals(name)) {
+            throw new SecurityException("Blocked sandbox policy replacement: " + name);
+        }
+        if ("setFactory".equals(name)
+                || (perm instanceof java.security.SecurityPermission
+                && (name.startsWith("insertProvider") || name.startsWith("removeProvider") || name.startsWith("setProperty.")))
+                || (perm instanceof java.net.NetPermission
+                && ("setProxySelector".equals(name) || "setDefaultAuthenticator".equals(name) || "setCookieHandler".equals(name)))) {
+            if (classContext == null || classContext.length <= 1) {
+                throw new SecurityException("Blocked security/network configuration change without class context: " + name);
+            }
+            boolean sawAuthorizedFrame = false;
+            for (int i = 1; i < classContext.length; i++) {
+                Class<?> caller = classContext[i];
+                if (caller == null) continue;
+                String cn = caller.getName();
+                if (!isTrustedReflectionCaller(cn)) {
+                    throw new SecurityException("Blocked unauthorized " + name + " by untrusted frame: " + cn);
+                }
+                if (!"java.lang.SecurityManager".equals(cn)
+                        && !"java.security.AccessController".equals(cn)
+                        && !cn.startsWith("java.lang.reflect.")) {
+                    sawAuthorizedFrame = true;
+                }
+            }
+            if (!sawAuthorizedFrame) {
+                throw new SecurityException("Blocked " + name + " with no authorized caller frame");
+            }
+            return;
+        }
+        if ("suppressAccessChecks".equals(name) || "accessDeclaredMembers".equals(name)) {
+            if (classContext == null || classContext.length <= 1) {
+                throw new SecurityException("Blocked reflection (" + name + ") without class context");
+            }
+            boolean sawNonBootstrapFrame = false;
+            for (int i = 1; i < classContext.length; i++) {
+                Class<?> caller = classContext[i];
+                if (caller == null) continue;
+                String cn = caller.getName();
+                if (!isTrustedReflectionCaller(cn)) {
+                    throw new SecurityException("Blocked unauthorized reflection (" + name + ") by untrusted frame: " + cn);
+                }
+                if (!"java.lang.SecurityManager".equals(cn)
+                        && !"java.security.AccessController".equals(cn)
+                        && !cn.startsWith("java.lang.reflect.")
+                        && !"java.lang.Class".equals(cn)) {
+                    sawNonBootstrapFrame = true;
+                }
+            }
+            if (!sawNonBootstrapFrame) {
+                throw new SecurityException("Blocked reflection (" + name + ") with no authorized caller frame");
+            }
+            return;
+        }
+        if ("getenv.ASYCUDA_BRIDGE_TOKEN".equals(name) || "getenv.*".equals(name)) {
+            if (classContext == null || classContext.length <= 1) {
+                throw new SecurityException("Blocked environment access (" + name + ") without class context");
+            }
+            boolean sawAsycudaBoot = false;
+            for (int i = 1; i < classContext.length; i++) {
+                Class<?> caller = classContext[i];
+                if (caller == null) continue;
+                String cn = caller.getName();
+                if (caller == AsycudaBoot.class || cn.startsWith("asycuda.AsycudaBoot$")) {
+                    sawAsycudaBoot = true;
+                    continue;
+                }
+                if (isBootstrapJdkCaller(cn)) {
+                    continue;
+                }
+                throw new SecurityException("Blocked unauthorized environment access (" + name + ") by " + cn);
+            }
+            if (!sawAsycudaBoot) {
+                throw new SecurityException("Blocked unauthorized environment access (" + name + ") outside AsycudaBoot");
+            }
+            return;
+        }
+        if ("createSecurityManager".equals(name)) {
+            if (classContext == null || classContext.length <= 1) {
+                throw new SecurityException("Blocked sandbox escape permission: " + name);
+            }
+            boolean sawJdkCaller = false;
+            for (int i = 1; i < classContext.length; i++) {
+                Class<?> caller = classContext[i];
+                if (caller == null) continue;
+                String cn = caller.getName();
+                if ("java.lang.SecurityManager".equals(cn)
+                        || "java.security.AccessController".equals(cn)
+                        || cn.startsWith("java.lang.reflect.")) {
+                    continue;
+                }
+                if (caller == AsycudaBoot.class || cn.startsWith("asycuda.AsycudaBoot$")) {
+                    if (sawJdkCaller) {
+                        continue;
+                    }
+                    throw new SecurityException("Blocked sandbox escape permission: " + name);
+                }
+                if (isBootstrapJdkCaller(cn)) {
+                    sawJdkCaller = true;
+                    continue;
+                }
+                if (isTrustedReflectionCaller(cn)) {
+                    continue;
+                }
+                throw new SecurityException("Blocked sandbox escape permission (" + name + ") by " + cn);
+            }
+            if (!sawJdkCaller) {
+                throw new SecurityException("Blocked sandbox escape permission: " + name);
+            }
+            return;
+        }
+        if ("setIO".equals(name)) {
+            if (classContext == null || classContext.length <= 1) {
+                throw new SecurityException("Blocked unauthorized System.setIO");
+            }
+            for (int i = 1; i < classContext.length; i++) {
+                Class<?> caller = classContext[i];
+                if (caller == null) continue;
+                String cn = caller.getName();
+                if (caller == AsycudaBoot.class
+                        || cn.startsWith("asycuda.AsycudaBoot$")
+                        || isBootstrapJdkCaller(cn)
+                        || cn.startsWith("so.")) {
+                    continue;
+                }
+                throw new SecurityException("Blocked unauthorized System.setIO by " + cn);
+            }
+        }
+    }
+
+    private static void enforceServerSocketListen(int port, Class<?>[] classContext) {
+        if (classContext == null || classContext.length <= 1) {
+            throw new SecurityException("Blocked unauthorized ServerSocket listen on port " + port);
+        }
+        boolean sawRmiCaller = false;
+        for (int i = 1; i < classContext.length; i++) {
+            Class<?> caller = classContext[i];
+            if (caller == null) continue;
+            String cn = caller.getName();
+            if (!isTrustedReflectionCaller(cn)) {
+                throw new SecurityException("Blocked unauthorized ServerSocket listen on port " + port + " by " + cn);
+            }
+            if (cn.startsWith("so.rmi.") || cn.startsWith("sun.rmi.") || cn.startsWith("java.rmi.")) {
+                sawRmiCaller = true;
+            }
+        }
+        if (!sawRmiCaller) {
+            throw new SecurityException("Blocked non-RMI ServerSocket listen on port: " + port);
         }
     }
 
     public static SecurityManager createHardenedSecurityManager() {
         return new SecurityManager() {
-            @Override public void checkPermission(Permission perm) { /* Fine-grained checks handled below */ }
-            @Override public void checkPermission(Permission perm, Object context) { /* Fine-grained checks handled below */ }
+            @Override public void checkPermission(Permission perm) {
+                enforceSandboxPermission(perm, getClassContext());
+            }
+            @Override public void checkPermission(Permission perm, Object context) {
+                enforceSandboxPermission(perm, getClassContext());
+            }
             @Override public void checkExec(String cmd) {
                 throw new SecurityException("OS subprocess execution is blocked inside the ASYCUDA JVM sandbox: " + cmd);
+            }
+            @Override public void checkLink(String lib) {
+                checkAllowedNativeLibrary(lib);
+            }
+            @Override public void checkListen(int port) {
+                enforceServerSocketListen(port, getClassContext());
+            }
+            @Override public void checkAccept(String host, int port) {
+                checkAllowedOutboundNetwork(host, -1);
             }
             @Override public void checkConnect(String host, int port) {
                 checkAllowedOutboundNetwork(host, port);
@@ -1492,10 +2024,10 @@ public class AsycudaBoot {
                 checkBlockedHostPath(file);
             }
             @Override public void checkDelete(String file) {
-                checkBlockedHostPath(file);
+                checkBlockedWriteOrDeletePath(file);
             }
             @Override public void checkWrite(String file) {
-                checkBlockedHostPath(file);
+                checkBlockedWriteOrDeletePath(file);
                 if (Boolean.TRUE.equals(IN_CHECK.get())) return;
                 if (file != null && file.contains("/tmp/")) {
                     IN_CHECK.set(Boolean.TRUE);
@@ -1521,14 +2053,22 @@ public class AsycudaBoot {
     public static void main(String[] args) throws Exception {
         installHighSpeedNetworkTuning();
         refreshAllowedCustomsIps();
+        registerDynamicJnlpArguments(args);
         // Install a hardened SecurityManager that enforces:
         // 1. Strict outbound network allowlist (checkConnect: only localhost/127.0.0.1 and asy.mof.gov.iq)
         // 2. Complete block on OS subprocess execution (checkExec: Runtime.exec / ProcessBuilder)
         // 3. Complete isolation from Android host preferences/databases (checkRead / checkWrite / checkDelete)
         try {
             System.setSecurityManager(createHardenedSecurityManager());
-        } catch (UnsupportedOperationException ignored) {
-            // OpenJDK 18+ may disallow System.setSecurityManager unless -Djava.security.manager=allow is set
+        } catch (Throwable t) {
+            sendToAndroidApk("SECURITY_ERROR|Failed to initialize Java SecurityManager sandbox: " + t.getClass().getSimpleName());
+            Runtime.getRuntime().halt(1);
+            return;
+        }
+        if (System.getSecurityManager() == null) {
+            sendToAndroidApk("SECURITY_ERROR|Java SecurityManager sandbox is inactive.");
+            Runtime.getRuntime().halt(1);
+            return;
         }
 
         try {

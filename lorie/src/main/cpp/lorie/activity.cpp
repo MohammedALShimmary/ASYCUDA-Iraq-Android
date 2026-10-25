@@ -213,29 +213,17 @@ int LorieViewResources::xcallback(int fd, int events) {
         if (read(connFd, &e, sizeof(e)) == sizeof(e)) {
             switch(e.type) {
                 case EVENT_CLIPBOARD_SEND: {
-                    if (!e.clipboardSend.count)
-                        break;
-                    size_t capacity;
-                    if (__builtin_add_overflow((size_t) e.clipboardSend.count, (size_t) 1, &capacity))
-                        return xcallback(fd, ALOOPER_EVENT_HANGUP);
-                    char *clipboard = (char*) calloc(capacity, 1);
-                    if (!clipboard) {
-                        log(ERROR, "Could not allocate clipboard buffer");
-                        return xcallback(fd, ALOOPER_EVENT_HANGUP);
+                    // One-way clipboard policy (Android -> ASYCUDA only):
+                    // Drain any X11 -> Android clipboard bytes from socket to keep stream in sync,
+                    // without logging or forwarding to Android's system clipboard.
+                    uint32_t remaining = e.clipboardSend.count;
+                    char discard[1024];
+                    while (remaining > 0) {
+                        size_t chunk = remaining < sizeof(discard) ? remaining : sizeof(discard);
+                        ssize_t r = read(connFd, discard, chunk);
+                        if (r <= 0) break;
+                        remaining -= (uint32_t) r;
                     }
-                    read(connFd, clipboard, e.clipboardSend.count);
-                    clipboard[e.clipboardSend.count] = 0;
-                    size_t clipLen = strnlen(clipboard, e.clipboardSend.count);
-                    log(DEBUG, "Clipboard content (%zu symbols) is %s", clipLen, clipboard);
-                    jmethodID id = env->GetMethodID(env->GetObjectClass(thiz), "setClipboardText","(Ljava/lang/String;)V");
-                    jobject bb = env->NewDirectByteBuffer(clipboard, clipLen);
-                    jobject charset = env->CallStaticObjectMethod(Charset.self, Charset.forName, env->NewStringUTF("UTF-8"));
-                    jobject cb = env->CallObjectMethod(charset, Charset.decode, bb);
-                    env->DeleteLocalRef(bb);
-
-                    auto str = (jstring) env->CallObjectMethod(cb, CharBuffer.toString);
-                    env->CallVoidMethod(thiz, id, str);
-                    free(clipboard);
                     break;
                 }
                 case EVENT_CLIPBOARD_REQUEST: {
@@ -347,8 +335,6 @@ static void sendTextEvent(JNIEnv *env, __unused jobject thiz, jlong ptr, jbyteAr
         if (!length)
             return;
 
-        log(DEBUG, "Parsing text: %.*s", length, str);
-
         while (*p) {
             wchar_t wc;
             size_t len = mbrtowc(&wc, p, MB_CUR_MAX, &mbstate);
@@ -361,7 +347,6 @@ static void sendTextEvent(JNIEnv *env, __unused jobject thiz, jlong ptr, jbyteAr
             if (len == 0)
                 break;
 
-            log(DEBUG, "Sending unicode event: %lc (U+%X)", wc, wc);
             lorieEvent e = { .unicode = { .t = EVENT_UNICODE, .code = (uint32_t) wc } };
             write(r->connFd, &e, sizeof(e));
             p += len;
@@ -536,8 +521,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
                 lastInputTimestampMs = nowMs();
                 auto* r = (LorieViewResources*) ptr;
                 if (r && r->connFd != -1) {
-                    int code = (scan_code) ?: android_to_linux_keycode[key_code];
-                    sendEvent(r, .key = { .t = EVENT_KEY, .key = (uint16_t) (code + 8), .state = key_down });
+                    int code = scan_code ? scan_code : ((key_code >= 0 && key_code < 304) ? android_to_linux_keycode[key_code] : 0);
+                    if (code != 0)
+                        sendEvent(r, .key = { .t = EVENT_KEY, .key = (uint16_t) (code + 8), .state = key_down });
                 }
                 return true;
             }},

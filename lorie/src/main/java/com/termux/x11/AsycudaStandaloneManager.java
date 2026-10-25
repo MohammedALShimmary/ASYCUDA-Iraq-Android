@@ -801,7 +801,8 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_0_5_r2");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_1_0_r6");
+            ensureNetworkChangeMonitor(activity.getApplicationContext(), filesDir);
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -850,8 +851,17 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v3_9_5"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_0_0"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_0_5"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_0_5_r2"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r2"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r3"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r4"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r5"));
                 extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
                 ensureFileCreated(bootPatchMarker);
+            } else {
+                // Verify and enforce SHA-256 integrity of local bridge JARs on every startup
+                extractBootJarsOnly(activity, "asycuda-iraq.tar.xz", clientDir);
             }
 
             // Migrate any files from legacy workspace folder into unified prints vault
@@ -909,15 +919,6 @@ public class AsycudaStandaloneManager {
             ensureDir(homeDir);
             ensureDir(printsDir);
             ensureDir(workspaceDir);
-            try {
-                Os.chmod(usrTmpDir.getAbsolutePath(), 0700);
-                Os.chmod(x11UnixDir.getAbsolutePath(), 0700);
-            } catch (Exception ignored) {
-                // Ignore chmod if filesystem does not support POSIX permissions
-            }
-
-            deleteQuietly(new File(usrTmpDir, ".X0-lock"));
-            deleteQuietly(new File(x11UnixDir, "X0"));
 
             Os.setenv("HOME", homeDir.getAbsolutePath(), true);
             Os.setenv("PREFIX", new File(filesDir, "usr").getAbsolutePath(), true);
@@ -926,25 +927,7 @@ public class AsycudaStandaloneManager {
             Os.setenv("DISPLAY", ":0", true);
 
             updateStatus("Starting Embedded X11 Display Engine (:0)...");
-            UI.post(() -> {
-                try {
-                    System.loadLibrary("Xlorie");
-                    CmdEntryPoint.ctx = activity.getApplicationContext();
-                    if (sCmdEntry == null) {
-                        sCmdEntry = new CmdEntryPoint(new String[] { ":0", "-nolisten", "tcp" });
-                    }
-                    MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
-                    act.connectToService(sCmdEntry);
-                } catch (UnsatisfiedLinkError | Exception t) {
-                    Toast.makeText(activity, "X11 Init Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            });
-
-            File x0Socket = new File(x11UnixDir, "X0");
-            for (int i = 0; i < 40; i++) {
-                if (x0Socket.exists()) break;
-                Thread.sleep(150);
-            }
+            ensureX11ServerSocketReady(activity, filesDir);
 
             updateStatus("Starting ASYCUDA World Iraq Client...");
             launchAsycudaJvm(activity);
@@ -1001,25 +984,86 @@ public class AsycudaStandaloneManager {
         }, "Asycuda-StartupAppUpdateCheck").start();
     }
 
+    private static volatile boolean sNetworkMonitorRegistered = false;
+
+    private void ensureNetworkChangeMonitor(Context appCtx, File filesDir) {
+        if (sNetworkMonitorRegistered || appCtx == null) return;
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) appCtx.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                sNetworkMonitorRegistered = true;
+                cm.registerDefaultNetworkCallback(new android.net.ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(android.net.Network network) {
+                        new Thread(() -> refreshGlibcHostsCache(filesDir), "Asycuda-NetHandoverDns").start();
+                    }
+                });
+            }
+        } catch (Exception ignored) {
+            // Best-effort network handover monitor
+        }
+    }
+
     /**
-     * Pre-resolves asy.mof.gov.iq via Android system DNS and writes to usr/glibc/etc/hosts
-     * so glibc inside the JVM never stalls on DNS queries.
+     * Dynamically resolves {@code host} (never using any hardcoded server IP or fallback IP):
+     * 1. Queries Android's currently active {@link android.net.Network#getByName(String)} (4G or Wi-Fi).
+     * 2. Queries standard {@link InetAddress#getByName(String)}.
+     */
+    private InetAddress resolveHostDynamically(String host) {
+        try {
+            MainActivity act = sCurrentActivity;
+            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
+                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
+                if (activeNet != null) {
+                    InetAddress addr = activeNet.getByName(host);
+                    if (addr != null && addr.getAddress() != null) {
+                        return InetAddress.getByAddress(host, addr.getAddress());
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Try system default resolver next
+        }
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            if (addr != null && addr.getAddress() != null) {
+                return InetAddress.getByAddress(host, addr.getAddress());
+            }
+        } catch (Exception ignored) {
+            // Unreachable or DNS failed
+        }
+        return null;
+    }
+
+    /**
+     * Dynamically resolves asy.mof.gov.iq and updates usr/glibc/etc/hosts so glibc inside the JVM
+     * can resolve asy.mof.gov.iq across Wi-Fi and 4G. If the device is momentarily offline during
+     * a network switch, preserves any existing usr/glibc/etc/hosts entry instead of wiping it.
      */
     private void refreshGlibcHostsCache(File filesDir) {
         try {
             File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
             if (hostsFile.getParentFile() != null) ensureDir(hostsFile.getParentFile());
+            InetAddress resolved = resolveHostDynamically(ALLOWED_MOF_HOST);
+            if (resolved == null || resolved.getHostAddress() == null) {
+                if (hostsFile.exists() && hostsFile.length() > 30) {
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.append("127.0.0.1 localhost\n");
+                sb.append("::1 localhost\n");
+                try (FileOutputStream fos = new FileOutputStream(hostsFile)) {
+                    fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+                    fos.getFD().sync();
+                }
+                setReadableOwnerOnly(hostsFile);
+                return;
+            }
             StringBuilder sb = new StringBuilder();
             sb.append("127.0.0.1 localhost\n");
             sb.append("::1 localhost\n");
-            try {
-                InetAddress mofAddr = InetAddress.getByName(ALLOWED_MOF_HOST);
-                if (mofAddr != null && mofAddr.getHostAddress() != null) {
-                    sb.append(mofAddr.getHostAddress()).append(" asy.mof.gov.iq\n");
-                }
-            } catch (Exception ignored) {
-                // Offline DNS lookup skipped
-            }
+            sb.append(resolved.getHostAddress().trim()).append(" asy.mof.gov.iq\n");
             try (FileOutputStream fos = new FileOutputStream(hostsFile)) {
                 fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
                 fos.getFD().sync();
@@ -1031,6 +1075,7 @@ public class AsycudaStandaloneManager {
     }
 
     private void extractBootJarsOnly(Context ctx, String assetName, File destDir) {
+        int found = 0;
         try (InputStream raw = ctx.getAssets().open(assetName);
              BufferedInputStream bis = new BufferedInputStream(raw, 65536);
              XZInputStream xzis = new XZInputStream(bis);
@@ -1039,30 +1084,74 @@ public class AsycudaStandaloneManager {
             String destCanonPrefix = destDir.getCanonicalPath() + File.separator;
             TarArchiveEntry entry;
             byte[] buf = new byte[32768];
-            int found = 0;
             while ((entry = tis.getNextTarEntry()) != null) {
                 String name = entry.getName();
                 if (name.startsWith("./")) name = name.substring(2);
                 if (BOOT_JAR_REL.equals(name) || JNLP_JAR_REL.equals(name)
-                        || BOOTPATCH_JAR_NAME.equals(name) || "mof.crt".equals(name)) {
+                        || BOOTPATCH_JAR_NAME.equals(name) || ("jars/" + BOOTPATCH_JAR_NAME).equals(name)
+                        || "mof.crt".equals(name)) {
                     File outFile = new File(destDir, name);
                     if (!outFile.getCanonicalPath().startsWith(destCanonPrefix)) {
                         continue;
                     }
                     File parent = outFile.getParentFile();
                     if (parent != null) ensureDir(parent);
+                    setWritableOwnerOnly(outFile);
+                    deleteQuietly(outFile);
                     try (FileOutputStream fos = new FileOutputStream(outFile)) {
                         int n;
                         while ((n = tis.read(buf)) != -1) fos.write(buf, 0, n);
                         fos.getFD().sync();
                     }
                     setReadableOwnerOnly(outFile);
+                    outFile.setWritable(false, false);
                     found++;
-                    if (found >= 4) break;
+                    if (found >= 5) break;
                 }
             }
-        } catch (Exception ignored) {
-            // Ignore partial boot jar extraction error
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to extract mandatory boot bridge archives: " + e.getMessage(), e);
+        }
+        if (found < 4) {
+            throw new IllegalStateException("Incomplete boot bridge archive extraction (found " + found + " files)");
+        }
+    }
+
+    /**
+     * Verifies all cached government JARs in {@code jarsDir} against the pinned UNCTAD/SOClass
+     * certificate, immediately deleting any tampered or corrupted JAR and rebuilding {@code classpath.txt}
+     * with only verified JARs.
+     */
+    private void verifyAndPurgeCachedJars(File clientDir) {
+        if (clientDir == null) return;
+        File jarsDir = new File(clientDir, "jars");
+        File[] files = jarsDir.listFiles();
+        if (files == null || files.length == 0) return;
+
+        ExecutorService verifyPool = Executors.newFixedThreadPool(8);
+        List<Future<?>> tasks = new ArrayList<>(files.length);
+        for (final File f : files) {
+            final String name = f.getName();
+            if (!name.endsWith(".jar") || name.startsWith("00_")) continue;
+            tasks.add(verifyPool.submit(() -> {
+                if (!verifyDownloadedJarIntegrity(f)) {
+                    setWritableOwnerOnly(f);
+                    deleteQuietly(f);
+                } else {
+                    f.setWritable(false, false);
+                }
+            }));
+        }
+        verifyPool.shutdown();
+        for (Future<?> t : tasks) {
+            try {
+                t.get();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (ExecutionException ignored) {
+                // Handled per file
+            }
         }
     }
 
@@ -1107,6 +1196,9 @@ public class AsycudaStandaloneManager {
     private int syncGovernmentJars(File clientDir, boolean manualForceCheck, AsycudaMaterialUi.UpdateCenterController modalCtrl) {
         int updatedCount = 0;
         try {
+            if (clientDir != null && clientDir.getParentFile() != null) {
+                refreshGlibcHostsCache(clientDir.getParentFile());
+            }
             updateStatus("Checking customs packages on asy.mof.gov.iq...");
             if (modalCtrl != null) {
                 modalCtrl.setMofUpdateStatus("Connecting to asy.mof.gov.iq...", "Reading " + FILE_AWIQ_JNLP, 0, 100, true);
@@ -1116,29 +1208,30 @@ public class AsycudaStandaloneManager {
             }
             SSLSocketFactory sslFactory = createMofVerifiedSslFactory();
 
-            int connTimeout = manualForceCheck ? 8000 : 3500;
-            int readTimeout = manualForceCheck ? 15000 : 6000;
-
-            HttpURLConnection jnlpConn = openMofConnection(MOF_JNLP_URL, sslFactory, connTimeout, readTimeout);
-            jnlpConn.setRequestMethod("GET");
-            int code = jnlpConn.getResponseCode();
-            if (code != 200) {
-                jnlpConn.disconnect();
-                updateStatus("Server returned HTTP " + code + ", using local packages");
-                if (modalCtrl != null) {
-                    modalCtrl.setMofUpdateStatus("Server returned HTTP " + code + " (using local files)", "Cached", 0, 0, false);
-                }
-                Thread.sleep(300);
-                return 0;
-            }
+            int connTimeout = manualForceCheck ? 10000 : 5000;
+            int readTimeout = manualForceCheck ? 15000 : 8000;
 
             String jnlpXml;
-            try (InputStream in = jnlpConn.getInputStream();
-                 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-                jnlpXml = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+            HttpURLConnection jnlpConn = openMofConnection(MOF_JNLP_URL, sslFactory, connTimeout, readTimeout);
+            try {
+                jnlpConn.setRequestMethod("GET");
+                int code = jnlpConn.getResponseCode();
+                if (code != 200) {
+                    verifyAndPurgeCachedJars(clientDir);
+                    updateStatus("Server returned HTTP " + code + ", using verified local packages");
+                    if (modalCtrl != null) {
+                        modalCtrl.setMofUpdateStatus("Server returned HTTP " + code + " (using local files)", "Cached", 0, 0, false);
+                    }
+                    Thread.sleep(300);
+                    return 0;
+                }
+                try (InputStream in = jnlpConn.getInputStream();
+                     ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+                    jnlpXml = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+                }
             } finally {
                 jnlpConn.disconnect();
             }
@@ -1192,11 +1285,15 @@ public class AsycudaStandaloneManager {
                     continue;
                 }
                 activeGovJarNames.add(flatName);
-                cpEntries.add("jars/" + flatName);
                 final File targetJar = new File(jarsDir, flatName);
 
                 futures.add(pool.submit(() -> {
                     boolean needsDl = !targetJar.exists() || targetJar.length() == 0;
+                    if (!needsDl && !verifyDownloadedJarIntegrity(targetJar)) {
+                        setWritableOwnerOnly(targetJar);
+                        deleteQuietly(targetJar);
+                        needsDl = true;
+                    }
                     if (!needsDl) {
                         HttpURLConnection head = null;
                         try {
@@ -1204,7 +1301,9 @@ public class AsycudaStandaloneManager {
                             head.setRequestMethod("HEAD");
                             if (head.getResponseCode() == 200) {
                                 long remoteLen = head.getContentLengthLong();
-                                if (remoteLen > 0 && remoteLen != targetJar.length()) {
+                                long remoteMod = head.getLastModified();
+                                if ((remoteLen > 0 && remoteLen != targetJar.length())
+                                        || (remoteMod > 0 && Math.abs(remoteMod - targetJar.lastModified()) > 2000L)) {
                                     needsDl = true;
                                 }
                             }
@@ -1301,19 +1400,32 @@ public class AsycudaStandaloneManager {
                 updatedCount = dlSuccessCounter.get();
             }
 
-            // Rebuild classpath.txt with preserved bridge jars first
+            // Rebuild classpath.txt with preserved bridge jars first and only verified existing government jars
+            for (int i = 0; i < total; i++) {
+                String href = remoteHrefs.get(i);
+                String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
+                String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
+                if (flatName.isEmpty() || flatName.startsWith("00_")) continue;
+                File verifiedJar = new File(jarsDir, flatName);
+                if (verifiedJar.exists() && verifiedJar.length() > 0) {
+                    cpEntries.add("jars/" + flatName);
+                }
+            }
             StringBuilder cpBuilder = new StringBuilder();
             for (String entry : cpEntries) {
                 if (cpBuilder.length() > 0) cpBuilder.append(":");
                 cpBuilder.append(entry);
             }
             File cpFile = new File(clientDir, FILE_CLASSPATH);
+            setWritableOwnerOnly(cpFile);
             try (FileOutputStream fos = new FileOutputStream(cpFile)) {
                 fos.write(cpBuilder.toString().getBytes(StandardCharsets.UTF_8));
                 fos.getFD().sync();
             } catch (Exception ignored) {
                 // Ignore classpath write error
             }
+            setReadableOwnerOnly(cpFile);
+            cpFile.setWritable(false, false);
 
             if (modalCtrl != null) {
                 if (updatedCount > 0) {
@@ -1334,14 +1446,29 @@ public class AsycudaStandaloneManager {
 
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-        } catch (Exception ignored) {
+        } catch (Exception err) {
             try {
+                verifyAndPurgeCachedJars(clientDir);
                 String[] list = new File(clientDir, "jars").list();
                 int cached = list != null ? list.length : 0;
-                updateStatus("Offline mode: using " + cached + " local packages");
-                if (modalCtrl != null) {
-                    modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
-                            "Check your internet or VPN connection", 0, 0, false);
+                String errDetail = err.getClass().getSimpleName()
+                        + (err.getMessage() != null ? ": " + err.getMessage() : "");
+                int rmiPort = extractDynamicMofRmiPort(new File(clientDir, FILE_AWIQ_JNLP));
+                boolean rmiOnline = rmiPort > 0 && probeMofRmiPortOnline(rmiPort, 2500);
+                if (rmiOnline) {
+                    updateStatus("Customs Server (:" + rmiPort + ") online — using " + cached + " verified local packages");
+                    if (modalCtrl != null) {
+                        modalCtrl.setMofUpdateStatus(
+                                "Customs Server (:" + rmiPort + ") Online — " + cached + " packages ready",
+                                "MoF Web JNLP temporarily offline (" + errDetail + ")",
+                                0, 0, false);
+                    }
+                } else {
+                    updateStatus("Offline mode: using " + cached + " local packages (" + errDetail + ")");
+                    if (modalCtrl != null) {
+                        modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
+                                errDetail, 0, 0, false);
+                    }
                 }
                 Thread.sleep(300);
             } catch (InterruptedException ie) {
@@ -1351,6 +1478,70 @@ public class AsycudaStandaloneManager {
             }
         }
         return updatedCount;
+    }
+
+    private static List<String> parseJnlpApplicationArgs(File jnlpFile) {
+        List<String> args = new ArrayList<>();
+        if (jnlpFile != null && jnlpFile.exists()) {
+            try {
+                String xml = readTail(jnlpFile, 16384);
+                String lower = xml.toLowerCase(Locale.US);
+                int idx = 0;
+                while (idx < lower.length()) {
+                    int s = lower.indexOf("<argument>", idx);
+                    if (s < 0) break;
+                    int e = lower.indexOf("</argument>", s);
+                    if (e < 0) break;
+                    String val = xml.substring(s + "<argument>".length(), e).trim();
+                    if (!val.isEmpty()) {
+                        String lowVal = val.toLowerCase(Locale.US);
+                        if (lowVal.startsWith("-") || lowVal.contains(ALLOWED_MOF_HOST)) {
+                            args.add(val);
+                        }
+                    }
+                    idx = e + "</argument>".length();
+                }
+            } catch (Exception ignored) {
+                // Ignore JNLP read failure
+            }
+        }
+        return args;
+    }
+
+    private static int extractDynamicMofRmiPort(File jnlpFile) {
+        List<String> args = parseJnlpApplicationArgs(jnlpFile);
+        for (String arg : args) {
+            String low = arg.toLowerCase(Locale.US);
+            int idx = low.indexOf(ALLOWED_MOF_HOST + ":");
+            if (idx >= 0) {
+                int start = idx + (ALLOWED_MOF_HOST + ":").length();
+                int end = start;
+                while (end < low.length() && Character.isDigit(low.charAt(end))) {
+                    end++;
+                }
+                if (end > start) {
+                    try {
+                        int p = Integer.parseInt(low.substring(start, end));
+                        if (p > 0 && p <= 65535) return p;
+                    } catch (NumberFormatException ignored) {
+                        // Ignore malformed port
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    private boolean probeMofRmiPortOnline(int rmiPort, int timeoutMs) {
+        if (rmiPort <= 0) return false;
+        InetAddress addr = resolveHostDynamically(ALLOWED_MOF_HOST);
+        if (addr == null) return false;
+        try (Socket s = new Socket()) {
+            s.connect(new java.net.InetSocketAddress(addr, rmiPort), timeoutMs);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean downloadJarAtomically(String jarUrl, File targetJar, SSLSocketFactory sslFactory) {
@@ -1373,11 +1564,17 @@ public class AsycudaStandaloneManager {
             }
 
             if (tmpJar.length() > 0 && verifyDownloadedJarIntegrity(tmpJar)) {
-                if (targetJar.exists()) deleteQuietly(targetJar);
+                if (targetJar.exists()) {
+                    setWritableOwnerOnly(targetJar);
+                    deleteQuietly(targetJar);
+                }
                 if (tmpJar.renameTo(targetJar)) {
-                    setReadableOwnerOnly(targetJar);
                     if (remoteMod > 0 && !targetJar.setLastModified(remoteMod)) {
                         // Timestamp update is best-effort
+                    }
+                    setReadableOwnerOnly(targetJar);
+                    if (!targetJar.setWritable(false, false)) {
+                        // Read-only lock is best-effort on non-POSIX filesystems
                     }
                     return true;
                 }
@@ -1391,111 +1588,25 @@ public class AsycudaStandaloneManager {
         return false;
     }
 
-    private static final String SCHEME_HTTPS = "https";
-    private static final String ALLOWED_MOF_HOST = "asy.mof.gov.iq";
-    private static final String PINNED_MOF_SOCODE_CERT_SHA256 =
-            "5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d";
+    private static final String SCHEME_HTTPS = AsycudaSecurityValidator.SCHEME_HTTPS;
+    private static final String ALLOWED_MOF_HOST = AsycudaSecurityValidator.ALLOWED_MOF_HOST;
 
     /**
      * Resolves a JNLP {@code <jar href="..."/>} reference strictly against {@code https://asy.mof.gov.iq/aw/}
-     * and enforces an explicit HTTPS hostname allowlist ({@code asy.mof.gov.iq}).
-     * Any non-HTTPS scheme, external hostname, or path traversal is rejected (returns {@code null}).
+     * and enforces an explicit HTTPS hostname/port allowlist ({@code asy.mof.gov.iq:443}) via
+     * {@link AsycudaSecurityValidator#resolveTrustedMofJarUrl(String)}.
      */
-    private static String resolveTrustedMofJarUrl(String href) {
-        if (href == null || href.trim().isEmpty()) return null;
-        String trimmed = href.trim();
-        if (trimmed.contains("..")) return null;
-        try {
-            URL base = new URL(MOF_CODEBASE_URL);
-            URL resolved = trimmed.contains("://")
-                    ? new URL(trimmed)
-                    : new URL(base, trimmed.replaceFirst("^/+", ""));
-            if (!SCHEME_HTTPS.equalsIgnoreCase(resolved.getProtocol())) {
-                return null;
-            }
-            if (!ALLOWED_MOF_HOST.equalsIgnoreCase(resolved.getHost())) {
-                return null;
-            }
-            String path = resolved.getPath();
-            if (path == null || !path.startsWith("/aw/") || !path.endsWith(".jar")) {
-                return null;
-            }
-            return resolved.toString();
-        } catch (Exception e) {
-            return null;
-        }
+    public static String resolveTrustedMofJarUrl(String href) {
+        return AsycudaSecurityValidator.resolveTrustedMofJarUrl(href);
     }
 
     /**
-     * Verifies that a downloaded JAR is a well-formed ZIP/JAR archive, enforces Java cryptographic
-     * signature verification ({@code JarFile(..., true)}) on all entries, and requires that both
-     * the {@code META-INF/SOCODE.RSA} PKCS#7 block and every non-{@code META-INF/} entry in the archive
-     * are cryptographically signed by the pinned UNCTAD/SOClass X.509 code-signing certificate
-     * ({@code SHA-256: 5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d}).
+     * Verifies that a downloaded JAR is a well-formed ZIP/JAR archive and cryptographically signed
+     * by the pinned UNCTAD/SOClass X.509 certificate via
+     * {@link AsycudaSecurityValidator#verifyDownloadedJarIntegrity(File)}.
      */
-    private static boolean verifyDownloadedJarIntegrity(File jarFile) {
-        if (jarFile == null || !jarFile.exists() || jarFile.length() < 22) return false;
-        try (java.util.jar.JarFile jf = new java.util.jar.JarFile(jarFile, true)) {
-            java.util.jar.JarEntry rsaEntry = jf.getJarEntry("META-INF/SOCODE.RSA");
-            java.util.jar.JarEntry sfEntry = jf.getJarEntry("META-INF/SOCODE.SF");
-            if (rsaEntry == null || sfEntry == null) {
-                return false;
-            }
-
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            boolean pkcs7MatchedPinnedSigner = false;
-            try (InputStream rsaIn = jf.getInputStream(rsaEntry)) {
-                java.util.Collection<? extends Certificate> pkcs7Certs = cf.generateCertificates(rsaIn);
-                if (pkcs7Certs != null) {
-                    for (Certificate c : pkcs7Certs) {
-                        if (PINNED_MOF_SOCODE_CERT_SHA256.equalsIgnoreCase(sha256Hex(sha256, c.getEncoded()))) {
-                            pkcs7MatchedPinnedSigner = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!pkcs7MatchedPinnedSigner) {
-                return false;
-            }
-
-            Enumeration<java.util.jar.JarEntry> entries = jf.entries();
-            int entryCount = 0;
-            byte[] buf = new byte[16384];
-            while (entries.hasMoreElements()) {
-                java.util.jar.JarEntry je = entries.nextElement();
-                entryCount++;
-                try (InputStream is = jf.getInputStream(je)) {
-                    while (is.read(buf) != -1) {
-                        // Draining the entry stream triggers JarVerifier digest & signature validation
-                    }
-                }
-                String name = je.getName();
-                if (!je.isDirectory() && !name.startsWith("META-INF/")) {
-                    Certificate[] entryCerts = je.getCertificates();
-                    if (entryCerts == null || entryCerts.length == 0) {
-                        return false;
-                    }
-                    if (!PINNED_MOF_SOCODE_CERT_SHA256.equalsIgnoreCase(sha256Hex(sha256, entryCerts[0].getEncoded()))) {
-                        return false;
-                    }
-                }
-            }
-            return entryCount > 0;
-        } catch (Exception invalidJar) {
-            return false;
-        }
-    }
-
-    private static String sha256Hex(MessageDigest sha256, byte[] data) {
-        sha256.reset();
-        byte[] digest = sha256.digest(data);
-        StringBuilder hex = new StringBuilder(digest.length * 2);
-        for (byte b : digest) {
-            hex.append(String.format(Locale.US, "%02x", b & 0xFF));
-        }
-        return hex.toString();
+    public static boolean verifyDownloadedJarIntegrity(File jarFile) {
+        return AsycudaSecurityValidator.verifyDownloadedJarIntegrity(jarFile);
     }
 
     private HttpURLConnection openMofConnection(String urlStr, SSLSocketFactory sslFactory, int connTimeout, int readTimeout) throws IOException {
@@ -1503,7 +1614,22 @@ public class AsycudaStandaloneManager {
         if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol()) || !ALLOWED_MOF_HOST.equalsIgnoreCase(url.getHost())) {
             throw new SecurityException("Blocked connection to untrusted host: " + url.getHost());
         }
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = null;
+        try {
+            MainActivity act = sCurrentActivity;
+            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
+                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
+                if (activeNet != null) {
+                    conn = (HttpURLConnection) activeNet.openConnection(url);
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall back to default url.openConnection()
+        }
+        if (conn == null) {
+            conn = (HttpURLConnection) url.openConnection();
+        }
         conn.setInstanceFollowRedirects(false);
         if (conn instanceof HttpsURLConnection && sslFactory != null) {
             HttpsURLConnection https = (HttpsURLConnection) conn;
@@ -1607,6 +1733,48 @@ public class AsycudaStandaloneManager {
         }
     }
 
+    private void ensureX11ServerSocketReady(MainActivity activity, File filesDir) throws InterruptedException {
+        File usrTmpDir = new File(filesDir, "usr/tmp");
+        File x11UnixDir = new File(usrTmpDir, ".X11-unix");
+        ensureDir(usrTmpDir);
+        ensureDir(x11UnixDir);
+        try {
+            Os.chmod(usrTmpDir.getAbsolutePath(), 0700);
+            Os.chmod(x11UnixDir.getAbsolutePath(), 0700);
+        } catch (Exception ignored) {
+            // Ignore chmod if filesystem does not support POSIX permissions
+        }
+        File x0Socket = new File(x11UnixDir, "X0");
+        if (sCmdEntry == null || !x0Socket.exists()) {
+            deleteQuietly(new File(usrTmpDir, ".X0-lock"));
+            deleteQuietly(x0Socket);
+            UI.post(() -> {
+                try {
+                    System.loadLibrary("Xlorie");
+                    CmdEntryPoint.ctx = activity.getApplicationContext();
+                    sCmdEntry = new CmdEntryPoint(new String[] { ":0", "-nolisten", "tcp" });
+                    MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
+                    act.connectToService(sCmdEntry);
+                } catch (UnsatisfiedLinkError | Exception t) {
+                    Toast.makeText(activity, "X11 Init Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
+        } else {
+            UI.post(() -> {
+                try {
+                    MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
+                    act.connectToService(sCmdEntry);
+                } catch (Exception ignored) {
+                    // Best-effort service reconnect
+                }
+            });
+        }
+        for (int i = 0; i < 40; i++) {
+            if (x0Socket.exists()) break;
+            Thread.sleep(150);
+        }
+    }
+
     private void launchAsycudaJvm(MainActivity activity) {
         File logFile;
         Process proc;
@@ -1620,6 +1788,8 @@ public class AsycudaStandaloneManager {
 
                 File filesDir = new File("/data/data/" + activity.getPackageName() + "/files");
                 if (!filesDir.exists()) filesDir = activity.getFilesDir();
+
+                ensureX11ServerSocketReady(activity, filesDir);
 
                 // Pre-populate usr/glibc/etc/hosts with resolved IP for asy.mof.gov.iq
                 refreshGlibcHostsCache(filesDir);
@@ -1659,16 +1829,32 @@ public class AsycudaStandaloneManager {
                 File fastInternalHome = new File(filesDir, "home");
                 ensureDir(fastInternalHome);
 
-                String cpVal = "jars/*";
+                String cpVal = BOOT_JAR_REL + ":" + JNLP_JAR_REL;
                 File cpFile = new File(clientDir, FILE_CLASSPATH);
                 if (cpFile.exists()) {
                     try (BufferedReader br = new BufferedReader(new FileReader(cpFile))) {
                         String line = br.readLine();
                         if (line != null && !line.trim().isEmpty()) {
-                            cpVal = line.trim().replace("/data/data/com.termux/files/home/asycuda_iraq/", "");
+                            String rawCp = line.trim().replace("/data/data/com.termux/files/home/asycuda_iraq/", "");
+                            StringBuilder filteredCp = new StringBuilder();
+                            filteredCp.append(BOOT_JAR_REL).append(":").append(JNLP_JAR_REL);
+                            for (String token : rawCp.split(":")) {
+                                String entry = token.trim();
+                                if (entry.startsWith("jars/") && entry.endsWith(".jar")
+                                        && !entry.contains("..") && !entry.equals(BOOT_JAR_REL) && !entry.equals(JNLP_JAR_REL)) {
+                                    String jarName = entry.substring("jars/".length());
+                                    if (!jarName.contains("/") && !jarName.contains("\\")) {
+                                        File jarFile = new File(clientDir, entry);
+                                        if (jarFile.isFile() && jarFile.length() > 0) {
+                                            filteredCp.append(":").append(entry);
+                                        }
+                                    }
+                                }
+                            }
+                            cpVal = filteredCp.toString();
                         }
                     } catch (Exception ignored) {
-                        // Use wildcard classpath fallback
+                        // Use bridge classpath fallback
                     }
                 }
 
@@ -1680,28 +1866,39 @@ public class AsycudaStandaloneManager {
                 }
                 cmd.add(javaBin.getAbsolutePath());
                 cmd.add("-Dasycuda.running=1");
-                cmd.add("-Dasycuda.bridge.token=" + BRIDGE_AUTH_TOKEN);
                 cmd.add("-Xbootclasspath/p:" + new File(clientDir, BOOTPATCH_JAR_NAME).getAbsolutePath());
+                String hardenedLibPath = new File(jreDir, "jre/lib/aarch64").getAbsolutePath() + ":"
+                        + new File(jreDir, "jre/lib/aarch64/jli").getAbsolutePath() + ":"
+                        + new File(jreDir, "jre/lib/aarch64/server").getAbsolutePath() + ":"
+                        + new File(jreDir, "lib/aarch64").getAbsolutePath() + ":"
+                        + new File(jreDir, "lib/aarch64/jli").getAbsolutePath() + ":"
+                        + new File(jreDir, "lib/aarch64/server").getAbsolutePath() + ":"
+                        + new File(filesDir, "usr/glibc/lib").getAbsolutePath();
+                cmd.add("-Djava.library.path=" + hardenedLibPath);
                 cmd.add("-Xms256m");
                 cmd.add("-Xmx1280m");
                 cmd.add("-Djava.io.tmpdir=" + tmpDir.getAbsolutePath());
                 cmd.add("-Dasycuda.prints.dir=" + printsDir.getAbsolutePath());
                 cmd.add("-Dasycuda.workspace.dir=" + workspaceDir.getAbsolutePath());
                 cmd.add("-Djava.net.preferIPv4Stack=true");
-                cmd.add("-Dsun.net.inetaddr.ttl=-1");
-                cmd.add("-Dnetworkaddress.cache.ttl=-1");
+                cmd.add("-Dsun.net.inetaddr.ttl=30");
+                cmd.add("-Dnetworkaddress.cache.ttl=30");
                 cmd.add("-Dhttp.keepAlive=true");
                 cmd.add("-Dhttp.maxConnections=32");
-                cmd.add("-Dsun.rmi.transport.tcp.responseTimeout=120000");
+                cmd.add("-Dsun.rmi.transport.tcp.responseTimeout=15000");
+                cmd.add("-Dpreload.supportedLng=on");
+                cmd.add("-Dpreload.licenseInfo=on");
+                cmd.add("-Dpreload.formatDictionary=on");
+                cmd.add("-Dpreload.desktop=on");
+                cmd.add("-Dpreload.availableRT=on");
+                cmd.add("-Dpreload.DL=on");
                 cmd.add("-Djava.rmi.server.hostname=127.0.0.1");
                 cmd.add("-Duser.home=" + fastInternalHome.getAbsolutePath());
                 cmd.add("-Djava.util.logging.manager=so.util.logging.SOLogManager");
                 cmd.add("-cp");
                 cmd.add(cpVal);
                 cmd.add("asycuda.AsycudaBoot");
-                cmd.add("https://asy.mof.gov.iq/aw/help/");
-                cmd.add("//asy.mof.gov.iq:2006/");
-                cmd.add("-dout");
+                cmd.addAll(parseJnlpApplicationArgs(new File(clientDir, FILE_AWIQ_JNLP)));
 
                 logFile = new File(clientDir, FILE_ASYCUDA_LOG);
                 ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -1719,6 +1916,7 @@ public class AsycudaStandaloneManager {
                 env.put("PREFIX", new File(filesDir, "usr").getAbsolutePath());
                 env.put("TMPDIR", new File(filesDir, "usr/tmp").getAbsolutePath());
                 env.put("DISPLAY", ":0");
+                env.put("ASYCUDA_BRIDGE_TOKEN", BRIDGE_AUTH_TOKEN);
 
                 proc = pb.start();
                 sJavaProcess = proc;
@@ -1839,6 +2037,9 @@ public class AsycudaStandaloneManager {
                     File parent = outFile.getParentFile();
                     if (parent != null) ensureDir(parent);
                     deleteQuietly(outFile);
+                    if (!AsycudaSecurityValidator.isSafeTarSymlinkTarget(destDir, outFile, entry.getLinkName())) {
+                        throw new SecurityException("Blocked archive symlink pointing outside target directory: " + entry.getName());
+                    }
                     try {
                         Os.symlink(entry.getLinkName(), outFile.getAbsolutePath());
                     } catch (Exception ignored) {
@@ -1849,7 +2050,10 @@ public class AsycudaStandaloneManager {
                     if (parent != null) ensureDir(parent);
                     deleteQuietly(outFile);
                     File target = new File(destDir, entry.getLinkName());
-                    if (target.getCanonicalPath().startsWith(destCanonPrefix) && target.exists()) {
+                    if (!AsycudaSecurityValidator.isSafeTarEntryPath(destDir, target)) {
+                        throw new SecurityException("Blocked archive hardlink pointing outside target directory: " + entry.getName());
+                    }
+                    if (target.exists()) {
                         try (FileInputStream in = new FileInputStream(target);
                              FileOutputStream out = new FileOutputStream(outFile)) {
                             int n;
@@ -1889,6 +2093,9 @@ public class AsycudaStandaloneManager {
                     try (Socket s = ss.accept();
                          BufferedReader br = new BufferedReader(
                                  new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8))) {
+                        if (!isLoopbackPeerOwnedByOurUid(s)) {
+                            continue;
+                        }
                         String line = br.readLine();
                         if (line != null) handleBridgeMessage(line.trim());
                     } catch (Exception ignored) {
@@ -1903,12 +2110,54 @@ public class AsycudaStandaloneManager {
         t.start();
     }
 
+    private static boolean isLoopbackPeerOwnedByOurUid(Socket s) {
+        if (s == null || s.getInetAddress() == null || !s.getInetAddress().isLoopbackAddress()) {
+            return false;
+        }
+        int peerPort = s.getPort();
+        int myUid = android.os.Process.myUid();
+        String hexIpv4 = String.format(Locale.US, "0100007F:%04X", peerPort);
+        String hexIpv6 = String.format(Locale.US, "0000000000000000FFFF00000100007F:%04X", peerPort);
+        String hexIpv6Loop = String.format(Locale.US, "00000000000000000000000001000000:%04X", peerPort);
+        boolean foundAnyEntry = false;
+        String[] procFiles = new String[] { "/proc/net/tcp", "/proc/net/tcp6" };
+        for (String path : procFiles) {
+            File procTcp = new File(path);
+            if (!procTcp.exists() || !procTcp.canRead()) {
+                continue;
+            }
+            try (BufferedReader br = new BufferedReader(new FileReader(procTcp))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String trimmed = line.trim();
+                    if (trimmed.isEmpty() || trimmed.startsWith("sl")) continue;
+                    foundAnyEntry = true;
+                    String[] cols = trimmed.split("\\s+");
+                    if (cols.length >= 8 && (hexIpv4.equalsIgnoreCase(cols[1])
+                            || hexIpv6.equalsIgnoreCase(cols[1])
+                            || hexIpv6Loop.equalsIgnoreCase(cols[1]))) {
+                        return String.valueOf(myUid).equals(cols[7]);
+                    }
+                }
+            } catch (Exception ignored) {
+                // Continue checking remaining proc files
+            }
+        }
+        // Only fall back to the 128-bit session token when Android 10+ SELinux hides all /proc/net/tcp rows
+        return !foundAnyEntry;
+    }
+
     private void handleBridgeMessage(String rawMsg) {
         MainActivity act = sCurrentActivity;
         if (act == null || rawMsg == null) return;
 
         String authPrefix = "AUTH|" + BRIDGE_AUTH_TOKEN + "|";
-        if (!rawMsg.startsWith(authPrefix)) {
+        if (rawMsg.length() < authPrefix.length()) {
+            return;
+        }
+        byte[] expectedBytes = authPrefix.getBytes(StandardCharsets.UTF_8);
+        byte[] actualBytes = rawMsg.substring(0, authPrefix.length()).getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(expectedBytes, actualBytes)) {
             return;
         }
         String msg = rawMsg.substring(authPrefix.length());
@@ -1959,8 +2208,15 @@ public class AsycudaStandaloneManager {
                         "طلب خادم أسيكودا تحديث ملفات النظام (SOClass). جاري فتح نافذة التحديث...",
                         "ڕاژەی ئەسیکۆدا داوای نوێکردنەوەی SOClass دەکات. کردنەوەی پەنجەرەی نوێکردنەوە..."),
                         Toast.LENGTH_LONG).show();
-                runUnifiedUpdateCheckModal(act);
+                runUnifiedUpdateCheckModal(act, true);
             });
+        } else if (msg.startsWith("SECURITY_ERROR|")) {
+            final String reason = msg.substring("SECURITY_ERROR|".length()).trim();
+            UI.post(() -> AsycudaMaterialUi.showSecuritySandboxErrorModal(
+                    act,
+                    reason,
+                    () -> restartAsycudaSession(act),
+                    () -> shutdownApp(act)));
         }
     }
 
@@ -1990,12 +2246,26 @@ public class AsycudaStandaloneManager {
 
     private File resolveSafeBridgeFile(Context ctx, String requestedPath) {
         if (requestedPath == null || requestedPath.isEmpty()) return null;
-        String baseName = new File(requestedPath).getName().replaceAll(REGEX_UNSAFE_FILENAME, "_");
-        if (baseName.isEmpty() || ".".equals(baseName) || "..".equals(baseName)) return null;
         File[] allowedDirs = new File[] {
             new File(ctx.getFilesDir(), DIR_PRINTS),
             new File(ctx.getFilesDir(), DIR_WORKSPACE)
         };
+        try {
+            File req = new File(requestedPath);
+            if (req.isAbsolute()) {
+                String reqCanon = req.getCanonicalPath();
+                for (File dir : allowedDirs) {
+                    String dirCanonPrefix = dir.getCanonicalPath() + File.separator;
+                    if (reqCanon.startsWith(dirCanonPrefix) && req.exists() && req.isFile()) {
+                        return req;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through to sanitized basename check
+        }
+        String baseName = AsycudaSecurityValidator.sanitizeBridgeFileName(requestedPath);
+        if (baseName.isEmpty() || ".".equals(baseName) || "..".equals(baseName)) return null;
         for (File dir : allowedDirs) {
             File candidate = new File(dir, baseName);
             if (candidate.exists() && candidate.isFile()) {
@@ -2286,15 +2556,30 @@ public class AsycudaStandaloneManager {
                     "دووبارە پێکردنەوەی دانیشتن..."));
         }
         new Thread(() -> {
-            if (sJavaProcess != null) {
-                sJavaProcess.destroyForcibly();
-                sJavaProcess = null;
+            Process oldProc = sJavaProcess;
+            sJavaProcess = null;
+            if (oldProc != null) {
+                try {
+                    oldProc.destroyForcibly();
+                    oldProc.waitFor();
+                } catch (Exception ignored) {
+                    // Best-effort wait for previous JVM exit
+                }
+                try {
+                    Thread.sleep(350);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
             }
             launchAsycudaJvm(activity);
         }, "Asycuda-SessionRestart").start();
     }
 
     private void runUnifiedUpdateCheckModal(MainActivity activity) {
+        runUnifiedUpdateCheckModal(activity, false);
+    }
+
+    private void runUnifiedUpdateCheckModal(MainActivity activity, boolean forceSessionRestart) {
         if (!sSyncInProgress.compareAndSet(false, true)) {
             Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
                     "Update check is already running...",
@@ -2356,6 +2641,9 @@ public class AsycudaStandaloneManager {
                             }
                         }
                     }
+                    if (!AsycudaSecurityValidator.isValidSha256Hex(apkSha256)) {
+                        apkSha256 = AsycudaSecurityValidator.extractSha256FromReleaseBody(body);
+                    }
 
                     if (apkUrl != null && isRemoteVersionNewer(tagName, currentVer)) {
                         appUpdateAvailable = true;
@@ -2393,7 +2681,8 @@ public class AsycudaStandaloneManager {
             try {
                 File clientDir = new File(activity.getFilesDir(), DIR_CLIENT);
                 int updatedJars = syncGovernmentJars(clientDir, true, ctrl);
-                ctrl.onCheckFinished(updatedJars, appUpdateAvailable, () -> restartAsycudaSession(activity));
+                int effectiveRestartTrigger = forceSessionRestart ? Math.max(1, updatedJars) : updatedJars;
+                ctrl.onCheckFinished(effectiveRestartTrigger, appUpdateAvailable, () -> restartAsycudaSession(activity));
             } finally {
                 sSyncInProgress.set(false);
             }
@@ -2430,6 +2719,14 @@ public class AsycudaStandaloneManager {
         HttpURLConnection conn = null;
         sApkDownloadActive.set(true);
         try {
+            if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(apkUrl)) {
+                ctrl.setAppUpdateStatus("Security error: Untrusted APK download URL", -1, false);
+                return;
+            }
+            if (!AsycudaSecurityValidator.isValidSha256Hex(expectedSha256)) {
+                ctrl.setAppUpdateStatus("Security error: Missing or invalid release SHA-256 digest", -1, false);
+                return;
+            }
             cleanupStaleUpdateApks(activity);
             File updatesCacheDir = new File(activity.getCacheDir(), DIR_UPDATES_CACHE);
             ensureDir(updatesCacheDir);
@@ -2440,6 +2737,16 @@ public class AsycudaStandaloneManager {
             conn.setConnectTimeout(10000);
             conn.setReadTimeout(30000);
             conn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android-Updater");
+
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) {
+                ctrl.setAppUpdateStatus("HTTP error downloading APK: " + code, -1, false);
+                return;
+            }
+            if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(conn.getURL().toString())) {
+                ctrl.setAppUpdateStatus("Security error: Untrusted APK redirect destination", -1, false);
+                return;
+            }
 
             long totalBytes = conn.getContentLengthLong();
             if (totalBytes <= 0) totalBytes = expectedSize;
@@ -2471,19 +2778,17 @@ public class AsycudaStandaloneManager {
                 out.getFD().sync();
             }
 
-            // 1. Verify SHA-256 integrity against GitHub Release asset digest when present
-            if (expectedSha256 != null && !expectedSha256.isEmpty()) {
-                byte[] actualBytes = sha256Digest.digest();
-                StringBuilder hex = new StringBuilder();
-                for (byte b : actualBytes) hex.append(String.format(Locale.US, "%02x", b & 0xFF));
-                if (!hex.toString().equalsIgnoreCase(expectedSha256.trim())) {
-                    deleteQuietly(outApk);
-                    ctrl.setAppUpdateStatus("Security error: APK SHA-256 checksum mismatch", -1, false);
-                    return;
-                }
+            // 1. Mandatory SHA-256 integrity verification against GitHub Release digest
+            byte[] actualBytes = sha256Digest.digest();
+            StringBuilder hex = new StringBuilder();
+            for (byte b : actualBytes) hex.append(String.format(Locale.US, "%02x", b & 0xFF));
+            if (!hex.toString().equalsIgnoreCase(expectedSha256.trim())) {
+                deleteQuietly(outApk);
+                ctrl.setAppUpdateStatus("Security error: APK SHA-256 checksum mismatch", -1, false);
+                return;
             }
 
-            // 2. Verify APK signing certificate matches currently installed application
+            // 2. Verify APK signing certificate matches currently installed application & pinned release key
             if (!verifyDownloadedApkSignature(activity, outApk)) {
                 deleteQuietly(outApk);
                 ctrl.setAppUpdateStatus("Security error: APK signature verification failed", -1, false);
@@ -2520,17 +2825,39 @@ public class AsycudaStandaloneManager {
     private boolean verifyDownloadedApkSignature(Context ctx, File apkFile) {
         try {
             PackageManager pm = ctx.getPackageManager();
-            PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNATURES);
-            if (archiveInfo == null || !ctx.getPackageName().equals(archiveInfo.packageName)) {
-                return false;
+            Signature[] archiveSigs = null;
+            Signature[] installedSigs = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNING_CERTIFICATES);
+                if (archiveInfo == null || !ctx.getPackageName().equals(archiveInfo.packageName) || archiveInfo.signingInfo == null) {
+                    return false;
+                }
+                if (archiveInfo.signingInfo.hasMultipleSigners()) {
+                    return false;
+                }
+                archiveSigs = archiveInfo.signingInfo.getSigningCertificateHistory();
+                PackageInfo installedInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
+                if (installedInfo == null || installedInfo.signingInfo == null) {
+                    return false;
+                }
+                installedSigs = installedInfo.signingInfo.getSigningCertificateHistory();
+            } else {
+                PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNATURES);
+                if (archiveInfo == null || !ctx.getPackageName().equals(archiveInfo.packageName)) {
+                    return false;
+                }
+                PackageInfo installedInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES);
+                archiveSigs = archiveInfo.signatures;
+                installedSigs = installedInfo.signatures;
             }
-            PackageInfo installedInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES);
-            Signature[] archiveSigs = archiveInfo.signatures;
-            Signature[] installedSigs = installedInfo.signatures;
             if (archiveSigs == null || installedSigs == null || archiveSigs.length == 0 || installedSigs.length == 0) {
                 return false;
             }
-            return archiveSigs[0].equals(installedSigs[0]);
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            String archiveHex = AsycudaSecurityValidator.sha256Hex(sha256, archiveSigs[0].toByteArray());
+            String installedHex = AsycudaSecurityValidator.sha256Hex(sha256, installedSigs[0].toByteArray());
+            return archiveHex.equalsIgnoreCase(installedHex)
+                    && AsycudaSecurityValidator.PINNED_APK_RELEASE_CERT_SHA256.equalsIgnoreCase(archiveHex);
         } catch (Exception t) {
             return false;
         }
@@ -2647,6 +2974,11 @@ public class AsycudaStandaloneManager {
             }
 
             @Override
+            public StringBuilder buildRedactedDiagnosticPreviewInRam(String description) {
+                return buildDiagnosticPreviewBufferInRam(activity, description);
+            }
+
+            @Override
             public void onSubmitToSentry(String description, File attachedImage,
                                          AsycudaMaterialUi.FeedbackModalController controller, Dialog feedbackDialog) {
                 controller.setUploadState(true, AsycudaMaterialUi.tr(activity,
@@ -2659,6 +2991,9 @@ public class AsycudaStandaloneManager {
                         byte[] zipBytes = buildDiagnosticsZipBytes(activity, description, attachedImage);
                         boolean sent = uploadReportEnvelopeToSentry(activity, description, zipBytes, attachedImage);
                         if (sent) {
+                            if (attachedImage != null && attachedImage.getName().equals("screen_capture.jpg")) {
+                                deleteQuietly(attachedImage);
+                            }
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
                                     "Report sent. Thank you!",
                                     "تم إرسال البلاغ بنجاح. شكراً لك!",
@@ -2682,6 +3017,48 @@ public class AsycudaStandaloneManager {
                 }, "Asycuda-SentryUploader").start();
             }
         }, () -> openMaterialControlCenter(activity));
+    }
+
+    /**
+     * Constructs a 100% in-RAM mutable {@link StringBuilder} preview of the redacted diagnostic
+     * data that would be transmitted in a voluntary report. Zero bytes are written to disk, and
+     * the caller wipes/zeroes the buffer on dialog dismissal.
+     */
+    private StringBuilder buildDiagnosticPreviewBufferInRam(MainActivity activity, String userDescription) {
+        File filesDir = activity.getFilesDir();
+        File clientDir = new File(filesDir, DIR_CLIENT);
+        String safeDescription = redactSensitiveLogContent(userDescription);
+        StringBuilder sb = new StringBuilder(8192);
+        sb.append("=== 1. DEVICE & APP METADATA (REDACTED IN RAM) ===\n");
+        sb.append("App Version: ").append(AsycudaMaterialUi.getAppVersionLabel(activity)).append("\n");
+        sb.append("Package: ").append(activity.getPackageName()).append("\n");
+        sb.append("Language: ").append(AsycudaMaterialUi.getAppLanguage(activity)).append("\n");
+        sb.append("Device: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
+                .append(" (Android ").append(Build.VERSION.RELEASE).append(", SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+        sb.append("JVM Process Alive: ").append(sJavaProcess != null && isProcessAlive(sJavaProcess)).append("\n");
+        sb.append("Free Internal Storage (MB): ").append(filesDir.getUsableSpace() / (1024 * 1024)).append("\n");
+        sb.append("TermsAccepted: ").append(AsycudaMaterialUi.hasAcceptedTerms(activity)).append("\n");
+
+        if (!safeDescription.isEmpty()) {
+            sb.append("\n=== 2. USER ISSUE DESCRIPTION (REDACTED) ===\n");
+            sb.append(safeDescription).append("\n");
+        }
+
+        File jarsDir = new File(clientDir, "jars");
+        File[] jars = jarsDir.listFiles();
+        int jarCount = jars != null ? jars.length : 0;
+        sb.append("\n=== 3. INSTALLED PACKAGES INVENTORY ===\n");
+        sb.append("Total JARs in client/jars: ").append(jarCount).append(" (filenames and byte sizes only)\n");
+
+        sb.append("\n=== 4. ASYCUDA.LOG TAIL (REDACTED) ===\n");
+        sb.append(redactSensitiveLogContent(readTail(new File(clientDir, FILE_ASYCUDA_LOG), 3000))).append("\n");
+
+        File clientLog = new File(clientDir, "client.log");
+        if (clientLog.exists()) {
+            sb.append("\n=== 5. CLIENT.LOG TAIL (REDACTED) ===\n");
+            sb.append(redactSensitiveLogContent(readTail(clientLog, 2000))).append("\n");
+        }
+        return sb;
     }
 
     /**
@@ -2803,23 +3180,8 @@ public class AsycudaStandaloneManager {
      * (including both quoted JSON strings and unquoted key-value pairs) before any log text
      * is written to a diagnostic report.
      */
-    @SuppressWarnings({"java:S5852", "java:S5843", "java:S5998", "java:S6353"})
     public static String redactSensitiveLogContent(String raw) {
-        if (raw == null || raw.isEmpty()) return "";
-        String redacted = raw.replace(BRIDGE_AUTH_TOKEN, "[REDACTED_BRIDGE_TOKEN]");
-        // Scrub URL user:password@host credentials
-        redacted = redacted.replaceAll("(?i)(https?+://)[^/\\s:@]++:[^/\\s@]++@", "$1[REDACTED_AUTH]@");
-        // Scrub XML/SOAP tags that could hold credentials, usernames, TINs, or tokens
-        redacted = redacted.replaceAll(
-                "(?is)<(password|passwd|pwd|user|username|login|secret|token|jsessionid|sessionid|tin|declarant|credential|pin|otp)[^>]*+>.*?</\\1>",
-                "<$1>[REDACTED]</$1>");
-        // Scrub Bearer / Basic authorization tokens
-        redacted = redacted.replaceAll("(?i)\\b(bearer|basic)\\s++[^\\s,;\"'&<>\\]}]++", "$1 [REDACTED]");
-        // Scrub key=value / key: value / JSON "key": "value" patterns for sensitive keys (both quoted and unquoted values)
-        redacted = redacted.replaceAll(
-                "(?i)([\"']?+(?:password|passwd|pwd|pass|username|user_name|userid|login|login_id|declarant|declarant_id|tin|tax_id|secret|client_secret|token|auth_token|access_token|refresh_token|jsessionid|sessionid|session_id|cookie|set-cookie|authorization|bearer|api_key|apikey|pin|otp|cvv|credential|private_key|account_no|iban|customs_decl|declaration_no|sad_no|awb_no|bl_no)[\"']?+\\s*+[:=]\\s*+)(?:\"(?:\\\\.|[^\"\\\\])*+\"|'(?:\\\\.|[^'\\\\])*+'|[^\\s,;\"'&<>\\]}]++)",
-                "$1\"[REDACTED]\"");
-        return redacted;
+        return AsycudaSecurityValidator.redactSensitiveLogContent(raw, BRIDGE_AUTH_TOKEN);
     }
 
     private static long getAppVersionCode(Context ctx) {

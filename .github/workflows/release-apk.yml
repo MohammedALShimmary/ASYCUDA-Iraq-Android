@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag to build and publish (e.g. v4.0.5)'
+        description: 'Release tag to build and publish (e.g. v4.1.0)'
         required: true
-        default: 'v4.0.5'
+        default: 'v4.1.0'
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-release:
@@ -20,12 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -33,7 +35,7 @@ jobs:
       - name: Run 7-Suite Adversarial Security Verification
         run: |
           mkdir -p /tmp/sec-tests
-          javac -d /tmp/sec-tests java-bridge/AsycudaBoot.java scripts/SecurityVerificationTest.java
+          javac -d /tmp/sec-tests java-bridge/AsycudaBoot.java lorie/src/main/java/com/termux/x11/AsycudaSecurityValidator.java scripts/SecurityVerificationTest.java
           java -cp /tmp/sec-tests SecurityVerificationTest
 
       - name: Prepare Runtime & Recompile Open-Source Java Bridge JARs
@@ -43,16 +45,20 @@ jobs:
             -o lorie-app/src/main/assets/runtime-arm64.tar.xz
           echo "f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1  lorie-app/src/main/assets/runtime-arm64.tar.xz" | sha256sum -c -
 
-          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.0/asycuda-iraq.tar.xz" \
+          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/asycuda-iraq.tar.xz" \
             -o /tmp/base-asycuda-iraq.tar.xz
+          echo "d7f724041d358c824af58c790c83ddf525f623450dd303995bcfbf48d8d81d52  /tmp/base-asycuda-iraq.tar.xz" | sha256sum -c -
           tar -xJf /tmp/base-asycuda-iraq.tar.xz -C /tmp/asycuda-repack
+          find /tmp/asycuda-repack/jars -type f ! -name '00_*.jar' -delete
+          find /tmp/asycuda-repack -name '*.bak' -delete
+          echo -n "jars/00_boot.jar:jars/00_jnlp.jar" > /tmp/asycuda-repack/classpath.txt
 
           bash java-bridge/build-bridge.sh
           cp java-bridge/build/00_boot.jar /tmp/asycuda-repack/jars/00_boot.jar
           cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/jars/00_bootpatch.jar
           cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/00_bootpatch.jar
           cp java-bridge/build/00_jnlp.jar /tmp/asycuda-repack/jars/00_jnlp.jar
-          tar -cJf lorie-app/src/main/assets/asycuda-iraq.tar.xz -C /tmp/asycuda-repack .
+          tar --owner=0 --group=0 --numeric-owner -cJf lorie-app/src/main/assets/asycuda-iraq.tar.xz -C /tmp/asycuda-repack .
 
       - name: Decode Release Keystore & Build Signed Release APK
         env:
@@ -74,7 +80,7 @@ jobs:
         run: |
           TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
           if [[ "$TAG" != v* ]]; then
-            TAG="v4.0.5"
+            TAG="v4.1.0"
           fi
           APK_NAME="ASYCUDA_Iraq_${TAG}.apk"
           cp lorie-app/build/outputs/apk/release/lorie-app-release.apk "/tmp/${APK_NAME}"
@@ -123,19 +129,21 @@ jobs:
 
           # Publish or update the GitHub Release and upload all 4 assets
           cat << EOF > /tmp/release_notes.md
-          ## ASYCUDA World — Republic of Iraq (\`${TAG}\` • \`versionCode 42\`)
+          ## ASYCUDA World — Republic of Iraq (\`${TAG}\` • \`versionCode 43\`)
 
-          ### Highlights & Multi-AI Security Audit Enhancements (\`${TAG}\`)
-          1. **Zero-PII Iraqi Law Click-Wrap Liability Waiver (\`Iraqi Civil Code Art. 259/2\` & \`Law No. 78 of 2012 Art. 18/1\`)**:
-             - Enforces a binding first-launch electronic Click-Wrap Terms & Conditions and Contractual Liability Waiver governed by **Article 259(2) of the Iraqi Civil Code No. 40 of 1951** (\`المادة 259/2 من القانون المدني العراقي رقم 40 لسنة 1951\`) and **Article 18(1) of the Iraqi Electronic Signature and Electronic Transactions Law No. 78 of 2012** (\`قانون التوقيع الإلكتروني والمعاملات الإلكترونية رقم 78 لسنة 2012\`).
-             - Collects **zero personal names, zero company names, and zero hardware device IDs (\`ANDROID_ID\`)**, and transmits **zero consent receipts** to any external server (\`accepted = true\` is stored strictly as a local boolean flag on the device; legacy PII fields are automatically purged on startup).
-          2. **Enforced JVM Outbound Network Allowlist (\`SecurityManager.checkConnect\`) & Virtualized MOF RMI Support**:
-             - \`AsycudaBoot.createHardenedSecurityManager()\` and \`checkAllowedOutboundNetwork()\` enforce a strict outbound socket allowlist inside the embedded OpenJDK 8 runtime, permitting connections **exclusively** to \`localhost\`/\`127.0.0.1\` (for the local Android IPC bridge) and \`asy.mof.gov.iq\` (including its internal \`ClientTransportLayer\` virtualized RMI endpoint \`10.25.25.10\`) and throwing \`SecurityException\` for any other host or IP.
-          3. **7-Suite Direct CI Adversarial Security Verification & Private Bug Report Attachments**:
-             - \`scripts/SecurityVerificationTest.java\` compiles and invokes the production \`asycuda.AsycudaBoot\` class directly in GitHub Actions on every commit across 7 suites.
-             - Voluntary bug report attachments/screenshots are strictly optional (with an explicit UI privacy warning) and remain private inside the developer-authenticated Sentry dashboard (never uploaded to public GitHub Issues).
-          4. **Zero Pre-Bundled Government JARs, Android 14 (\`targetSdkVersion 34\`) & Zero Broad Storage Permissions**:
-             - Zero government JARs are bundled inside the APK; all 131 official ASYCUDA World JARs are downloaded directly from \`https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\` on first launch and verified against UNCTAD/SOClass's pinned X.509 certificate (\`META-INF/SOCODE.RSA\`).
+          ### What's New in \`${TAG}\`
+          1. **Dynamic Network, Port & IP Architecture (Zero Hardcoded IPs/Ports)**:
+             - Dynamically discovers JNLP launch arguments, RMI transport ports (\`so.rmi.url.port\`), and virtualized RMI endpoints directly from \`AWIQWorld.jnlp\`, \`ClientTransportLayer\`, and live system DNS resolution without hardcoded server IPs or fallback ports.
+          2. **Seamless Wi-Fi & 4G Cellular Handover**:
+             - Binds DNS resolution and HTTPS connections directly to Android's active network interface (\`ConnectivityManager.getActiveNetwork()\`) and automatically refreshes the runtime hosts cache upon network switches.
+          3. **One-Way Clipboard Paste (Android to ASYCUDA Only) with Zero Logging**:
+             - Enables seamless text pasting from Android into ASYCUDA via both Java Paste and keyboard clipboard paste, while strictly blocking clipboard export from ASYCUDA back to Android and ensuring zero clipboard or keystroke logging.
+          4. **Faster Post-Login & Session Relog Performance**:
+             - Enables full \`singleClientInit\` preloading (\`preload.DL=on\`, \`preload.desktop=on\`, \`preload.formatDictionary=on\`, \`preload.availableRT=on\`) and tuned RMI response timeouts so desktop restoration after login or idle logoff completes rapidly.
+          5. **Runtime Stability & X11 Display Synchronization**:
+             - Synchronizes X11 UNIX socket (\`:0\`) initialization prior to JVM launch and guards multi-linguistic translation lookups against null entries.
+          6. **Security & Privacy Hardening**:
+             - Enforces fail-closed \`SecurityManager\` sandbox initialization with canonical path protection, read-only JAR immutability, explicit JRE native library allowlisting, full-stack reflection checks, startup cryptographic JAR verification, constant-time \`MessageDigest.isEqual()\` IPC token verification with UID peer checks, and 100% in-RAM diagnostic log preview with automatic buffer zero-fill on close.
 
           ---
 
@@ -168,5 +176,50 @@ jobs:
               lorie-app/src/main/assets/runtime-arm64.tar.xz \
               sbom.cdx.json \
               --title "ASYCUDA World — Republic of Iraq ${TAG}" \
-              --notes-file /tmp/release_notes.md
+              --notes-file /tmp/release_notes.md \
+              --latest
           fi
+
+          # Automatically flag all older releases as Superseded — Not Recommended
+          python3 - << 'PYEOF'
+          import os, json, urllib.request
+          current_tag = os.environ["TAG"]
+          token = os.environ["GITHUB_TOKEN"]
+          repo = os.environ.get("GITHUB_REPOSITORY", "MohammedALShimmary/ASYCUDA-Iraq-Android")
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "Content-Type": "application/json"
+          }
+          banner = (
+              "> [!CAUTION]\n"
+              f"> **⚠️ SUPERSEDED RELEASE — NOT RECOMMENDED FOR PRODUCTION USE**\n"
+              f"> This release has been superseded by **{current_tag}**. Please download and install **{current_tag}** from the [Latest Release page](https://github.com/{repo}/releases/latest) or update via the In-App Update Center.\n\n---\n\n"
+          )
+          req = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases", headers=headers)
+          rels = json.loads(urllib.request.urlopen(req).read().decode())
+          for r in rels:
+              t = r["tag_name"]
+              if t == current_tag:
+                  continue
+              body = r.get("body") or ""
+              if "SUPERSEDED RELEASE — NOT RECOMMENDED" not in body:
+                  body = banner + body
+              payload = json.dumps({
+                  "name": f"{t} — [SUPERSEDED — NOT RECOMMENDED (Security & Architecture Upgrade Available)]",
+                  "body": body,
+                  "prerelease": True
+              }).encode("utf-8")
+              preq = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/releases/{r['id']}",
+                  data=payload, headers=headers, method="PATCH"
+              )
+              urllib.request.urlopen(preq).read()
+          PYEOF
+
+      - name: Generate Cryptographic SLSA Build Provenance Attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: |
+            lorie-app/build/outputs/apk/release/lorie-app-release.apk
+            lorie-app/src/main/assets/asycuda-iraq.tar.xz

@@ -10,17 +10,17 @@
 
 Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
 
-[**Download Latest Release `v4.0.5` (`ASYCUDA_Iraq_v4.0.5.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Latest Release `v4.1.0` (`ASYCUDA_Iraq_v4.1.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Latest Official Release: [`v4.0.5` (`versionCode 42`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5)
+## Latest Official Release: [`v4.1.0` (`versionCode 43`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0)
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.0.5.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) | `130df3350a50bb011da9b2d74c3c4eb2d17bc1cd04ae9b69de3f0fefee8def44` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/asycuda-iraq.tar.xz) | `d7f724041d358c824af58c790c83ddf525f623450dd303995bcfbf48d8d81d52` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`ASYCUDA_Iraq_v4.1.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) | `TBD_ON_RELEASE_BUILD` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/asycuda-iraq.tar.xz) | `e74ac5883c8b2fa1ac6554bedc80feaa9e0baa106700dc948d88708c8d2abac2` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
 ---
 
@@ -59,7 +59,7 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ## Installation
 
-1. Download [`ASYCUDA_Iraq_v4.0.5.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/ASYCUDA_Iraq_v4.0.5.apk) from the [v4.0.5 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.0.5) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
+1. Download [`ASYCUDA_Iraq_v4.1.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) from the [v4.1.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
 2. Open the APK on your Android phone or tablet to install it. If Google Play Protect prompts to scan the newly published APK binary, tap **Scan app** — the registered Android Developer Console signing certificate verifies as **"This app looks safe" ✓**.
 3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (governed by Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1 — zero personal data collected), and view the **What's New** summary. Zero storage permissions are required!
 4. On initial run, the client automatically downloads the 131 official ASYCUDA World JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` and launches the customs desktop.

@@ -23,6 +23,8 @@ javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
     -d "${OUT_DIR}/classes_bootpatch" \
     "${SCRIPT_DIR}/bootpatch/java/awt/Desktop.java"
 cp "${SCRIPT_DIR}/bootpatch/java/awt/Desktop.java" "${OUT_DIR}/classes_bootpatch/java/awt/Desktop.java"
+mkdir -p "${OUT_DIR}/classes_bootpatch/META-INF"
+cp "${SCRIPT_DIR}/ATTRIBUTION-TERMS.md" "${OUT_DIR}/classes_bootpatch/META-INF/ATTRIBUTION-TERMS.md"
 jar cf "${OUT_DIR}/00_bootpatch.jar" -C "${OUT_DIR}/classes_bootpatch" .
 
 echo "[2/3] Compiling 00_jnlp.jar (javax.jnlp.* compatibility layer)..."
@@ -31,8 +33,9 @@ javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
     "${SCRIPT_DIR}/jnlp/javax/jnlp/UnavailableServiceException.java" \
     "${SCRIPT_DIR}/jnlp/javax/jnlp/BasicService.java" \
     "${SCRIPT_DIR}/jnlp/javax/jnlp/ServiceManager.java"
-mkdir -p "${OUT_DIR}/classes_jnlp/javax/jnlp"
+mkdir -p "${OUT_DIR}/classes_jnlp/javax/jnlp" "${OUT_DIR}/classes_jnlp/META-INF"
 cp "${SCRIPT_DIR}/jnlp/javax/jnlp/"*.java "${OUT_DIR}/classes_jnlp/javax/jnlp/"
+cp "${SCRIPT_DIR}/ATTRIBUTION-TERMS.md" "${OUT_DIR}/classes_jnlp/META-INF/ATTRIBUTION-TERMS.md"
 jar cf "${OUT_DIR}/00_jnlp.jar" -C "${OUT_DIR}/classes_jnlp" .
 
 echo "[3/3] Compiling 00_boot.jar (asycuda.AsycudaBoot)..."
@@ -40,6 +43,8 @@ javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
     -d "${OUT_DIR}/classes_boot" \
     "${SCRIPT_DIR}/AsycudaBoot.java"
 cp "${SCRIPT_DIR}/AsycudaBoot.java" "${OUT_DIR}/classes_boot/asycuda/AsycudaBoot.java"
+mkdir -p "${OUT_DIR}/classes_boot/META-INF"
+cp "${SCRIPT_DIR}/ATTRIBUTION-TERMS.md" "${OUT_DIR}/classes_boot/META-INF/ATTRIBUTION-TERMS.md"
 jar cf "${OUT_DIR}/00_boot.jar" -C "${OUT_DIR}/classes_boot" .
 
 echo "Build complete. SHA-256 digests:"
