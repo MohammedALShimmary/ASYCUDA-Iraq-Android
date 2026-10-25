@@ -3994,8 +3994,9 @@ public class AsycudaMaterialUi {
                         final String fSec = secRating + " • " + vulns + " Issues";
                         final String fRel = relRating + " • " + bugs + " Bugs";
                         final String fMaint = sqaleRating + " • " + smells + " Smells";
-                        final int gateColor = passed ? SYSTEM_GREEN
-                                : ("WARN".equalsIgnoreCase(gate) ? Color.parseColor("#FFFF9F0A") : SYSTEM_RED);
+                        final int warnOrRedColor = "WARN".equalsIgnoreCase(gate)
+                                ? Color.parseColor("#FFFF9F0A") : SYSTEM_RED;
+                        final int gateColor = passed ? SYSTEM_GREEN : warnOrRedColor;
                         final int secColor = getBadgeColorForRating(secRating, vulns);
                         final int relColor = getBadgeColorForRating(relRating, bugs);
                         final int maintColor = getBadgeColorForRating(sqaleRating, smells);

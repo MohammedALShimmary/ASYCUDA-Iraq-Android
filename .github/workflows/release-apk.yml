@@ -45,20 +45,24 @@ jobs:
             -o lorie-app/src/main/assets/runtime-arm64.tar.xz
           echo "f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1  lorie-app/src/main/assets/runtime-arm64.tar.xz" | sha256sum -c -
 
-          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.0.5/asycuda-iraq.tar.xz" \
+          curl -fSL "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v3.9.5/asycuda-iraq.tar.xz" \
             -o /tmp/base-asycuda-iraq.tar.xz
-          echo "d7f724041d358c824af58c790c83ddf525f623450dd303995bcfbf48d8d81d52  /tmp/base-asycuda-iraq.tar.xz" | sha256sum -c -
+          echo "e06fa907965721479fb540f74faddbf87f9c6a7bfb2bd5daa1a1802f81381f30  /tmp/base-asycuda-iraq.tar.xz" | sha256sum -c -
           tar -xJf /tmp/base-asycuda-iraq.tar.xz -C /tmp/asycuda-repack
-          find /tmp/asycuda-repack/jars -type f ! -name '00_*.jar' -delete
           find /tmp/asycuda-repack -name '*.bak' -delete
-          echo -n "jars/00_boot.jar:jars/00_jnlp.jar" > /tmp/asycuda-repack/classpath.txt
 
           bash java-bridge/build-bridge.sh
           cp java-bridge/build/00_boot.jar /tmp/asycuda-repack/jars/00_boot.jar
           cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/jars/00_bootpatch.jar
           cp java-bridge/build/00_bootpatch.jar /tmp/asycuda-repack/00_bootpatch.jar
           cp java-bridge/build/00_jnlp.jar /tmp/asycuda-repack/jars/00_jnlp.jar
-          tar --owner=0 --group=0 --numeric-owner -cJf lorie-app/src/main/assets/asycuda-iraq.tar.xz -C /tmp/asycuda-repack .
+          (
+            cd /tmp/asycuda-repack
+            tar --owner=0 --group=0 --numeric-owner -cJf "$GITHUB_WORKSPACE/lorie-app/src/main/assets/asycuda-iraq.tar.xz" \
+              00_bootpatch.jar AWIQWorld.jnlp mof.crt classpath.txt \
+              jars/00_boot.jar jars/00_jnlp.jar jars/00_bootpatch.jar \
+              icons $(ls jars/*.jar | grep -vE 'jars/00_(boot|jnlp|bootpatch)\.jar')
+          )
 
       - name: Decode Release Keystore & Build Signed Release APK
         env:

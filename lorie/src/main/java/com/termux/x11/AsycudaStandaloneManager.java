@@ -880,7 +880,8 @@ public class AsycudaStandaloneManager {
                 extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
             }
 
-            if (!new File(clientDir, "jars/client.jar").exists()) {
+            File clientJarFile = new File(clientDir, PREFIX_JARS + "client.jar");
+            if (!clientJarFile.exists()) {
                 updateStatus(AsycudaMaterialUi.tr(activity,
                         "Unpacking ASYCUDA World components (2/2)...",
                         "جاري استخراج مكونات نظام أسيكودا (2/2)...",
@@ -910,12 +911,10 @@ public class AsycudaStandaloneManager {
             }
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
-            // On initial install, zero government JARs are bundled in the APK — all 131 official JARs
-            // are fetched directly from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp and verified against SOCODE.RSA.
-            boolean initialDownloadRequired = !new File(clientDir, "jars/client.jar").exists();
+            boolean initialDownloadRequired = !clientJarFile.exists();
             syncGovernmentJars(clientDir, initialDownloadRequired, null);
 
-            if (!new File(clientDir, "jars/client.jar").exists()) {
+            if (!clientJarFile.exists()) {
                 updateStatus(AsycudaMaterialUi.tr(activity,
                         "Internet connection to asy.mof.gov.iq is required for initial installation of official ASYCUDA packages.",
                         "يلزم الاتصال بخادم الكمارك الرسمي (asy.mof.gov.iq) لتحميل ملفات نظام أسيكودا لأول مرة.",

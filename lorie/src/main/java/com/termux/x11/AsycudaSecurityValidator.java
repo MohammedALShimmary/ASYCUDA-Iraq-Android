@@ -120,7 +120,8 @@ public final class AsycudaSecurityValidator {
     }
 
     private static boolean doesPkcs7ContainPinnedSigner(
-            JarFile jf, JarEntry rsaEntry, MessageDigest sha256, String expectedCertSha256) throws Exception {
+            JarFile jf, JarEntry rsaEntry, MessageDigest sha256, String expectedCertSha256)
+            throws java.security.GeneralSecurityException, java.io.IOException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         try (InputStream rsaIn = jf.getInputStream(rsaEntry)) {
             Collection<? extends Certificate> pkcs7Certs = cf.generateCertificates(rsaIn);
@@ -134,7 +135,7 @@ public final class AsycudaSecurityValidator {
         return false;
     }
 
-    private static void drainJarEntryStream(JarFile jf, JarEntry je, byte[] buf) throws Exception {
+    private static void drainJarEntryStream(JarFile jf, JarEntry je, byte[] buf) throws java.io.IOException {
         try (InputStream is = jf.getInputStream(je)) {
             while (is.read(buf) != -1) {
                 // Draining the entry stream triggers JarVerifier digest & signature validation
@@ -147,7 +148,8 @@ public final class AsycudaSecurityValidator {
     }
 
     private static boolean isEntrySignedByPinnedCert(
-            JarEntry je, MessageDigest sha256, String expectedCertSha256) throws Exception {
+            JarEntry je, MessageDigest sha256, String expectedCertSha256)
+            throws java.security.cert.CertificateEncodingException {
         Certificate[] entryCerts = je.getCertificates();
         if (entryCerts == null || entryCerts.length == 0) {
             return false;
