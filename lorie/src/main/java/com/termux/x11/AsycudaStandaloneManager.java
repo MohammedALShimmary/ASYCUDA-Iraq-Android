@@ -91,7 +91,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-@SuppressWarnings({"java:S3776", "java:S1141", "java:S2696", "java:S135", "java:S1075", "java:S9391", "java:S9439"})
+@SuppressWarnings({"java:S3776", "java:S1141", "java:S2696", "java:S135", "java:S1075", "java:S1192", "java:S3063", "java:S9391", "java:S9439"})
 public class AsycudaStandaloneManager {
 
     private static final String MOF_CODEBASE_URL = "https://asy.mof.gov.iq/aw/";
@@ -1295,13 +1295,16 @@ public class AsycudaStandaloneManager {
                     latch.countDown();
                 }
             };
+            boolean cellAcquired = false;
             try {
                 cm.requestNetwork(req, cb);
-                latch.await(4500, java.util.concurrent.TimeUnit.MILLISECONDS);
+                cellAcquired = latch.await(4500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
             } catch (Exception ignored) {
                 // Cellular network unavailable or permission denied
             }
-            android.net.Network cellNet = cellHolder[0];
+            android.net.Network cellNet = (cellAcquired || cellHolder[0] != null) ? cellHolder[0] : null;
             if (cellNet != null) {
                 InetAddress cellAddr = null;
                 try {
@@ -1365,20 +1368,6 @@ public class AsycudaStandaloneManager {
             }
         }
         return false;
-    }
-
-    private boolean probeNetworkCanReachMof(android.net.Network net, int port, int timeoutMs) {
-        if (net == null || port <= 0) return false;
-        try {
-            InetAddress addr = net.getByName(ALLOWED_MOF_HOST);
-            if (addr == null) return false;
-            try (Socket s = net.getSocketFactory().createSocket()) {
-                s.connect(new java.net.InetSocketAddress(addr, port), timeoutMs);
-                return true;
-            }
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private synchronized void ensureCellularRmiRelay(final int rmiPort) {
@@ -3250,9 +3239,14 @@ public class AsycudaStandaloneManager {
                     String hostsTail = readTail(hostsFile, 256);
                     boolean usesLoopbackRelay = hostsTail.contains("127.0.0.1 asy.mof.gov.iq");
                     boolean hasMofEntry = hostsTail.contains("asy.mof.gov.iq");
-                    String safeHostsState = usesLoopbackRelay
-                            ? "127.0.0.1 asy.mof.gov.iq (Local 4G Loopback Relay)"
-                            : (hasMofEntry ? "[IP_REDACTED] asy.mof.gov.iq (Direct Host Mapping)" : "localhost only");
+                    String safeHostsState;
+                    if (usesLoopbackRelay) {
+                        safeHostsState = "127.0.0.1 asy.mof.gov.iq (Local 4G Loopback Relay)";
+                    } else if (hasMofEntry) {
+                        safeHostsState = "[IP_REDACTED] asy.mof.gov.iq (Direct Host Mapping)";
+                    } else {
+                        safeHostsState = "localhost only";
+                    }
                     tech.append("glibc /etc/hosts : ").append(safeHostsState).append("\n");
                 }
                 if (caughtException != null) {

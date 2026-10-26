@@ -2101,7 +2101,7 @@ public class AsycudaMaterialUi {
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_menu_diagnostics);
-        int accentColor = isNewUncataloguedError ? Color.parseColor("#FFBF5AF2") : Color.parseColor("#FFFF9F0A");
+        int accentColor = Color.parseColor(isNewUncataloguedError ? "#FFBF5AF2" : "#FFFF9F0A");
         icon.setImageTintList(ColorStateList.valueOf(accentColor));
         LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
         icLp.setMarginEnd(dp(activity, 8));
@@ -2179,7 +2179,7 @@ public class AsycudaMaterialUi {
         int pad = dp(activity, 10);
         explanationTv.setPadding(pad, pad, pad, pad);
         explanationTv.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 10,
-                isNewUncataloguedError ? Color.parseColor("#66BF5AF2") : Color.parseColor("#4DFF9F0A")));
+                Color.parseColor(isNewUncataloguedError ? "#66BF5AF2" : "#4DFF9F0A")));
         contentCol.addView(explanationTv);
 
         // 1b. User-Consented Verified Self-Healing Fix Card & Button (Only executed when user chooses to click)
@@ -5017,7 +5017,7 @@ public class AsycudaMaterialUi {
      */
     private static final class DialogRootContainer extends LinearLayout {
         private ScrollView mPrimaryScrollView;
-        private LinearLayout mScrollArrowRow;
+        private final LinearLayout mScrollArrowRow;
         private boolean mHasOverflow = false;
         private boolean mAddingInternalArrow = false;
 

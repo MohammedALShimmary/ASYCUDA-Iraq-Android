@@ -112,7 +112,7 @@ public final class AsycudaSecurityValidator {
                     if (!isEntrySignedByPinnedCert(je, sha256, expectedCertSha256)) {
                         return false;
                     }
-                } else if (je.isDirectory() && !je.getName().toUpperCase(Locale.US).startsWith("META-INF/")) {
+                } else if (isNonMetaInfDirectoryEntry(je)) {
                     nonMetaDirCount++;
                 }
             }
@@ -124,6 +124,10 @@ public final class AsycudaSecurityValidator {
         } catch (Exception invalidJar) {
             return false;
         }
+    }
+
+    private static boolean isNonMetaInfDirectoryEntry(JarEntry je) {
+        return je != null && je.isDirectory() && !je.getName().toUpperCase(Locale.US).startsWith("META-INF/");
     }
 
     private static boolean verifySignedStubManifestDigest(
