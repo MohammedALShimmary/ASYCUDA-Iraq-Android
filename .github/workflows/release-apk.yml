@@ -129,21 +129,40 @@ jobs:
 
           # Publish or update the GitHub Release and upload all 4 assets
           cat << EOF > /tmp/release_notes.md
-          ## ASYCUDA World — Republic of Iraq (\`${TAG}\` • \`versionCode 43\`)
+          # ASYCUDA World — Republic of Iraq (\`${TAG}\` • \`versionCode 43\` — Major Release)
 
-          ### What's New in \`${TAG}\`
-          1. **Dynamic Network, Port & IP Architecture (Zero Hardcoded IPs/Ports)**:
+          > [!CAUTION]
+          > **MAJOR SECURITY & ARCHITECTURE RELEASE (\`${TAG}\`) — ALL PREVIOUS RELEASES (\`< v4.1.0\`) ARE UNSAFE & NOT RECOMMENDED**
+          > Release **\`${TAG}\`** is a **Major Security & Architecture Release**. All earlier releases (\`v4.0.5\`, \`v4.0.0\`, \`v3.9.5\`, \`v3.9.0\`, \`v3.8.0\`, \`v3.7.0\`, and \`v3.6.0\`) are now **unsafe, superseded, and strictly not recommended for production use**. Please upgrade immediately to **\`${TAG}\`**.
+
+          ---
+
+          ### What's New in Major Release \`${TAG}\`
+          1. **100% Dynamic Network, Port & IP Architecture (Zero Hardcoded IPs/Ports)**:
              - Dynamically discovers JNLP launch arguments, RMI transport ports (\`so.rmi.url.port\`), and virtualized RMI endpoints directly from \`AWIQWorld.jnlp\`, \`ClientTransportLayer\`, and live system DNS resolution without hardcoded server IPs or fallback ports.
-          2. **Seamless Wi-Fi & 4G Cellular Handover**:
-             - Binds DNS resolution and HTTPS connections directly to Android's active network interface (\`ConnectivityManager.getActiveNetwork()\`) and automatically refreshes the runtime hosts cache upon network switches.
-          3. **One-Way Clipboard Paste (Android to ASYCUDA Only) with Zero Logging**:
+          2. **Universal Error & Network Diagnostics Window + User-Consented 4G Mobile Data Bypass**:
+             - Automatically probes active transport (\`Wi-Fi\`, \`4G/5G\`, \`VPN\`), DNS resolution, HTTPS (\`:443\`), and the dynamic RMI port from \`AWIQWorld.jnlp\`, matching failures against the validated Known-Issues Catalog (\`lorie-app/src/main/assets/known-errors-catalog.json\`).
+             - Provides a user-consented one-tap **"Apply Fix: Route Session via 4G Mobile Data"** button (bounded to \`MAX_CELLULAR_RELAY_PORTS = 8\`) and a composite TLS TrustManager (\`installMofHttpsTrustStore()\` with \`mof.crt\`) so \`Help -> Index\` loads cleanly over both Wi-Fi and 4G.
+          3. **100% In-RAM Redacted Diagnostic Preview & Auto-Zeroing Memory Safety**:
+             - Both the Universal Diagnostics Window and the Control Center *"Report a Technical Issue"* modal use the exact same strict PII/credential scrubber (\`redactSensitiveLogContent()\`), provide a **Full RAM Preview** dialog, never copy logs to the system clipboard, and overwrite/zero (\`\0\`) all diagnostic \`StringBuilder\` buffers on close.
+          4. **One-Way Clipboard Paste (Android to ASYCUDA Only) with Zero Logging**:
              - Enables seamless text pasting from Android into ASYCUDA via both Java Paste and keyboard clipboard paste, while strictly blocking clipboard export from ASYCUDA back to Android and ensuring zero clipboard or keystroke logging.
-          4. **Faster Post-Login & Session Relog Performance**:
-             - Enables full \`singleClientInit\` preloading (\`preload.DL=on\`, \`preload.desktop=on\`, \`preload.formatDictionary=on\`, \`preload.availableRT=on\`) and tuned RMI response timeouts so desktop restoration after login or idle logoff completes rapidly.
-          5. **Runtime Stability & X11 Display Synchronization**:
-             - Synchronizes X11 UNIX socket (\`:0\`) initialization prior to JVM launch and guards multi-linguistic translation lookups against null entries.
+          5. **Refined Space-Friendly UI, Smart Scroll Indicator & Hardened Vault File/Folder Renaming**:
+             - Compact responsive modal sizing across portrait and landscape screens, an auto-hiding floating scroll-down indicator badge (\`▼\`), and hardened Vault file/folder renaming (\`showRenameItemDialog()\`).
           6. **Security & Privacy Hardening**:
-             - Enforces fail-closed \`SecurityManager\` sandbox initialization with canonical path protection, read-only JAR immutability, explicit JRE native library allowlisting, full-stack reflection checks, startup cryptographic JAR verification, constant-time \`MessageDigest.isEqual()\` IPC token verification with UID peer checks, and 100% in-RAM diagnostic log preview with automatic buffer zero-fill on close.
+             - Enforces fail-closed \`SecurityManager\` sandbox initialization with canonical path protection (\`checkBlockedHostPath()\`), read-only JAR immutability, explicit JRE native library allowlisting, private \`sendToAndroidApk\` IPC authenticated via \`ASYCUDA_BRIDGE_TOKEN\` + UID peer checks, and cryptographic \`SOCODE.RSA\` JAR verification on initial download, startup, and mid-session restarts (including signed UNCTAD stub archives such as \`asytaxc.jar\`).
+
+          ---
+
+          ## 🇮🇶 ملخص الإصدار الرئيسي \`${TAG}\` (العربية)
+
+          > **⚠️ تنبيه أمني هام (إصدار رئيسي شامل \`${TAG}\`)**: يُعد التحديث **\`${TAG}\`** إصداراً رئيسياً للأمان والبنية البرمجية. **جميع الإصدارات السابقة (\`v4.0.5\` وما قبله) أصبحت غير آمنة وملغاة ولا يُنصح باستخدامها نهائياً** — يُرجى التحديث فوراً إلى الإصدار **\`${TAG}\`**.
+
+          ---
+
+          ## کورتەی وەشانی سەرەکی \`${TAG}\` (کوردی)
+
+          > **⚠️ ئاگاداری ئەمنی گرنگ (وەشانی سەرەکی \`${TAG}\`)**: وەشانی **\`${TAG}\`** وەشانێکی سەرەکی ئاسایش و پێکهاتەی بەرنامەکەیە. **گشت وەشانەکانی پێشتر (\`v4.0.5\` و کۆنتر) چیتر سەلامەت نین و پێشنیار ناکرێن** — تکایە دەستبەجێ نوێی بکەرەوە بۆ **\`${TAG}\`**.
 
           ---
 
@@ -162,7 +181,7 @@ jobs:
           sed -i 's/^          //' /tmp/release_notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "ASYCUDA World — Republic of Iraq ${TAG}" --notes-file /tmp/release_notes.md
+            gh release edit "$TAG" --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics & 4G Bypass, Hardened JVM Sandbox)" --notes-file /tmp/release_notes.md --latest
             gh release upload "$TAG" \
               "/tmp/${APK_NAME}" \
               lorie-app/src/main/assets/asycuda-iraq.tar.xz \
@@ -175,12 +194,12 @@ jobs:
               lorie-app/src/main/assets/asycuda-iraq.tar.xz \
               lorie-app/src/main/assets/runtime-arm64.tar.xz \
               sbom.cdx.json \
-              --title "ASYCUDA World — Republic of Iraq ${TAG}" \
+              --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics & 4G Bypass, Hardened JVM Sandbox)" \
               --notes-file /tmp/release_notes.md \
               --latest
           fi
 
-          # Automatically flag all older releases as Superseded — Not Recommended
+          # Automatically flag all older releases as UNSAFE & SUPERSEDED — Not Recommended
           python3 - << 'PYEOF'
           import os, json, urllib.request
           current_tag = os.environ["TAG"]
@@ -193,8 +212,8 @@ jobs:
           }
           banner = (
               "> [!CAUTION]\n"
-              f"> **⚠️ SUPERSEDED RELEASE — NOT RECOMMENDED FOR PRODUCTION USE**\n"
-              f"> This release has been superseded by **{current_tag}**. Please download and install **{current_tag}** from the [Latest Release page](https://github.com/{repo}/releases/latest) or update via the In-App Update Center.\n\n---\n\n"
+              f"> **⚠️ UNSAFE & SUPERSEDED RELEASE — DO NOT USE IN PRODUCTION**\n"
+              f"> This historical release is **unsafe, deprecated, and superseded** by **[Major Release `{current_tag}`](https://github.com/{repo}/releases/tag/{current_tag})**. All versions prior to `{current_tag}` (including `v4.0.5`) are unsafe and not recommended. Please upgrade immediately to **[`{current_tag}`](https://github.com/{repo}/releases/latest)**.\n\n---\n\n"
           )
           req = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases", headers=headers)
           rels = json.loads(urllib.request.urlopen(req).read().decode())
@@ -203,10 +222,13 @@ jobs:
               if t == current_tag:
                   continue
               body = r.get("body") or ""
-              if "SUPERSEDED RELEASE — NOT RECOMMENDED" not in body:
-                  body = banner + body
+              if "---" in body and ("SUPERSEDED RELEASE" in body[:900] or "UNSAFE & SUPERSEDED" in body[:900]):
+                  parts = body.split("---", 1)
+                  if len(parts) == 2:
+                      body = parts[1].lstrip()
+              body = banner + body
               payload = json.dumps({
-                  "name": f"{t} — [SUPERSEDED — NOT RECOMMENDED (Security & Architecture Upgrade Available)]",
+                  "name": f"{t} — [UNSAFE & SUPERSEDED — NOT RECOMMENDED (Upgrade to Major Release {current_tag})]",
                   "body": body,
                   "prerelease": True
               }).encode("utf-8")
