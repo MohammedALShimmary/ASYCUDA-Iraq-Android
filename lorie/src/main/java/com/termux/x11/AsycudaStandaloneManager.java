@@ -2575,9 +2575,9 @@ public class AsycudaStandaloneManager {
 
     private static void openWifiSettings(MainActivity activity) {
         try {
-            Intent wifiIntent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                    ? new Intent(android.provider.Settings.Panel.ACTION_WIFI)
-                    : new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+            Intent wifiIntent = new Intent(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                    ? android.provider.Settings.Panel.ACTION_WIFI
+                    : android.provider.Settings.ACTION_WIFI_SETTINGS);
             activity.startActivity(wifiIntent);
         } catch (Exception e) {
             try {
