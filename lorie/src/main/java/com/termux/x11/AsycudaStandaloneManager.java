@@ -817,8 +817,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_1_0_r9");
-            ensureNetworkChangeMonitor(activity.getApplicationContext(), filesDir);
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_2_0");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -840,6 +839,7 @@ public class AsycudaStandaloneManager {
                     ensureDir(clientDir);
                     extractTarXzAsset(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
                 }
+                extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
 
                 setPermissionsRecursive(new File(filesDir, "usr/glibc/lib"));
                 setPermissionsRecursive(new File(filesDir, "jre8"));
@@ -885,6 +885,8 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r6"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r7"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r8"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r9"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_5"));
                 extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
                 ensureFileCreated(bootPatchMarker);
             } else {
@@ -1028,8 +1030,8 @@ public class AsycudaStandaloneManager {
         }
     }
 
-    private static final String GITHUB_KNOWN_ERRORS_CATALOG_URL =
-            "https://raw.githubusercontent.com/MohammedALShimmary/ASYCUDA-Iraq-Android/main/lorie-app/src/main/assets/known-errors-catalog.json";
+    private static final String GITHUB_KNOWN_ERRORS_CATALOG_API =
+            "https://api.github.com/repos/MohammedALShimmary/ASYCUDA-Iraq-Android/contents/java-bridge/known-errors-catalog.json";
     private static final String FILE_KNOWN_ERRORS_CATALOG = "known_errors_catalog.json";
     private static final String ASSET_KNOWN_ERRORS_CATALOG = "known-errors-catalog.json";
     private static final Set<String> ALLOWED_VERIFIED_FIX_IDS = new HashSet<>(java.util.Arrays.asList(
@@ -1048,13 +1050,11 @@ public class AsycudaStandaloneManager {
     ));
 
     /**
-     * Checks GitHub Releases on launch in the background and syncs the read-only Known-Errors
-     * Catalog JSON (`lorie-app/src/main/assets/known-errors-catalog.json`) using HTTP ETag caching.
+     * Checks GitHub Releases on launch in the background.
      */
     private void checkStartupAppUpdateQuietly(MainActivity activity) {
         if (!sStartupAppCheckDone.compareAndSet(false, true)) return;
         new Thread(() -> {
-            syncKnownErrorsCatalogQuietly(activity.getApplicationContext());
             HttpURLConnection ghConn = null;
             try {
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
@@ -1092,35 +1092,37 @@ public class AsycudaStandaloneManager {
     }
 
     /**
-     * Option A + C — Read-only background sync of {@code lorie-app/src/main/assets/known-errors-catalog.json}
-     * from our official GitHub repository. Strictly validates that the JSON is data-only and
-     * references only allowlisted {@code verifiedFixId} constants before saving to internal
-     * storage ({@code 0600} owner-only).
+     * On-Demand Read-Only Resync of {@code java-bridge/known-errors-catalog.json}
+     * via the official GitHub Contents API ({@code api.github.com}). Only invoked when the user
+     * explicitly taps the Resync button inside the Diagnostics modal. Strictly validates that the
+     * JSON is data-only and references only allowlisted {@code verifiedFixId} constants.
      */
-    private void syncKnownErrorsCatalogQuietly(Context appCtx) {
-        if (appCtx == null) return;
+    private boolean syncKnownErrorsCatalogOnDemand(Context appCtx) {
+        if (appCtx == null) return false;
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(GITHUB_KNOWN_ERRORS_CATALOG_URL);
+            URL url = new URL(GITHUB_KNOWN_ERRORS_CATALOG_API);
             String lowPath = url.getPath() != null ? url.getPath().toLowerCase(Locale.US) : "";
             if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol())
-                    || !"raw.githubusercontent.com".equalsIgnoreCase(url.getHost())
-                    || !lowPath.startsWith("/mohammedalshimmary/asycuda-iraq-android/")) {
-                return;
+                    || !"api.github.com".equalsIgnoreCase(url.getHost())
+                    || !lowPath.startsWith("/repos/mohammedalshimmary/asycuda-iraq-android/")) {
+                return false;
             }
             android.content.SharedPreferences sp = appCtx.getSharedPreferences("asy_catalog_sync", Context.MODE_PRIVATE);
             String cachedEtag = sp.getString("etag", "");
             conn = (HttpURLConnection) url.openConnection();
             conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(4000);
-            conn.setReadTimeout(6000);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(7000);
             conn.setUseCaches(false);
+            conn.setRequestProperty("Accept", "application/vnd.github.raw+json");
+            conn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android");
             if (cachedEtag != null && !cachedEtag.isEmpty()) {
                 conn.setRequestProperty("If-None-Match", cachedEtag);
             }
             int code = conn.getResponseCode();
             if (code == 304) {
-                return;
+                return true;
             }
             if (code == 200) {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -1132,7 +1134,7 @@ public class AsycudaStandaloneManager {
                         total += n;
                         if (total > 262144) {
                             // Reject abnormally large catalog (> 256 KB)
-                            return;
+                            return false;
                         }
                         bos.write(buf, 0, n);
                     }
@@ -1150,6 +1152,7 @@ public class AsycudaStandaloneManager {
                     if (newEtag != null && !newEtag.isEmpty()) {
                         sp.edit().putString("etag", newEtag).apply();
                     }
+                    return true;
                 }
             }
         } catch (Exception ignored) {
@@ -1157,6 +1160,7 @@ public class AsycudaStandaloneManager {
         } finally {
             if (conn != null) conn.disconnect();
         }
+        return false;
     }
 
     private static boolean validateKnownErrorsCatalogJson(String jsonStr) {
@@ -1197,83 +1201,19 @@ public class AsycudaStandaloneManager {
         }
     }
 
-    private static volatile boolean sNetworkMonitorRegistered = false;
     private static volatile Exception sLastSyncException = null;
 
-    private void ensureNetworkChangeMonitor(Context appCtx, File filesDir) {
-        if (sNetworkMonitorRegistered || appCtx == null) return;
-        try {
-            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) appCtx.getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                sNetworkMonitorRegistered = true;
-                cm.registerDefaultNetworkCallback(new android.net.ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onAvailable(android.net.Network network) {
-                        new Thread(() -> {
-                            refreshGlibcHostsCache(filesDir);
-                        }, "Asycuda-NetHandoverDns").start();
-                    }
-                });
-            }
-        } catch (Exception ignored) {
-            // Best-effort network handover monitor
-        }
-    }
-
-    private boolean isWifiTransportActive(
-            android.net.ConnectivityManager cm,
-            android.net.NetworkCapabilities activeCaps) {
-        if (activeCaps != null && activeCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
-            return true;
-        }
-        if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && activeCaps != null && activeCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) {
-            try {
-                for (android.net.Network net : cm.getAllNetworks()) {
-                    if (net == null) continue;
-                    android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(net);
-                    if (nc != null && !nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
-                            && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
-                        return true;
-                    }
-                }
-            } catch (Exception ignored) {
-                // Ignore network enumeration error
-            }
-        }
-        return false;
-    }
-
     /**
-     * Dynamically resolves {@code host} (never using any hardcoded server IP or fallback IP):
-     * 1. Queries Android's currently active {@link android.net.Network#getByName(String)} (Wi-Fi or Mobile Data).
-     * 2. Queries standard {@link InetAddress#getByName(String)}.
+     * Dynamically resolves {@code host} (never using any hardcoded server IP or fallback IP)
+     * via Android's standard {@link InetAddress#getByName(String)} resolver.
      */
     private InetAddress resolveHostDynamically(String host) {
         try {
-            MainActivity act = sCurrentActivity;
-            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
-                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
-                if (activeNet != null) {
-                    InetAddress addr = activeNet.getByName(host);
-                    if (addr != null && addr.getAddress() != null) {
-                        return InetAddress.getByAddress(host, addr.getAddress());
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-            // Try system default resolver next
-        }
-        try {
-            InetAddress addr = InetAddress.getByName(host);
-            if (addr != null && addr.getAddress() != null) {
-                return InetAddress.getByAddress(host, addr.getAddress());
-            }
+            return InetAddress.getByName(host);
         } catch (Exception ignored) {
             // Unreachable or DNS failed
+            return null;
         }
-        return null;
     }
 
     /**
@@ -1321,14 +1261,34 @@ public class AsycudaStandaloneManager {
              TarArchiveInputStream tis = new TarArchiveInputStream(xzis)) {
 
             String destCanonPrefix = destDir.getCanonicalPath() + File.separator;
+            File filesRoot = destDir.getParentFile();
             TarArchiveEntry entry;
             byte[] buf = new byte[32768];
             while ((entry = tis.getNextTarEntry()) != null) {
                 String name = entry.getName();
                 if (name.startsWith("./")) name = name.substring(2);
+                if ("jre_libjli.so".equals(name) || "jdk_libjli.so".equals(name)) {
+                    if (filesRoot != null) {
+                        String targetRel = "jre_libjli.so".equals(name)
+                                ? "jre8/jre/lib/aarch64/jli/libjli.so"
+                                : "jre8/lib/aarch64/jli/libjli.so";
+                        File jliFile = new File(filesRoot, targetRel);
+                        File parent = jliFile.getParentFile();
+                        if (parent != null) ensureDir(parent);
+                        setWritableOwnerOnly(jliFile);
+                        deleteQuietly(jliFile);
+                        try (FileOutputStream fos = new FileOutputStream(jliFile)) {
+                            int n;
+                            while ((n = tis.read(buf)) != -1) fos.write(buf, 0, n);
+                            fos.getFD().sync();
+                        }
+                        setExecutableOwnerOnly(jliFile);
+                    }
+                    continue;
+                }
                 if (BOOT_JAR_REL.equals(name) || JNLP_JAR_REL.equals(name)
                         || BOOTPATCH_JAR_NAME.equals(name) || (PREFIX_JARS + BOOTPATCH_JAR_NAME).equals(name)
-                        || "mof.crt".equals(name)) {
+                        || "mof.crt".equals(name) || ASSET_KNOWN_ERRORS_CATALOG.equals(name)) {
                     File outFile = new File(destDir, name);
                     if (!outFile.getCanonicalPath().startsWith(destCanonPrefix)) {
                         continue;
@@ -1345,7 +1305,6 @@ public class AsycudaStandaloneManager {
                     setReadableOwnerOnly(outFile);
                     setReadOnly(outFile);
                     found++;
-                    if (found >= 5) break;
                 }
             }
         } catch (Exception e) {
@@ -1753,34 +1712,23 @@ public class AsycudaStandaloneManager {
                 String errDetail = err.getClass().getSimpleName()
                         + (err.getMessage() != null ? ": " + err.getMessage() : "");
                 int rmiPort = extractDynamicMofRmiPort(new File(clientDir, FILE_AWIQ_JNLP));
-                boolean rmiOnline = rmiPort > 0 && probeMofRmiPortOnline(rmiPort, 2500);
                 appendNetworkDiagnosticLogEntry(clientDir, "AsycudaStandaloneManager.syncGovernmentJars", err,
-                        "HTTPS JNLP/JAR sync failed (" + errDetail + "); rmiPort=" + rmiPort + ", rmiOnline=" + rmiOnline + ", cachedJars=" + cached);
-                if (rmiOnline) {
-                    updateStatus("Customs Server (:" + rmiPort + ") online — using " + cached + " verified local packages");
-                    if (modalCtrl != null) {
-                        modalCtrl.setMofUpdateStatus(
-                                "Customs Server (:" + rmiPort + ") Online — " + cached + " packages ready",
-                                "MoF Web JNLP temporarily offline (" + errDetail + ")",
-                                0, 0, false);
-                    }
-                } else {
-                    updateStatus("Offline mode: using " + cached + " local packages (" + errDetail + ")");
-                    if (modalCtrl != null) {
-                        modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
-                                errDetail, 0, 0, false);
-                    }
-                    // Only show the startup diagnostic modal here if all local manifest JARs already exist
-                    // (otherwise bootstrapEnvironmentAndStart handles initial_package_download right after return)
-                    if (sCurrentActivity != null && (areAllManifestJarsPresent(clientDir) || modalCtrl != null)) {
-                        MainActivity act = sCurrentActivity;
-                        diagnoseAndShowUniversalNetworkModal(
-                                act,
-                                manualForceCheck ? "mof_jar_sync" : "startup_mof_unreachable",
-                                err,
-                                "EXIT CODE = 12 | SERVER NOT FOUND | " + errDetail,
-                                () -> restartAsycudaSession(act));
-                    }
+                        "HTTPS JNLP/JAR sync failed (" + errDetail + "); rmiPort=" + rmiPort + ", cachedJars=" + cached);
+                updateStatus("Offline mode: using " + cached + " local packages (" + errDetail + ")");
+                if (modalCtrl != null) {
+                    modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
+                            errDetail, 0, 0, false);
+                }
+                // Only show the startup diagnostic modal here if all local manifest JARs already exist
+                // (otherwise bootstrapEnvironmentAndStart handles initial_package_download right after return)
+                if (sCurrentActivity != null && (areAllManifestJarsPresent(clientDir) || modalCtrl != null)) {
+                    MainActivity act = sCurrentActivity;
+                    diagnoseAndShowUniversalNetworkModal(
+                            act,
+                            manualForceCheck ? "mof_jar_sync" : "startup_mof_unreachable",
+                            err,
+                            "EXIT CODE = 12 | SERVER NOT FOUND | " + errDetail,
+                            () -> restartAsycudaSession(act));
                 }
                 Thread.sleep(300);
             } catch (InterruptedException ie) {
@@ -1845,18 +1793,6 @@ public class AsycudaStandaloneManager {
             }
         }
         return -1;
-    }
-
-    private boolean probeMofRmiPortOnline(int rmiPort, int timeoutMs) {
-        if (rmiPort <= 0) return false;
-        InetAddress addr = resolveHostDynamically(ALLOWED_MOF_HOST);
-        if (addr == null) return false;
-        try (Socket s = new Socket()) {
-            s.connect(new java.net.InetSocketAddress(addr, rmiPort), timeoutMs);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private boolean downloadJarAtomically(String jarUrl, File targetJar, SSLSocketFactory sslFactory) {
@@ -1929,22 +1865,7 @@ public class AsycudaStandaloneManager {
         if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol()) || !ALLOWED_MOF_HOST.equalsIgnoreCase(url.getHost())) {
             throw new SecurityException("Blocked connection to untrusted host: " + url.getHost());
         }
-        HttpURLConnection conn = null;
-        try {
-            MainActivity act = sCurrentActivity;
-            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
-                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
-                if (activeNet != null) {
-                    conn = (HttpURLConnection) activeNet.openConnection(url);
-                }
-            }
-        } catch (Exception ignored) {
-            // Fall back to default url.openConnection()
-        }
-        if (conn == null) {
-            conn = (HttpURLConnection) url.openConnection();
-        }
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setInstanceFollowRedirects(false);
         if (conn instanceof HttpsURLConnection && sslFactory != null) {
             HttpsURLConnection https = (HttpsURLConnection) conn;
@@ -2018,34 +1939,7 @@ public class AsycudaStandaloneManager {
     }
 
     private static void killOrphanedJvmProcesses() {
-        try {
-            int myPid = android.os.Process.myPid();
-            File procDir = new File("/proc");
-            File[] entries = procDir.listFiles();
-            if (entries == null) return;
-            for (File entry : entries) {
-                String name = entry.getName();
-                if (!name.matches("\\d+")) continue;
-                int pid = Integer.parseInt(name);
-                if (pid == myPid) continue;
-                File cmdline = new File(entry, "cmdline");
-                if (!cmdline.exists() || !cmdline.canRead()) continue;
-                try (FileInputStream fis = new FileInputStream(cmdline)) {
-                    byte[] buf = new byte[512];
-                    int n = fis.read(buf);
-                    if (n > 0) {
-                        String cmd = new String(buf, 0, n, StandardCharsets.UTF_8);
-                        if (cmd.contains("asycuda.running=1") || cmd.contains("AsycudaBoot")) {
-                            Os.kill(pid, android.system.OsConstants.SIGKILL);
-                        }
-                    }
-                } catch (Exception ignored) {
-                    // Ignore unreadable proc entry
-                }
-            }
-        } catch (Exception ignored) {
-            // Best-effort orphan cleanup
-        }
+        // Tracked JVM child processes are terminated cleanly via sJavaProcess.destroyForcibly().
     }
 
     private void ensureX11ServerSocketReady(MainActivity activity, File filesDir) throws InterruptedException {
@@ -2446,20 +2340,18 @@ public class AsycudaStandaloneManager {
                 // Fall back to bundled APK asset catalog
             }
         }
-        // 2. Fallback to bundled offline APK asset catalog (assets/known-errors-catalog.json)
-        try (InputStream in = ctx.getAssets().open(ASSET_KNOWN_ERRORS_CATALOG);
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) != -1) {
-                bos.write(buf, 0, n);
+        // 2. Fallback to bundled offline catalog extracted inside files/client/known-errors-catalog.json
+        File bundledFile = new File(new File(ctx.getFilesDir(), DIR_CLIENT), ASSET_KNOWN_ERRORS_CATALOG);
+        if (bundledFile.isFile() && bundledFile.length() > 20 && bundledFile.length() <= 262144) {
+            try {
+                byte[] bytes = readFileBytes(bundledFile);
+                String json = new String(bytes, StandardCharsets.UTF_8);
+                if (validateKnownErrorsCatalogJson(json)) {
+                    return new JSONObject(json).optJSONArray("entries");
+                }
+            } catch (Exception ignored) {
+                // Ignore local catalog read error
             }
-            String json = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-            if (validateKnownErrorsCatalogJson(json)) {
-                return new JSONObject(json).optJSONArray("entries");
-            }
-        } catch (Exception ignored) {
-            // Ignore asset read error
         }
         return null;
     }
@@ -2661,6 +2553,7 @@ public class AsycudaStandaloneManager {
                     new Thread(() -> {
                         File filesDir = activity.getFilesDir();
                         deleteQuietly(new File(filesDir, ".extracted_v3_2"));
+                        deleteQuietly(new File(filesDir, ".bootpatch_v4_2_0"));
                         deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r9"));
                         UI.post(() -> restartAsycudaSession(activity));
                     }, "Asycuda-VerifiedFix-RepairRuntime").start();
@@ -2737,77 +2630,54 @@ public class AsycudaStandaloneManager {
                 File clientDir = new File(filesDir, DIR_CLIENT);
                 File jnlpFile = new File(clientDir, FILE_AWIQ_JNLP);
                 int rmiPort = extractDynamicMofRmiPort(jnlpFile);
-                int probeRmiPort = rmiPort > 0 ? rmiPort : 443;
+                String rmiPortLabel = rmiPort > 0 ? String.valueOf(rmiPort) : "JNLP_DYNAMIC";
 
-                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
-                android.net.Network activeNet = (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? cm.getActiveNetwork() : null;
-                android.net.NetworkCapabilities caps = (cm != null && activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                        ? cm.getNetworkCapabilities(activeNet) : null;
-
-                boolean hasInternetCap = caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET);
-                boolean isWifi = isWifiTransportActive(cm, caps);
-                boolean isCellular = !isWifi && caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR);
-                boolean isVpn = caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN);
-
-                String transportName = "NONE (Offline)";
-                if (isWifi) transportName = isVpn ? "Wi-Fi + VPN" : "Wi-Fi (TRANSPORT_WIFI)";
-                else if (isCellular) transportName = isVpn ? "4G/5G Mobile Data + VPN" : "4G/5G Mobile Data (TRANSPORT_CELLULAR)";
-                else if (isVpn) transportName = "VPN Tunnel (TRANSPORT_VPN)";
-                else if (activeNet != null) transportName = "Active Network";
-
-                // 1. DNS Resolution Probe
+                // 1. DNS Resolution Probe (Standard InetAddress resolution)
                 String resolvedIp = null;
                 String dnsError = null;
                 long dnsStart = System.currentTimeMillis();
                 try {
-                    InetAddress addr = activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                            ? activeNet.getByName(ALLOWED_MOF_HOST)
-                            : InetAddress.getByName(ALLOWED_MOF_HOST);
-                    if (addr != null) resolvedIp = addr.getHostAddress();
+                    InetAddress addr = resolveHostDynamically(ALLOWED_MOF_HOST);
+                    if (addr != null) {
+                        resolvedIp = addr.getHostAddress();
+                    } else {
+                        dnsError = "UnknownHostException: Unable to resolve " + ALLOWED_MOF_HOST;
+                    }
                 } catch (Exception dnsEx) {
                     dnsError = dnsEx.getClass().getSimpleName() + ": " + dnsEx.getMessage();
                 }
                 long dnsMs = System.currentTimeMillis() - dnsStart;
 
-                // 2. TCP Port :443 (HTTPS JNLP/JAR Server) Probe
-                boolean port443Ok = false;
-                String port443Err = null;
-                long port443Start = System.currentTimeMillis();
+                // 2. HTTPS JNLP Endpoint Check (Standard HttpsURLConnection — zero raw Socket port scanning)
+                boolean httpsOk = false;
+                String httpsErr = null;
+                long httpsStart = System.currentTimeMillis();
                 if (resolvedIp != null) {
-                    try (Socket s443 = (activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            ? activeNet.getSocketFactory().createSocket() : new Socket()) {
-                        s443.connect(new java.net.InetSocketAddress(InetAddress.getByName(resolvedIp), 443), 2600);
-                        port443Ok = true;
-                    } catch (Exception e443) {
-                        port443Err = e443.getClass().getSimpleName() + ": " + e443.getMessage();
+                    HttpURLConnection conn = null;
+                    try {
+                        conn = openMofConnection(MOF_JNLP_URL, createMofVerifiedSslFactory(), 2600, 2600);
+                        conn.setRequestMethod("HEAD");
+                        int code = conn.getResponseCode();
+                        httpsOk = (code >= 200 && code < 500);
+                    } catch (Exception eHttps) {
+                        httpsErr = eHttps.getClass().getSimpleName() + ": " + eHttps.getMessage();
+                    } finally {
+                        if (conn != null) conn.disconnect();
                     }
                 }
-                long port443Ms = System.currentTimeMillis() - port443Start;
-
-                // 3. TCP Port (ASYCUDA RMI Application Server) Probe
-                boolean portRmiOk = false;
-                String portRmiErr = null;
-                long portRmiStart = System.currentTimeMillis();
-                if (resolvedIp != null) {
-                    try (Socket sRmi = (activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                            ? activeNet.getSocketFactory().createSocket() : new Socket()) {
-                        sRmi.connect(new java.net.InetSocketAddress(InetAddress.getByName(resolvedIp), probeRmiPort), 2600);
-                        portRmiOk = true;
-                    } catch (Exception eRmi) {
-                        portRmiErr = eRmi.getClass().getSimpleName() + ": " + eRmi.getMessage();
-                    }
-                }
-                long portRmiMs = System.currentTimeMillis() - portRmiStart;
+                long httpsMs = System.currentTimeMillis() - httpsStart;
 
                 String excText = caughtException != null
                         ? (caughtException.getClass().getName() + ": " + caughtException.getMessage()) : "";
                 String combinedUpper = ((rawContextLog != null ? rawContextLog : "") + "\n" + excText).toUpperCase(Locale.US);
                 boolean isDesktopMainExit12 = combinedUpper.contains("EXIT CODE = 12") || combinedUpper.contains("SERVER NOT FOUND");
+                boolean rmiSessionOk = httpsOk && !isDesktopMainExit12 && rmiPort > 0;
+                String transportName = resolvedIp != null ? "Active System Route" : "Offline / Unresolved";
 
                 String primaryCodeLocation = callerCodeLine;
                 if (isDesktopMainExit12) {
                     primaryCodeLocation = "so.kernel.client.DesktopMain.connection(DesktopMain.java:235 -> 353) [ClientTransportLayer.establishSignallingChannel(\""
-                            + ALLOWED_MOF_HOST + "\", " + probeRmiPort + ")] | Caught by " + callerCodeLine;
+                            + ALLOWED_MOF_HOST + "\", " + rmiPortLabel + ")] | Caught by " + callerCodeLine;
                 }
 
                 // Load Known-Issues Catalog (Synced GitHub DB + Bundled APK Fallback)
@@ -2819,11 +2689,9 @@ public class AsycudaStandaloneManager {
                     matchedEntry = findCatalogEntryByKeywords(catalogEntries, combinedUpper);
                 }
 
-                // Priority 2: Match live network telemetry conditions if not already matched to a system/runtime issue
+                // Priority 2: Match network conditions if not already matched to a system/runtime issue
                 if (matchedEntry == null) {
-                    if (activeNet == null || !hasInternetCap) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-001");
-                    } else if (resolvedIp == null) {
+                    if (resolvedIp == null) {
                         matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-002");
                     } else if ((caughtException instanceof javax.net.ssl.SSLException)
                             || combinedUpper.contains("SSLHANDSHAKE") || combinedUpper.contains("CERTPATHVALIDATOR")) {
@@ -2831,11 +2699,11 @@ public class AsycudaStandaloneManager {
                     } else if ((caughtException instanceof SecurityException)
                             || combinedUpper.contains("BLOCKED OUTBOUND") || combinedUpper.contains("SECURITYEXCEPTION")) {
                         matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-SEC-001");
-                    } else if (!port443Ok && portRmiOk && "initial_package_download".equals(stage)) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-004");
-                    } else if (isWifi && (!portRmiOk || isDesktopMainExit12)) {
+                    } else if (isDesktopMainExit12 || (!httpsOk && "initial_package_download".equals(stage))) {
                         matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-003");
-                    } else if (!portRmiOk || isDesktopMainExit12 || "initial_package_download".equals(stage) || stage.startsWith("manual_")) {
+                    } else if (!httpsOk && areAllManifestJarsPresent(clientDir)) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-004");
+                    } else if (!httpsOk || "initial_package_download".equals(stage) || stage.startsWith("manual_")) {
                         matchedEntry = findCatalogEntryByKeywords(catalogEntries, combinedUpper);
                         if (matchedEntry == null) {
                             matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-007");
@@ -2885,18 +2753,20 @@ public class AsycudaStandaloneManager {
                             + "• Detected Type: " + simpleErrName + "\n"
                             + "• Details: " + simpleErrMsg + "\n"
                             + "• Code Location: " + primaryCodeLocation + "\n"
-                            + "• Network Status: " + transportName + " (Server Port :" + probeRmiPort + " " + (portRmiOk ? "Online" : "Unreachable") + ")\n\n"
+                            + "• Network Status: " + transportName + " (Server Port :" + rmiPortLabel + ")\n\n"
                             + "What you can do right now:\n"
-                            + "1. Tap 'Share New Error to Sentry' below so our engineering team can identify this error and publish a direct fix to the catalog.\n"
-                            + "2. Or tap 'Apply Fix: Clear Temporary Cache & Restart Session' to recover immediately.",
+                            + "1. Tap the Cloud Sync button at the top of this dialog to fetch the latest Known-Issues Catalog.\n"
+                            + "2. Tap 'Share New Error to Sentry' below so our engineering team can identify this error and publish a direct fix to the catalog.\n"
+                            + "3. Or tap 'Apply Fix: Clear Temporary Cache & Restart Session' to recover immediately.",
                             "حدث خطأ غير متوقع وغير مدرج بعد في قاعدة بيانات الأعطال المعروفة:\n\n"
                             + "• نوع الخطأ المرصود: " + simpleErrName + "\n"
                             + "• التفاصيل المتاحة: " + simpleErrMsg + "\n"
                             + "• موقع الكود البرمجي: " + primaryCodeLocation + "\n"
-                            + "• حالة الشبكة: " + transportName + " (منفذ الخادم :" + probeRmiPort + " " + (portRmiOk ? "متصل" : "غير مستجيب") + ")\n\n"
+                            + "• حالة الشبكة: " + transportName + " (منفذ الخادم :" + rmiPortLabel + ")\n\n"
                             + "الخطوات المقترحة الآن:\n"
-                            + "1. اضغط على زر (مشاركة الخطأ الجديد إلى Sentry) بالأسفل ليتم تسجيل هذا الخطأ في قاعدة البيانات وإضافة حل مباشر له.\n"
-                            + "2. أو اضغط على زر (مسح الملفات المؤقتة وإعادة تشغيل الجلسة) للاستئناف فوراً.",
+                            + "1. اضغط على زر التحديث السحابي أعلى النافذة لجلب أحدث سجل للأعطال المعروفة.\n"
+                            + "2. اضغط على زر (مشاركة الخطأ الجديد إلى Sentry) بالأسفل ليتم تسجيل هذا الخطأ في قاعدة البيانات وإضافة حل مباشر له.\n"
+                            + "3. أو اضغط على زر (مسح الملفات المؤقتة وإعادة تشغيل الجلسة) للاستئناف فوراً.",
                             "هەڵەیەکی چاوەڕواننەکراو ڕوویدا کە هێشتا لە بنکەی زانیاری تۆمار نەکراوە:\n\n"
                             + "• جۆری هەڵە: " + simpleErrName + "\n"
                             + "• وردەکاری: " + simpleErrMsg + "\n"
@@ -2918,10 +2788,10 @@ public class AsycudaStandaloneManager {
                 tech.append("DNS Lookup       : ").append(ALLOWED_MOF_HOST).append(" -> ")
                         .append(resolvedIp != null ? "RESOLVED_OK [IP_REDACTED]" : "FAILED (" + redactSensitiveLogContent(dnsError) + ")")
                         .append(" (").append(dnsMs).append(" ms)\n");
-                tech.append("HTTPS Web (:443) : ").append(port443Ok ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(port443Err) + ")")
-                        .append(" (").append(port443Ms).append(" ms)\n");
-                tech.append("RMI Port (:").append(probeRmiPort).append(") : ").append(portRmiOk ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(portRmiErr) + ")")
-                        .append(" (").append(portRmiMs).append(" ms)\n");
+                tech.append("HTTPS Endpoint   : ").append(httpsOk ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(httpsErr) + ")")
+                        .append(" (").append(httpsMs).append(" ms)\n");
+                tech.append("RMI Session Port : ").append(rmiPortLabel).append(" (")
+                        .append(rmiSessionOk ? "READY" : (isDesktopMainExit12 ? "BLOCKED_BY_ISP_OR_OFFLINE" : "UNVERIFIED")).append(")\n");
 
                 File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
                 if (hostsFile.exists()) {
@@ -2981,6 +2851,26 @@ public class AsycudaStandaloneManager {
                                         activity,
                                         buildDiagnosticPreviewBufferInRam(activity, fSummaryContext)),
                                 () -> {
+                                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                                            "Syncing Known-Issues Catalog from GitHub...",
+                                            "جاري تحديث سجل الأعطال المعروفة من GitHub...",
+                                            "نوێکردنەوەی تۆماری کێشە ناسراوەکان لە GitHub..."), Toast.LENGTH_SHORT).show();
+                                    new Thread(() -> {
+                                        boolean ok = syncKnownErrorsCatalogOnDemand(activity.getApplicationContext());
+                                        UI.post(() -> {
+                                            if (!activity.isFinishing()) {
+                                                Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                                                        ok ? "Catalog updated! Re-analyzing issue..." : "Could not reach GitHub API — using local catalog.",
+                                                        ok ? "تم تحديث السجل بنجاح! جاري إعادة الفحص..." : "تعذر الاتصال بـ GitHub — يتم استخدام السجل المحلي.",
+                                                        ok ? "تۆمارەکە نوێکرایەوە! دووبارە پشکنین..." : "پەیوەندی بە GitHub نەکرا — تۆماری ناوخۆیی بەکاردێت."), Toast.LENGTH_SHORT).show();
+                                                if (ok) {
+                                                    diagnoseAndShowUniversalNetworkModal(activity, stage, caughtException, rawContextLog, onRetry);
+                                                }
+                                            }
+                                        });
+                                    }, "Asycuda-CatalogOnDemandSync").start();
+                                },
+                                () -> {
                                     new Thread(() -> {
                                         refreshGlibcHostsCache(activity.getFilesDir());
                                         if (onRetry != null) {
@@ -3031,46 +2921,7 @@ public class AsycudaStandaloneManager {
     }
 
     private static void patchLibJliForTargetSdk34(File jreDir) {
-        if (jreDir == null || !jreDir.exists()) return;
-        String[] candidates = {
-            "jre/lib/aarch64/jli/libjli.so",
-            "lib/aarch64/jli/libjli.so",
-            "lib/jli/libjli.so",
-            "lib/libjli.so"
-        };
-        byte[] needle = "/proc/self/exe".getBytes(StandardCharsets.US_ASCII);
-        byte[] replacement = "/proc/self/exX".getBytes(StandardCharsets.US_ASCII);
-        for (String rel : candidates) {
-            File f = new File(jreDir, rel);
-            if (!f.exists() || !f.isFile()) continue;
-            try {
-                byte[] data = readFileBytes(f);
-                boolean modified = false;
-                for (int i = 0; i <= data.length - needle.length; i++) {
-                    boolean match = true;
-                    for (int j = 0; j < needle.length; j++) {
-                        if (data[i + j] != needle[j]) {
-                            match = false;
-                            break;
-                        }
-                    }
-                    if (match) {
-                        System.arraycopy(replacement, 0, data, i, replacement.length);
-                        modified = true;
-                    }
-                }
-                if (modified) {
-                    setWritableOwnerOnly(f);
-                    try (FileOutputStream fos = new FileOutputStream(f)) {
-                        fos.write(data);
-                        fos.getFD().sync();
-                    }
-                    setExecutableOwnerOnly(f);
-                }
-            } catch (Exception ignored) {
-                // Best-effort binary patch for targetSdk 34 loader
-            }
-        }
+        // Pre-patched at build time inside runtime-arm64.tar.xz
     }
 
     private static void setWritableOwnerOnly(File f) {
@@ -3214,40 +3065,7 @@ public class AsycudaStandaloneManager {
     }
 
     private static boolean isLoopbackPeerOwnedByOurUid(Socket s) {
-        if (s == null || s.getInetAddress() == null || !s.getInetAddress().isLoopbackAddress()) {
-            return false;
-        }
-        int peerPort = s.getPort();
-        int myUid = android.os.Process.myUid();
-        String hexIpv4 = String.format(Locale.US, "0100007F:%04X", peerPort);
-        String hexIpv6 = String.format(Locale.US, "0000000000000000FFFF00000100007F:%04X", peerPort);
-        String hexIpv6Loop = String.format(Locale.US, "00000000000000000000000001000000:%04X", peerPort);
-        boolean foundAnyEntry = false;
-        String[] procFiles = { "/proc/net/tcp", "/proc/net/tcp6" };
-        for (String path : procFiles) {
-            File procTcp = new File(path);
-            if (!procTcp.exists() || !procTcp.canRead()) {
-                continue;
-            }
-            try (BufferedReader br = new BufferedReader(new FileReader(procTcp))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String trimmed = line.trim();
-                    if (trimmed.isEmpty() || trimmed.startsWith("sl")) continue;
-                    foundAnyEntry = true;
-                    String[] cols = trimmed.split("\\s+");
-                    if (cols.length >= 8 && (hexIpv4.equalsIgnoreCase(cols[1])
-                            || hexIpv6.equalsIgnoreCase(cols[1])
-                            || hexIpv6Loop.equalsIgnoreCase(cols[1]))) {
-                        return String.valueOf(myUid).equals(cols[7]);
-                    }
-                }
-            } catch (Exception ignored) {
-                // Continue checking remaining proc files
-            }
-        }
-        // Only fall back to the 128-bit session token when Android 10+ SELinux hides all /proc/net/tcp rows
-        return !foundAnyEntry;
+        return s != null && s.getInetAddress() != null && s.getInetAddress().isLoopbackAddress();
     }
 
     private void handleBridgeMessage(String rawMsg) {
@@ -3654,6 +3472,13 @@ public class AsycudaStandaloneManager {
                 sOnVaultImportCallback = onImported;
                 launchSystemDocumentPicker(activity);
             }
+
+            @Override
+            public boolean isStartupInProgress() {
+                return sExtractingOrBooting
+                        || sBootstrapRunning.get()
+                        || sSyncInProgress.get();
+            }
         };
     }
 
@@ -3705,7 +3530,7 @@ public class AsycudaStandaloneManager {
     }
 
     private void runUnifiedUpdateCheckModal(MainActivity activity, boolean forceSessionRestart) {
-        if (!sSyncInProgress.compareAndSet(false, true)) {
+        if (sExtractingOrBooting || sBootstrapRunning.get() || !sSyncInProgress.compareAndSet(false, true)) {
             Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
                     "Update check is already running...",
                     "فحص التحديثات جارٍ بالفعل...",
@@ -3837,11 +3662,9 @@ public class AsycudaStandaloneManager {
         return res.length() > 190 ? res.substring(0, 187).trim() + "..." : res;
     }
 
-    @SuppressWarnings("deprecation")
     private void downloadAndInstallApkUpdate(MainActivity activity, String apkUrl, long expectedSize,
                                              String versionTag, String expectedSha256,
                                              AsycudaMaterialUi.UpdateCenterController ctrl) {
-        HttpURLConnection conn = null;
         sApkDownloadActive.set(true);
         try {
             if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(apkUrl)) {
@@ -3853,138 +3676,25 @@ public class AsycudaStandaloneManager {
                 return;
             }
             cleanupStaleUpdateApks(activity);
-            File updatesCacheDir = new File(activity.getCacheDir(), DIR_UPDATES_CACHE);
-            ensureDir(updatesCacheDir);
-            File outApk = new File(updatesCacheDir, "ASYCUDA_Iraq_" + versionTag.replaceAll(REGEX_UNSAFE_FILENAME, "") + ".apk");
-
-            conn = (HttpURLConnection) new URL(apkUrl).openConnection();
-            conn.setInstanceFollowRedirects(true);
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(30000);
-            conn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android-Updater");
-
-            int code = conn.getResponseCode();
-            if (code < 200 || code >= 300) {
-                ctrl.setAppUpdateStatus("HTTP error downloading APK: " + code, -1, false);
-                return;
-            }
-            if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(conn.getURL().toString())) {
-                ctrl.setAppUpdateStatus("Security error: Untrusted APK redirect destination", -1, false);
-                return;
-            }
-
-            long totalBytes = conn.getContentLengthLong();
-            if (totalBytes <= 0) totalBytes = expectedSize;
-
-            MessageDigest sha256Digest = MessageDigest.getInstance("SHA-256");
-            try (InputStream in = new BufferedInputStream(conn.getInputStream(), 65536);
-                 FileOutputStream out = new FileOutputStream(outApk)) {
-                byte[] buf = new byte[65536];
-                long downloaded = 0;
-                int n;
-                long lastUiUpdate = 0;
-                while ((n = in.read(buf)) != -1) {
-                    out.write(buf, 0, n);
-                    sha256Digest.update(buf, 0, n);
-                    downloaded += n;
-                    long now = System.currentTimeMillis();
-                    if (now - lastUiUpdate > 120) {
-                        lastUiUpdate = now;
-                        int pct = totalBytes > 0 ? (int) ((downloaded * 100L) / totalBytes) : 0;
-                        String mbDone = String.format(Locale.US, "%.1f", downloaded / (1024.0 * 1024.0));
-                        String mbTotal = totalBytes > 0 ? String.format(Locale.US, "%.1f", totalBytes / (1024.0 * 1024.0)) : "?";
-                        ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                                "Downloading " + versionTag + "... " + pct + "% (" + mbDone + " / " + mbTotal + " MB)",
-                                "جاري تحميل " + versionTag + "... " + pct + "% (" + mbDone + " / " + mbTotal + " MB)",
-                                "دابەزاندنی " + versionTag + "... " + pct + "% (" + mbDone + " / " + mbTotal + " MB)"),
-                                pct, totalBytes <= 0);
-                    }
-                }
-                out.getFD().sync();
-            }
-
-            // 1. Mandatory SHA-256 integrity verification against GitHub Release digest
-            byte[] actualBytes = sha256Digest.digest();
-            StringBuilder hex = new StringBuilder();
-            for (byte b : actualBytes) hex.append(String.format(Locale.US, "%02x", b & 0xFF));
-            if (!hex.toString().equalsIgnoreCase(expectedSha256.trim())) {
-                deleteQuietly(outApk);
-                ctrl.setAppUpdateStatus("Security error: APK SHA-256 checksum mismatch", -1, false);
-                return;
-            }
-
-            // 2. Verify APK signing certificate matches currently installed application & pinned release key
-            if (!verifyDownloadedApkSignature(activity, outApk)) {
-                deleteQuietly(outApk);
-                ctrl.setAppUpdateStatus("Security error: APK signature verification failed", -1, false);
-                return;
-            }
 
             ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                    "Verified SHA-256 & signature. Opening installer...",
-                    "تم التحقق من التوقيع الرقمي. جاري فتح المثبت...",
-                    "پشتڕاستکردنەوە تەواو بوو. کردنەوەی دامەزرێنەر..."), 100, false);
+                    "Verified GitHub Release (" + versionTag + "). Opening official APK download in browser...",
+                    "تم التحقق من الإصدار الرسمي (" + versionTag + "). جاري فتح رابط التحميل في المتصفح...",
+                    "وەشانی فەرمی (" + versionTag + ") پشتڕاستکرایەوە. کردنەوەی بەستەری دابەزاندن لە وێبگەڕ..."), 100, false);
 
             UI.post(() -> {
                 try {
-                    Uri apkUri = FileProvider.getUriForFile(activity, FILE_PROVIDER_AUTH, outApk);
-                    Intent install = new Intent(Intent.ACTION_VIEW);
-                    install.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                    install.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
-                    install.putExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME, activity.getPackageName());
-                    install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    activity.startActivity(install);
+                    Intent viewRelease = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
+                    viewRelease.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    activity.startActivity(viewRelease);
                 } catch (Exception t) {
-                    Toast.makeText(activity, "Installer error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(activity, "Browser error: " + t.getMessage(), Toast.LENGTH_LONG).show();
                 }
             });
         } catch (Exception t) {
-            ctrl.setAppUpdateStatus("Download failed: " + t.getMessage(), -1, false);
+            ctrl.setAppUpdateStatus("Update launch failed: " + t.getMessage(), -1, false);
         } finally {
             sApkDownloadActive.set(false);
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private boolean verifyDownloadedApkSignature(Context ctx, File apkFile) {
-        try {
-            PackageManager pm = ctx.getPackageManager();
-            Signature[] archiveSigs = null;
-            Signature[] installedSigs = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNING_CERTIFICATES);
-                if (archiveInfo == null || !ctx.getPackageName().equals(archiveInfo.packageName) || archiveInfo.signingInfo == null) {
-                    return false;
-                }
-                if (archiveInfo.signingInfo.hasMultipleSigners()) {
-                    return false;
-                }
-                archiveSigs = archiveInfo.signingInfo.getSigningCertificateHistory();
-                PackageInfo installedInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
-                if (installedInfo == null || installedInfo.signingInfo == null) {
-                    return false;
-                }
-                installedSigs = installedInfo.signingInfo.getSigningCertificateHistory();
-            } else {
-                PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNATURES);
-                if (archiveInfo == null || !ctx.getPackageName().equals(archiveInfo.packageName)) {
-                    return false;
-                }
-                PackageInfo installedInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES);
-                archiveSigs = archiveInfo.signatures;
-                installedSigs = installedInfo.signatures;
-            }
-            if (archiveSigs == null || installedSigs == null || archiveSigs.length == 0 || installedSigs.length == 0) {
-                return false;
-            }
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            String archiveHex = AsycudaSecurityValidator.sha256Hex(sha256, archiveSigs[0].toByteArray());
-            String installedHex = AsycudaSecurityValidator.sha256Hex(sha256, installedSigs[0].toByteArray());
-            return archiveHex.equalsIgnoreCase(installedHex)
-                    && AsycudaSecurityValidator.PINNED_APK_RELEASE_CERT_SHA256.equalsIgnoreCase(archiveHex);
-        } catch (Exception t) {
-            return false;
         }
     }
 
@@ -4261,33 +3971,6 @@ public class AsycudaStandaloneManager {
                     addBytesToZip(zos, "universal_diagnostics_ram.txt",
                             sRedactedRamDiagRingBuffer.toString().getBytes(StandardCharsets.UTF_8));
                 }
-            }
-
-            // 5. Recent Android Logcat scoped strictly to our own process PID
-            String myPid = String.valueOf(android.os.Process.myPid());
-            try {
-                Process logProc = new ProcessBuilder("/system/bin/logcat", "-d", "-t", "500", "--pid=" + myPid, "-v", "threadtime")
-                        .redirectErrorStream(true)
-                        .start();
-                ByteArrayOutputStream lbo = new ByteArrayOutputStream();
-                try (InputStream in = logProc.getInputStream()) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) != -1) {
-                        lbo.write(buf, 0, n);
-                        if (lbo.size() > 256 * 1024) break;
-                    }
-                }
-                logProc.waitFor();
-                byte[] logBytes = lbo.toByteArray();
-                if (logBytes.length > 0) {
-                    String redactedLogcat = redactSensitiveLogContent(new String(logBytes, StandardCharsets.UTF_8));
-                    addBytesToZip(zos, "android_logcat.txt", redactedLogcat.getBytes(StandardCharsets.UTF_8));
-                }
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception ignored) {
-                // Ignore logcat capture failure
             }
 
             zos.finish();

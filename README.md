@@ -10,21 +10,21 @@
 
 Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
 
-[**Download Major Release `v4.1.0` (`ASYCUDA_Iraq_v4.1.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Major Release `v4.2.0` (`ASYCUDA_Iraq_v4.2.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Latest Official Major Release: [`v4.1.0` (`versionCode 43`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0)
+## Latest Official Major Release: [`v4.2.0` (`versionCode 50`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0)
 
 > [!CAUTION]
-> **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.1.0`) ARE UNSAFE & NOT RECOMMENDED**
-> Release **`v4.1.0`** is a **Major Release** introducing Dynamic Host & Port Discovery, Universal Network Diagnostics & Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof.crt`), Hardened Fail-Closed JVM Sandboxing, One-Way Clipboard Paste, and Startup Cryptographic Stub-JAR Verification. **All earlier releases (`v4.0.5`, `v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) are now unsafe, deprecated, and strictly not recommended for production use.** Please upgrade immediately to **`v4.1.0`**.
+> **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.2.0`) ARE UNSAFE & NOT RECOMMENDED**
+> Release **`v4.2.0`** is the official **Major Security & Architecture Release** introducing Dynamic Host & Port Discovery (zero hardcoded IPs or ports), Universal Network Diagnostics & On-Demand Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof_cacerts.jks`), Hardened Fail-Closed JVM Sandboxing, One-Way Clipboard Paste, Google Play Protect Stripped APK Bundle (`SAB`) Hardening (zero package-installer or battery-exemption permissions), and Startup Cryptographic Stub-JAR Verification. **All earlier releases (`v4.1.0` experimental, `v4.0.5`, `v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) are now unsafe, deprecated, and strictly not recommended for production use.** Please upgrade immediately to **`v4.2.0`**.
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.1.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) | `5344c1d73ef4057849170f91291b76e83f0a8b0c9f8572cbfc1e7855c730e140` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/asycuda-iraq.tar.xz) | `e27229fac5ecfee10aaef16303e3833d4b27e7bba43718287f1b2e409388986b` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`ASYCUDA_Iraq_v4.2.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) | `0fff48091d19ead7b4565f3b22d7ae0f28e9186cd6f17fb03483d050bb075b84` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/asycuda-iraq.tar.xz) | `bc4742d3a79ac0ce3f9f68676dcd176753b203d24cf8d49de289e3343ff6e3da` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 
 ---
 
@@ -47,7 +47,7 @@ Android client for the Iraqi General Commission of Customs (**ASYCUDA World** �
 - **Stable Background Connection**: Keeps the network session active when switching to other apps (such as WhatsApp, Authenticator, or PDF viewers).
 - **In-App Issue Reporting, Universal Error & Network Diagnostics Window & Remote Known-Issues Catalog**:
   - **Universal Error & Network Diagnostics Window (`Proposal B + Sentry Catalog`)**: Automatically diagnoses network, TLS, X11, and runtime errors (probing active transport, DNS resolution, `:443` HTTPS, and the dynamic RMI port from `AWIQWorld.jnlp`), explains the cause in plain English/Arabic/Kurdish with a collapsible 100% in-RAM redacted developer trace (with `"Full RAM Preview"` and automatic zero-fill on close), and offers user-consented one-tap **Verified Fixes** (such as alerting you to turn off Wi-Fi and switch to **4G Mobile Data** when a Wi-Fi ISP is blocked by the Ministry of Finance firewall).
-  - **Data-Only Known-Issues Catalog (`lorie-app/src/main/assets/known-errors-catalog.json`)**: Syncs read-only over HTTPS (`ETag` cached, `<= 256 KB`) from the official repository, strictly validated against a hardcoded allowlist of `verifiedFixId` constants (`ALLOWED_VERIFIED_FIX_IDS`) with zero dynamic code execution, and isolated from the JVM by `AsycudaBoot.checkBlockedHostPath()`.
+  - **Data-Only Known-Issues Catalog (`java-bridge/known-errors-catalog.json`)**: Pre-bundled inside `asycuda-iraq.tar.xz` and synced on demand via the GitHub Contents API (`api.github.com`, `ETag` cached, `<= 256 KB`) when requested by the user inside the Universal Error & Network Diagnostics modal, strictly validated against a hardcoded allowlist of `verifiedFixId` constants (`ALLOWED_VERIFIED_FIX_IDS`) with zero dynamic code execution, and isolated from the JVM by `AsycudaBoot.checkBlockedHostPath()`.
   - **Voluntary Issue Reports (Optional Screenshot & Private Developer-Only Attachments)**: Submit voluntary issue reports with redacted in-memory runtime logs (assembled strictly in RAM and never written to disk) and an **optional** screenshot (with an explicit orange/yellow UI privacy warning). When mirrored to GitHub Issues via `.github/workflows/sentry-to-github-issues.yml`, **attachments and screenshots are never uploaded publicly** — GitHub Issues contain only the scrubbed text summary and a private developer-only Sentry dashboard link.
 
 ---
@@ -66,8 +66,8 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ## Installation
 
-1. Download [`ASYCUDA_Iraq_v4.1.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) from the [v4.1.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
-2. Open the APK on your Android phone or tablet to install it. If Google Play Protect prompts to scan the newly published APK binary, tap **Scan app** — the registered Android Developer Console signing certificate verifies as **"This app looks safe" ✓**.
+1. Download [`ASYCUDA_Iraq_v4.2.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) from the [v4.2.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
+2. Open the APK on your Android phone or tablet to install it. If Google Play Protect prompts to scan the newly published APK binary, tap **Scan app** — the registered Android Developer Console signing certificate and hardened Stripped APK Bundle (`SAB`) verify as **"This app looks safe" ✓**.
 3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (governed by Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1 — zero personal data collected), and view the **What's New** summary. Zero storage permissions are required!
 4. On initial run, the client automatically downloads the 131 official ASYCUDA World JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` and launches the customs desktop.
 
@@ -75,11 +75,11 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 <div dir="rtl">
 
-## 🇮🇶 العربية — نظام أسيكودا العالمي (جمهورية العراق) — الإصدار الرئيسي `v4.1.0`
+## 🇮🇶 العربية — نظام أسيكودا العالمي (جمهورية العراق) — الإصدار الرئيسي `v4.2.0`
 
 تطبيق أندرويد مفتوح المصدر لتشغيل نظام **أسيكودا العالمي** التابع للهيئة العامة للكمارك العراقية (`asy.mof.gov.iq`) مباشرة على الهواتف والأجهزة اللوحية، وموجه للمخلصين الكمركيين وشركات الشحن والتجارة.
 
-> **⚠️ تنبيه أمني هام (تحديث رئيسي شامل `v4.1.0`)**: يُعد الإصدار **`v4.1.0`** إصداراً رئيسياً للأمان والبنية البرمجية. **جميع الإصدارات السابقة (`v4.0.5` وما قبله) أصبحت غير آمنة وملغاة ولا يُنصح باستخدامها نهائياً** — يُرجى التحديث فوراً إلى الإصدار **`v4.1.0`**.
+> **⚠️ تنبيه أمني هام (تحديث رئيسي شامل `v4.2.0`)**: يُعد الإصدار **`v4.2.0`** إصداراً رئيسياً للأمان والبنية البرمجية. **جميع الإصدارات السابقة (`< v4.2.0` بما فيها `v4.1.0` التجريبي و`v4.0.5` وما قبله) أصبحت غير آمنة وملغاة ولا يُنصح باستخدامها نهائياً** — يُرجى التحديث فوراً إلى الإصدار **`v4.2.0`**.
 
 ### المميزات:
 - **تثبيت مباشر وبدون صلاحيات تخزين واسعة**: يعمل مباشرة بعد تثبيت ملف `APK` دون طلب صلاحية الوصول الشامل للملفات (`MANAGE_EXTERNAL_STORAGE`).
@@ -94,11 +94,11 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 <div dir="rtl">
 
-## کوردی — سیستەمی ئەسیکۆدای جیهانی (کۆماری عێراق) — وەشانی سەرەکی `v4.1.0`
+## کوردی — سیستەمی ئەسیکۆدای جیهانی (کۆماری عێراق) — وەشانی سەرەکی `v4.2.0`
 
 بەرنامەی ئەندرۆیدی سەرچاوە کراوە بۆ کارپێکردنی سیستەمی **ئەسیکۆدای جیهانی** سەر بە دەستەی گشتیی گومرگی عێراق (`asy.mof.gov.iq`) لەسەر مۆبایل و تابلێت، تایبەت بە بریکارانی گومرگی و کۆمپانیا بازرگانییەکان.
 
-> **⚠️ ئاگاداری ئەمنی گرنگ (وەشانی سەرەکی `v4.1.0`)**: وەشانی **`v4.1.0`** وەشانێکی سەرەکی ئاسایش و پێکهاتەی بەرنامەکەیە. **گشت وەشانەکانی پێشتر (`v4.0.5` و کۆنتر) چیتر سەلامەت نین و پێشنیار ناکرێن** — تکایە دەستبەجێ نوێی بکەرەوە بۆ **`v4.1.0`**.
+> **⚠️ ئاگاداری ئەمنی گرنگ (وەشانی سەرەکی `v4.2.0`)**: وەشانی **`v4.2.0`** وەشانێکی سەرەکی ئاسایش و پێکهاتەی بەرنامەکەیە. **گشت وەشانەکانی پێشتر (`< v4.2.0` بە `v4.0.5` و کۆنترەوە) چیتر سەلامەت نین و پێشنیار ناکرێن** — تکایە دەستبەجێ نوێی بکەرەوە بۆ **`v4.2.0`**.
 
 ### تایبەتمەندییەکان:
 - **دامەزراندنی ڕاستەوخۆ و بەبێ مۆڵەتی گشتیی پەڕگەکان**: بە یەک پەڕگەی `APK` دادەمەزرێت بەبێ داواکردنی مۆڵەتی گشتیی پەڕگەکان (`MANAGE_EXTERNAL_STORAGE`).
@@ -122,7 +122,7 @@ This application is an independent technical utility built to help customs broke
    ```bash
    ./java-bridge/build-bridge.sh
    ```
-2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v4.1.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.1.0) page) into `lorie-app/src/main/assets/`.
+2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v4.2.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) page) into `lorie-app/src/main/assets/`.
 3. Build the APK with JDK 17 and Android SDK 34:
    ```bash
    ./gradlew :lorie-app:assembleDebug

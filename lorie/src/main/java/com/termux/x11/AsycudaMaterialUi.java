@@ -68,7 +68,7 @@ public class AsycudaMaterialUi {
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
     public static final String CURRENT_POLICY_VERSION = "2.0-2026.10";
-    public static final int CURRENT_CHANGELOG_VERSION = 43;
+    public static final int CURRENT_CHANGELOG_VERSION = 50;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
@@ -142,6 +142,7 @@ public class AsycudaMaterialUi {
         void onShareMultipleFiles(List<File> files);
         void onDeleteFiles(List<File> files);
         default void onImportFileToVault(File targetDir, Runnable onImported) {}
+        default boolean isStartupInProgress() { return false; }
     }
 
     public interface UpdateCenterController {
@@ -273,7 +274,7 @@ public class AsycudaMaterialUi {
         } catch (Throwable ignored) {
             // Fallback to current release version label
         }
-        return "v4.1.0";
+        return "v4.2.0";
     }
 
     public static boolean shouldShowWhatsNew(Context ctx) {
@@ -391,13 +392,27 @@ public class AsycudaMaterialUi {
                     showControlCenter(activity, cb);
                 });
 
-        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_cloud_sync,
+        boolean startupBusy = cb != null && cb.isStartupInProgress();
+        LinearLayout updateTile = addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_cloud_sync,
                 tr(activity, "Check for Updates", "فحص التحديثات", "پشکنینی نوێکردنەوەکان"),
-                tr(activity, "Verify app releases and Iraqi Customs server packages", "التحقق من تحديثات التطبيق وملفات خادم الكمارك العراقية", "پشکنینی نوێکردنەوەی بەرنامە و پەڕگەکانی سێرڤەری گومرگ"),
-                null, true, false, () -> {
+                startupBusy
+                        ? tr(activity, "Running automatically during startup...", "جارٍ الفحص تلقائياً أثناء بدء التشغيل...", "لە کاتی دەستپێکردندا خۆکارانە دەپشکنرێت...")
+                        : tr(activity, "Verify app releases and Iraqi Customs server packages", "التحقق من تحديثات التطبيق وملفات خادم الكمارك العراقية", "پشکنینی نوێکردنەوەی بەرنامە و پەڕگەکانی سێرڤەری گومرگ"),
+                startupBusy ? tr(activity, "STARTUP", "قيد الفحص", "لە کاردایە") : null,
+                !startupBusy, false, () -> {
+                    if (cb != null && cb.isStartupInProgress()) {
+                        Toast.makeText(activity, tr(activity,
+                                "Update check is already running during startup...",
+                                "فحص التحديثات يعمل تلقائياً أثناء بدء التشغيل...",
+                                "پشکنینی نوێکردنەوە لە کاتی دەستپێکردندا لە کاردایە..."), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     dialog.dismiss();
-                    cb.onCheckUpdates();
+                    if (cb != null) cb.onCheckUpdates();
                 });
+        if (startupBusy) {
+            updateTile.setAlpha(0.45f);
+        }
 
         addMenuTileWithBadge(activity, grid, R.drawable.ic_folder,
                 tr(activity, "Vault (File Manager)", "الخزنة (مدير الملفات)", "قاسە (بەڕێوەبەری پەڕگەکان)"),
@@ -431,13 +446,26 @@ public class AsycudaMaterialUi {
                     cb.onOpenFeedbackModal();
                 });
 
-        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_restart,
+        LinearLayout restartTile = addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_restart,
                 tr(activity, "Restart ASYCUDA Session", "إعادة تشغيل جلسة أسيكودا", "دووبارە پێکردنەوەی دانیشتنی ئەسیکۆدا"),
-                tr(activity, "Reload the ASYCUDA World client without exiting the app", "إعادة تشغيل واجهة النظام دون إغلاق التطبيق بالكامل", "دووبارە بارکردنەوەی سیستەمی ئەسیکۆدا بەبێ داخستنی بەرنامە"),
-                null, false, false, () -> {
+                startupBusy
+                        ? tr(activity, "Available once initial startup finishes", "متاح بعد اكتمال بدء التشغيل الأولي", "بەردەست دەبێت دوای تەواوبوونی دەستپێکردن")
+                        : tr(activity, "Reload the ASYCUDA World client without exiting the app", "إعادة تشغيل واجهة النظام دون إغلاق التطبيق بالكامل", "دووبارە بارکردنەوەی سیستەمی ئەسیکۆدا بەبێ داخستنی بەرنامە"),
+                startupBusy ? tr(activity, "WAIT", "انتظر", "چاوەڕوانبە") : null,
+                false, false, () -> {
+                    if (cb != null && cb.isStartupInProgress()) {
+                        Toast.makeText(activity, tr(activity,
+                                "Startup is already in progress...",
+                                "عملية بدء التشغيل جارية بالفعل...",
+                                "پرۆسەی دەستپێکردن لە کاردایە..."), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     dialog.dismiss();
-                    cb.onRestartSession();
+                    if (cb != null) cb.onRestartSession();
                 });
+        if (startupBusy) {
+            restartTile.setAlpha(0.45f);
+        }
 
         addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_info,
                 tr(activity, "About & Open-Source Licences", "حول التطبيق والتراخيص", "دەربارەی بەرنامە و مۆڵەتەکان"),
@@ -2149,6 +2177,7 @@ public class AsycudaMaterialUi {
             String verifiedFixButtonText,
             Runnable onApplyVerifiedFix,
             Runnable onPreviewFullRamReport,
+            Runnable onResyncCatalog,
             Runnable onRetryConnection,
             Runnable onOpenReportCenter) {
         if (activity == null || activity.isFinishing()) return;
@@ -2202,6 +2231,17 @@ public class AsycudaMaterialUi {
         titleCol.addView(sub);
 
         header.addView(titleCol);
+        if (onResyncCatalog != null) {
+            FrameLayout resyncBtn = createIconButton(activity, R.drawable.ic_menu_cloud_sync,
+                    tr(activity, "Resync Known-Issues Catalog", "مزامنة قاعدة الأعطال", "هاوکاتکردنی بنکەی هەڵەکان"),
+                    false, false, v -> {
+                        dialog.dismiss();
+                        onResyncCatalog.run();
+                    });
+            LinearLayout.LayoutParams rsLp = (LinearLayout.LayoutParams) resyncBtn.getLayoutParams();
+            rsLp.setMarginEnd(dp(activity, 6));
+            header.addView(resyncBtn);
+        }
         header.addView(createIconButton(activity, R.drawable.ic_action_close,
                 tr(activity, "Close", "إغلاق", "داخستن"),
                 false, false, v -> dialog.dismiss()));
@@ -2219,25 +2259,45 @@ public class AsycudaMaterialUi {
         LinearLayout contentCol = new LinearLayout(activity);
         contentCol.setOrientation(LinearLayout.VERTICAL);
 
-        // 0. If this is a brand-new / uncatalogued error, show a prominent highlight banner suggesting Sentry share
+        // 0. If this is a brand-new / uncatalogued error, show a prominent highlight banner suggesting Sentry share + Cloud Resync
         if (isNewUncataloguedError) {
+            LinearLayout newErrCard = new LinearLayout(activity);
+            newErrCard.setOrientation(LinearLayout.VERTICAL);
+            int bPad = dp(activity, 9);
+            newErrCard.setPadding(bPad, bPad, bPad, bPad);
+            newErrCard.setBackground(createCardDrawable(activity, Color.parseColor("#38BF5AF2"), 9, Color.parseColor("#FFBF5AF2")));
+            LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            bannerLp.bottomMargin = dp(activity, 6);
+            newErrCard.setLayoutParams(bannerLp);
+
             TextView newErrBanner = new TextView(activity);
             newErrBanner.setText(tr(activity,
-                    "NEW UNCATALOGUED ERROR DETECTED\nThis error is not yet recorded in the Known Issues Catalog. Please tap 'Share to Sentry' below so it can be identified and given a direct fix.",
-                    "تم رصد خطأ جديد غير مسجل في قاعدة البيانات\nهذا الخطأ غير مدرج بعد في سجل الأعطال المعروفة. يرجى الضغط على زر (مشاركة إلى Sentry) بالأسفل ليتم تشخيصه وإضافة حل مباشر له.",
-                    "هەڵەیەکی نوێی تۆمارنەکراو دۆزرایەوە\nئەم هەڵەیە هێشتا لە بنکەی زانیاری تۆمار نەکراوە. تکایە دوگمەی (هاوبەشکردن بۆ Sentry) لە خوارەوە دابگرە بۆ زیادکردنی چارەسەر."));
+                    "NEW UNCATALOGUED ERROR DETECTED\nThis error is not yet recorded in the local Known-Issues Catalog. Tap 'Sync Known-Issues Catalog' to check if a verified fix has been published on GitHub, or tap 'Share to Sentry' below.",
+                    "تم رصد خطأ جديد غير مسجل في قاعدة البيانات المحلية\nاضغط على زر (مزامنة سجل الأعطال) للتحقق من توفر حل جديد على GitHub، أو اضغط على (مشاركة إلى Sentry) بالأسفل.",
+                    "هەڵەیەکی نوێی تۆمارنەکراو دۆزرایەوە\nدوگمەی (هاوکاتکردنی بنکەی هەڵەکان) دابگرە بۆ پشکنینی چارەسەری نوێ لە GitHub، یان (هاوبەشکردن بۆ Sentry) دابگرە."));
             newErrBanner.setTextColor(Color.WHITE);
             newErrBanner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
             newErrBanner.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
             newErrBanner.setLineSpacing(dp(activity, 2), 1.04f);
-            int bPad = dp(activity, 9);
-            newErrBanner.setPadding(bPad, bPad, bPad, bPad);
-            newErrBanner.setBackground(createCardDrawable(activity, Color.parseColor("#38BF5AF2"), 9, Color.parseColor("#FFBF5AF2")));
-            LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            bannerLp.bottomMargin = dp(activity, 6);
-            newErrBanner.setLayoutParams(bannerLp);
-            contentCol.addView(newErrBanner);
+            newErrCard.addView(newErrBanner);
+
+            if (onResyncCatalog != null) {
+                TextView syncCatalogBannerBtn = createCupertinoButton(activity,
+                        tr(activity, "Sync Known-Issues Catalog from Cloud",
+                                "مزامنة سجل الأعطال المعروفة من السحابة",
+                                "هاوکاتکردنی بنکەی هەڵەکان لە هەورەوە"),
+                        true, false, v -> {
+                            dialog.dismiss();
+                            onResyncCatalog.run();
+                        });
+                LinearLayout.LayoutParams scbLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                scbLp.topMargin = dp(activity, 6);
+                syncCatalogBannerBtn.setLayoutParams(scbLp);
+                newErrCard.addView(syncCatalogBannerBtn);
+            }
+            contentCol.addView(newErrCard);
         }
 
         // 1. Human-understandable explanation card
@@ -2558,7 +2618,7 @@ public class AsycudaMaterialUi {
         parent.addView(row);
     }
 
-    private static void addMenuTileWithBadge(Context ctx, GridLayout grid,
+    private static LinearLayout addMenuTileWithBadge(Context ctx, GridLayout grid,
                                              int iconResId, String titleText, String descText,
                                              String statusBadgeText,
                                              boolean isAccentIcon, boolean isDestructive,
@@ -2636,6 +2696,7 @@ public class AsycudaMaterialUi {
         int m = dp(ctx, 3);
         glp.setMargins(m, m, m, m);
         grid.addView(card, glp);
+        return card;
     }
 
     /**
@@ -4017,9 +4078,9 @@ public class AsycudaMaterialUi {
 
         TextView secBody = new TextView(activity);
         secBody.setText(tr(activity,
-                "This app is 100% open-source so anyone can inspect how it works. Your ASYCUDA username, password, and customs declarations connect directly to the Ministry of Finance server (asy.mof.gov.iq) — this app never sees, saves, or collects them. Release " + getAppVersionLabel(activity) + " is a Major Security & Architecture Release; all earlier versions (< v4.1.0) are now unsafe, superseded, and not recommended.",
-                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. اسم المستخدم وكلمة المرور والتصاريح الكمركية الخاصة بك تتصل مباشرة بخادم وزارة المالية (asy.mof.gov.iq)، ولا يقوم التطبيق بقراءتها أو حفظها أو جمعها نهائياً. الإصدار " + getAppVersionLabel(activity) + " هو إصدار رئيسي للأمان والبنية البرمجية، وجميع الإصدارات السابقة (< v4.1.0) أصبحت غير آمنة وغير موصى بها.",
-                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت ڕاستەوخۆ دەچنە سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq) و ئەم بەرنامەیە هەرگیز نایانبینێت و پاشەکەوتیان ناکات. وەشانی " + getAppVersionLabel(activity) + " وەشانێکی سەرەکی ئاسایشە و گشت وەشانەکانی پێشتر (< v4.1.0) چیتر سەلامەت نین و پێشنیار ناکرێن."));
+                "This app is 100% open-source so anyone can inspect how it works. Your ASYCUDA username, password, and customs declarations connect directly to the Ministry of Finance server (asy.mof.gov.iq) — this app never sees, saves, or collects them. Release " + getAppVersionLabel(activity) + " is a Major Security & Architecture Release; all earlier versions (< v4.2.0) are now unsafe, superseded, and not recommended.",
+                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. اسم المستخدم وكلمة المرور والتصاريح الكمركية الخاصة بك تتصل مباشرة بخادم وزارة المالية (asy.mof.gov.iq)، ولا يقوم التطبيق بقراءتها أو حفظها أو جمعها نهائياً. الإصدار " + getAppVersionLabel(activity) + " هو إصدار رئيسي للأمان والبنية البرمجية، وجميع الإصدارات السابقة (< v4.2.0) أصبحت غير آمنة وغير موصى بها.",
+                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت ڕاستەوخۆ دەچنە سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq) و ئەم بەرنامەیە هەرگیز نایانبینێت و پاشەکەوتیان ناکات. وەشانی " + getAppVersionLabel(activity) + " وەشانێکی سەرەکی ئاسایشە و گشت وەشانەکانی پێشتر (< v4.2.0) چیتر سەلامەت نین و پێشنیار ناکرێن."));
         secBody.setTextColor(TEXT_PRIMARY);
         secBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
@@ -4484,9 +4545,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Major Security & Architecture Upgrade — Previous Versions (< v4.1.0) Are Unsafe & Not Recommended",
-                "تحديث رئيسي شامل للأمان والبنية — جميع الإصدارات السابقة (< v4.1.0) غير آمنة وغير موصى بها",
-                "نوێکردنەوەی سەرەکی ئاسایش — گشت وەشانەکانی پێشتر (< v4.1.0) سەلامەت نین و پێشنیار ناکرێن"));
+                "Major Security & Architecture Upgrade — Previous Versions (< v4.2.0) Are Unsafe & Not Recommended",
+                "تحديث رئيسي شامل للأمان والبنية — جميع الإصدارات السابقة (< v4.2.0) غير آمنة وغير موصى بها",
+                "نوێکردنەوەی سەرەکی ئاسایش — گشت وەشانەکانی پێشتر (< v4.2.0) سەلامەت نین و پێشنیار ناکرێن"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);

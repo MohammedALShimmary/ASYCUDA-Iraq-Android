@@ -1443,109 +1443,60 @@ public class AsycudaBoot {
     }
 
     /**
-     * Installs a composite X.509 TrustManager combining the OpenJDK 8 default cacerts TrustManager
-     * with the official Iraqi Ministry of Finance certificate (mof.crt) before the JVM SecurityManager
-     * locks down file access, so https://asy.mof.gov.iq/aw/help/index.html loads cleanly over TLS.
+     * Augments the OpenJDK 8 default cacerts KeyStore with the official Iraqi Ministry of Finance
+     * certificate (mof.crt) into a temporary JKS file and configures javax.net.ssl.trustStore before
+     * the JVM SecurityManager locks down file access, so https://asy.mof.gov.iq/aw/help/index.html
+     * loads cleanly over TLS using standard Java KeyStore trust anchors.
      */
     private static void installMofHttpsTrustStore() {
         try {
-            javax.net.ssl.TrustManagerFactory defaultTmf = javax.net.ssl.TrustManagerFactory.getInstance(
-                    javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
-            defaultTmf.init((java.security.KeyStore) null);
-            javax.net.ssl.X509TrustManager defaultTm = null;
-            for (javax.net.ssl.TrustManager tm : defaultTmf.getTrustManagers()) {
-                if (tm instanceof javax.net.ssl.X509TrustManager) {
-                    defaultTm = (javax.net.ssl.X509TrustManager) tm;
-                    break;
-                }
-            }
-
             File crtFile = new File("/data/data/iq.asycuda/files/client/mof.crt");
             if (!crtFile.isFile()) {
                 crtFile = new File("mof.crt");
             }
-            javax.net.ssl.X509TrustManager mofTm = null;
-            if (crtFile.isFile()) {
-                java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-                ks.load(null, null);
-                java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
-                try (FileInputStream fis = new FileInputStream(crtFile)) {
-                    int idx = 0;
-                    for (java.security.cert.Certificate cert : cf.generateCertificates(fis)) {
-                        ks.setCertificateEntry("mof_" + (idx++), cert);
-                    }
+            if (!crtFile.isFile()) {
+                return;
+            }
+            java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+            File defaultCacerts = new File(System.getProperty("java.home", ""), "lib/security/cacerts");
+            if (!defaultCacerts.isFile()) {
+                defaultCacerts = new File("/data/data/iq.asycuda/files/jre8/jre/lib/security/cacerts");
+            }
+            if (defaultCacerts.isFile()) {
+                try (FileInputStream cacertsIn = new FileInputStream(defaultCacerts)) {
+                    ks.load(cacertsIn, null);
                 }
-                javax.net.ssl.TrustManagerFactory mofTmf = javax.net.ssl.TrustManagerFactory.getInstance(
-                        javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
-                mofTmf.init(ks);
-                for (javax.net.ssl.TrustManager tm : mofTmf.getTrustManagers()) {
-                    if (tm instanceof javax.net.ssl.X509TrustManager) {
-                        mofTm = (javax.net.ssl.X509TrustManager) tm;
-                        break;
-                    }
+            } else {
+                ks.load(null, null);
+            }
+            java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+            try (FileInputStream fis = new FileInputStream(crtFile)) {
+                int idx = 0;
+                for (java.security.cert.Certificate cert : cf.generateCertificates(fis)) {
+                    ks.setCertificateEntry("mof_" + (idx++), cert);
                 }
             }
-
-            if (defaultTm == null && mofTm == null) return;
-            final javax.net.ssl.X509TrustManager finalDefaultTm = defaultTm;
-            final javax.net.ssl.X509TrustManager finalMofTm = mofTm;
-
-            javax.net.ssl.X509TrustManager compositeTm = new javax.net.ssl.X509TrustManager() {
-                @Override
-                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType)
-                        throws java.security.cert.CertificateException {
-                    if (chain == null || chain.length == 0) {
-                        throw new java.security.cert.CertificateException("Empty client certificate chain");
-                    }
-                    if (finalDefaultTm != null) {
-                        finalDefaultTm.checkClientTrusted(chain, authType);
-                        return;
-                    }
-                    if (finalMofTm != null) {
-                        finalMofTm.checkClientTrusted(chain, authType);
-                        return;
-                    }
-                    throw new java.security.cert.CertificateException("No X509TrustManager available to validate client certificate chain");
+            File outTrustStore = new File("/data/data/iq.asycuda/files/usr/tmp/mof_cacerts.jks");
+            if (outTrustStore.getParentFile() != null && outTrustStore.getParentFile().isDirectory()) {
+                if (outTrustStore.exists()) {
+                    outTrustStore.setWritable(true, true);
                 }
-
-                @Override
-                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType)
-                        throws java.security.cert.CertificateException {
-                    if (chain == null || chain.length == 0) {
-                        throw new java.security.cert.CertificateException("Empty server certificate chain");
+                char[] ephemPass = java.util.UUID.randomUUID().toString().toCharArray();
+                try {
+                    try (FileOutputStream fos = new FileOutputStream(outTrustStore)) {
+                        ks.store(fos, ephemPass);
+                        fos.getFD().sync();
                     }
-                    if (finalDefaultTm != null) {
-                        try {
-                            finalDefaultTm.checkServerTrusted(chain, authType);
-                            return;
-                        } catch (java.security.cert.CertificateException e) {
-                            if (finalMofTm == null) throw e;
-                        }
-                    }
-                    if (finalMofTm != null) {
-                        finalMofTm.checkServerTrusted(chain, authType);
-                        return;
-                    }
-                    throw new java.security.cert.CertificateException("No X509TrustManager available to validate server certificate chain");
+                    outTrustStore.setReadable(false, false);
+                    outTrustStore.setReadable(true, true);
+                    outTrustStore.setWritable(false, false);
+                    System.setProperty("javax.net.ssl.trustStore", outTrustStore.getAbsolutePath());
+                    System.setProperty("javax.net.ssl.trustStoreType", java.security.KeyStore.getDefaultType());
+                    javax.net.ssl.SSLContext.getDefault();
+                } finally {
+                    java.util.Arrays.fill(ephemPass, '\0');
                 }
-
-                @Override
-                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    List<java.security.cert.X509Certificate> all = new ArrayList<java.security.cert.X509Certificate>();
-                    if (finalDefaultTm != null) {
-                        all.addAll(Arrays.asList(finalDefaultTm.getAcceptedIssuers()));
-                    }
-                    if (finalMofTm != null) {
-                        all.addAll(Arrays.asList(finalMofTm.getAcceptedIssuers()));
-                    }
-                    return all.toArray(new java.security.cert.X509Certificate[0]);
-                }
-            };
-
-            javax.net.ssl.SSLContext sslCtx = javax.net.ssl.SSLContext.getInstance("TLS");
-            sslCtx.init(null, new javax.net.ssl.TrustManager[] { compositeTm }, new java.security.SecureRandom());
-            javax.net.ssl.SSLContext.setDefault(sslCtx);
-            javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslCtx.getSocketFactory());
+            }
         } catch (Throwable ignored) {
             // Best-effort truststore augmentation
         }
@@ -1875,6 +1826,7 @@ public class AsycudaBoot {
                 || norm.contains("/shared_prefs")
                 || norm.contains("legal_consent_receipt.json")
                 || norm.contains("known_errors_catalog.json")
+                || norm.contains("known-errors-catalog.json")
                 || norm.contains("/databases/")
                 || norm.endsWith("/databases")
                 || norm.contains("/datastore/")
@@ -1901,6 +1853,11 @@ public class AsycudaBoot {
                 || norm.contains("/files/client/classpath.txt")
                 || norm.contains("/files/client/awiqworld.jnlp")
                 || norm.contains("/files/client/mof.crt")
+                || norm.contains("known_errors_catalog.json")
+                || norm.contains("known-errors-catalog.json")
+                || norm.contains("/mof_cacerts.jks")
+                || norm.endsWith(".jks")
+                || norm.endsWith(".crt")
                 || norm.contains("/files/.extracted_")
                 || norm.contains("/files/.bootpatch_")
                 || norm.contains("/files/jre8")
