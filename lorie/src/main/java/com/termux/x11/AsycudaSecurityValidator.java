@@ -101,22 +101,65 @@ public final class AsycudaSecurityValidator {
             }
 
             Enumeration<JarEntry> entries = jf.entries();
-            int nonMetaEntryCount = 0;
+            int nonMetaFileCount = 0;
+            int nonMetaDirCount = 0;
             byte[] buf = new byte[16384];
             while (entries.hasMoreElements()) {
                 JarEntry je = entries.nextElement();
                 drainJarEntryStream(jf, je, buf);
                 if (isNonMetaInfFileEntry(je)) {
-                    nonMetaEntryCount++;
+                    nonMetaFileCount++;
                     if (!isEntrySignedByPinnedCert(je, sha256, expectedCertSha256)) {
                         return false;
                     }
+                } else if (je.isDirectory() && !je.getName().toUpperCase(Locale.US).startsWith("META-INF/")) {
+                    nonMetaDirCount++;
                 }
             }
-            return nonMetaEntryCount > 0;
+            if (nonMetaFileCount > 0) {
+                return true;
+            }
+            // Official UNCTAD stub JAR (e.g. lib/asytaxc.jar) with signed META-INF/MANIFEST.MF + SOCODE.SF + SOCODE.RSA and package directories
+            return nonMetaDirCount > 0 && verifySignedStubManifestDigest(jf, sfEntry, sha256);
         } catch (Exception invalidJar) {
             return false;
         }
+    }
+
+    private static boolean verifySignedStubManifestDigest(
+            JarFile jf, JarEntry sfEntry, MessageDigest sha256) throws java.io.IOException {
+        JarEntry manifestEntry = jf.getJarEntry("META-INF/MANIFEST.MF");
+        if (manifestEntry == null || sfEntry == null) {
+            return false;
+        }
+        byte[] manifestBytes = readEntryBytesBounded(jf, manifestEntry, 65536);
+        byte[] sfBytes = readEntryBytesBounded(jf, sfEntry, 65536);
+        if (manifestBytes.length == 0 || sfBytes.length == 0) {
+            return false;
+        }
+        sha256.reset();
+        String expectedManifestB64 = java.util.Base64.getEncoder().encodeToString(sha256.digest(manifestBytes));
+        String unfoldedSf = new String(sfBytes, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\r\n ", "")
+                .replace("\n ", "");
+        return unfoldedSf.contains("SHA-256-Digest-Manifest: " + expectedManifestB64);
+    }
+
+    private static byte[] readEntryBytesBounded(JarFile jf, JarEntry entry, int maxBytes) throws java.io.IOException {
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        try (InputStream in = jf.getInputStream(entry)) {
+            int n;
+            int total = 0;
+            while ((n = in.read(buf)) != -1) {
+                total += n;
+                if (total > maxBytes) {
+                    return new byte[0];
+                }
+                bos.write(buf, 0, n);
+            }
+        }
+        return bos.toByteArray();
     }
 
     private static boolean doesPkcs7ContainPinnedSigner(

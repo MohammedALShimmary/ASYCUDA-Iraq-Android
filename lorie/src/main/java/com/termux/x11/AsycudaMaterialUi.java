@@ -273,7 +273,7 @@ public class AsycudaMaterialUi {
         } catch (Throwable ignored) {
             // Fallback to current release version label
         }
-        return "v4.0.5";
+        return "v4.1.0";
     }
 
     public static boolean shouldShowWhatsNew(Context ctx) {
@@ -291,19 +291,19 @@ public class AsycudaMaterialUi {
     }
 
     public static void showControlCenter(MainActivity activity, MenuActionCallback cb) {
-        Dialog dialog = createModalDialog(activity, 0.88f, 700, true);
+        Dialog dialog = createModalDialog(activity, 0.82f, 590, true);
         LinearLayout root = createDialogContainer(activity);
 
         // Header Row
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView logo = new ImageView(activity);
         logo.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(activity, 40), dp(activity, 40));
-        logoLp.setMarginEnd(dp(activity, 12));
+        LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(activity, 32), dp(activity, 32));
+        logoLp.setMarginEnd(dp(activity, 10));
         header.addView(logo, logoLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -316,7 +316,7 @@ public class AsycudaMaterialUi {
                 "نظام أسيكودا العالمي — جمهورية العراق",
                 "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -326,7 +326,7 @@ public class AsycudaMaterialUi {
                 "مركز التحكم  |  الإصدار " + getAppVersionLabel(activity),
                 "ناوەندی کۆنترۆڵ  |  وەشانی " + getAppVersionLabel(activity)));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -336,7 +336,7 @@ public class AsycudaMaterialUi {
                     showLanguageModal(activity, cb);
                 });
         LinearLayout.LayoutParams langLp = (LinearLayout.LayoutParams) langBtn.getLayoutParams();
-        langLp.setMarginEnd(dp(activity, 8));
+        langLp.setMarginEnd(dp(activity, 6));
         header.addView(langBtn);
 
         View closeBtn = createIconButton(activity, R.drawable.ic_action_close,
@@ -351,7 +351,7 @@ public class AsycudaMaterialUi {
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        scrollLp.topMargin = dp(activity, 8);
+        scrollLp.topMargin = dp(activity, 6);
         scroll.setLayoutParams(scrollLp);
 
         GridLayout grid = new GridLayout(activity);
@@ -468,19 +468,19 @@ public class AsycudaMaterialUi {
      * Reserve Space for Shortcut Bar, Display Cutout, Keep Screen Awake, and Back Button Action).
      */
     public static void showDisplaySettingsModal(MainActivity activity, MenuActionCallback cb) {
-        Dialog dialog = createModalDialog(activity, 0.88f, 680, true);
+        Dialog dialog = createModalDialog(activity, 0.82f, 580, true);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_menu_display);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -493,7 +493,7 @@ public class AsycudaMaterialUi {
                 "إعدادات العرض والتحكم",
                 "ڕێکخستنی شاشە و کۆنترۆڵ"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -503,7 +503,7 @@ public class AsycudaMaterialUi {
                 "تخصيص دقة الشاشة، شفافية شريط الاختصارات، ونمط التحكم باللمس",
                 "ڕێکخستنی وردی شاشە، ڕووناکی شریتی قەدبڕەکان و شێوازی کۆنترۆڵکردن"));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -521,7 +521,7 @@ public class AsycudaMaterialUi {
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        scrollLp.topMargin = dp(activity, 10);
+        scrollLp.topMargin = dp(activity, 7);
         scroll.setLayoutParams(scrollLp);
 
         LinearLayout body = new LinearLayout(activity);
@@ -994,11 +994,11 @@ public class AsycudaMaterialUi {
 
         LinearLayout sliderCard = new LinearLayout(activity);
         sliderCard.setOrientation(LinearLayout.VERTICAL);
-        sliderCard.setPadding(dp(activity, 14), dp(activity, 11), dp(activity, 14), dp(activity, 11));
-        sliderCard.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+        sliderCard.setPadding(dp(activity, 11), dp(activity, 8), dp(activity, 11), dp(activity, 8));
+        sliderCard.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 11, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardLp.bottomMargin = dp(activity, 12);
+        cardLp.bottomMargin = dp(activity, 8);
         sliderCard.setLayoutParams(cardLp);
 
         LinearLayout topRow = new LinearLayout(activity);
@@ -1008,7 +1008,7 @@ public class AsycudaMaterialUi {
         TextView labelTv = new TextView(activity);
         labelTv.setText(labelText);
         labelTv.setTextColor(TEXT_SECONDARY);
-        labelTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        labelTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         labelTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(labelTv);
 
@@ -1016,10 +1016,10 @@ public class AsycudaMaterialUi {
         TextView valueBadge = new TextView(activity);
         valueBadge.setText(clampedCur + "%");
         valueBadge.setTextColor(SYSTEM_BLUE);
-        valueBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        valueBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         valueBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        valueBadge.setPadding(dp(activity, 10), dp(activity, 3), dp(activity, 10), dp(activity, 3));
-        valueBadge.setBackground(createCardDrawable(activity, SYSTEM_BLUE_TINT, 8, 0));
+        valueBadge.setPadding(dp(activity, 8), dp(activity, 2), dp(activity, 8), dp(activity, 2));
+        valueBadge.setBackground(createCardDrawable(activity, SYSTEM_BLUE_TINT, 7, 0));
         topRow.addView(valueBadge);
         sliderCard.addView(topRow);
 
@@ -1166,37 +1166,37 @@ public class AsycudaMaterialUi {
         TextView btn = new TextView(ctx);
         btn.setText(label);
         btn.setTextColor(selected ? TEXT_PRIMARY : TEXT_SECONDARY);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         btn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, selected ? Typeface.BOLD : Typeface.NORMAL));
         btn.setGravity(Gravity.CENTER);
-        btn.setPadding(dp(ctx, 8), dp(ctx, 9), dp(ctx, 8), dp(ctx, 9));
+        btn.setPadding(dp(ctx, 6), dp(ctx, 6), dp(ctx, 6), dp(ctx, 6));
         btn.setBackground(createRippleCardDrawable(ctx,
                 selected ? SYSTEM_BLUE : SURFACE_GROUPED_CARD,
-                10,
+                8,
                 selected ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
         btn.setClickable(true);
         btn.setFocusable(true);
         btn.setOnClickListener(v -> onTap.run());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMarginEnd(dp(ctx, 6));
+        lp.setMarginEnd(dp(ctx, 5));
         btn.setLayoutParams(lp);
         parent.addView(btn);
     }
 
     public static UpdateCenterController showUpdateCenterModal(MainActivity activity, Runnable onCloseWhenUpToDate) {
-        Dialog dialog = createModalDialog(activity, 0.82f, 580, false);
+        Dialog dialog = createModalDialog(activity, 0.76f, 490, false);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_menu_cloud_sync);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -1209,7 +1209,7 @@ public class AsycudaMaterialUi {
                 "فحص التحديثات",
                 "پشکنینی نوێکردنەوەکان"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -1219,7 +1219,7 @@ public class AsycudaMaterialUi {
                 "جاري التحقق من إصدار التطبيق وملفات النظام...",
                 "پشکنینی وەشانی بەرنامە و پەڕگەکانی سیستەم..."));
         sub.setTextColor(TEXT_SECONDARY);
-        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         titleCol.addView(sub);
         header.addView(titleCol);
 
@@ -1586,7 +1586,7 @@ public class AsycudaMaterialUi {
     }
 
     public static FeedbackModalController showFeedbackModal(MainActivity activity, FeedbackSubmitHandler handler, Runnable onBackToMenu) {
-        Dialog dialog = createModalDialog(activity, 0.86f, 640, true);
+        Dialog dialog = createModalDialog(activity, 0.80f, 560, true);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
@@ -1595,13 +1595,13 @@ public class AsycudaMaterialUi {
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_menu_diagnostics);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -1614,7 +1614,7 @@ public class AsycudaMaterialUi {
                 "الإبلاغ عن مشكلة فنية",
                 "ناردنی ڕاپۆرتی کێشەی تەکنیکی"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -1624,7 +1624,7 @@ public class AsycudaMaterialUi {
                 "إرسال بلاغ بالمشكلة مع سجلات الفحص وصورة للشاشة إلى مطور التطبيق",
                 "ناردنی ڕاپۆرتی کێشە لەگەڵ تۆماری هەڵەکان و وێنەی شاشە بۆ گەشەپێدەر"));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -1906,19 +1906,19 @@ public class AsycudaMaterialUi {
      */
     public static void showDiagnosticDataPreviewModal(MainActivity activity, final StringBuilder ramBuffer) {
         if (activity == null || activity.isFinishing()) return;
-        Dialog dialog = createModalDialog(activity, 0.86f, 640, true);
+        Dialog dialog = createModalDialog(activity, 0.80f, 550, true);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_menu_diagnostics);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_GREEN));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -1931,7 +1931,7 @@ public class AsycudaMaterialUi {
                 "معاينة السجلات التشخيصية",
                 "پێداچوونەوەی تۆمارە تەکنیکییەکان"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -1941,7 +1941,7 @@ public class AsycudaMaterialUi {
                 "تُعرض هذه السجلات مؤقتاً لتتمكن من مراجعة البيانات التي ستُرفق مع البلاغ، ولا يتم حفظ أي نسخة منها على ذاكرة هاتفك.",
                 "ئەم تۆمارانە بە شێوەی کاتی پیشان دەدرێن بۆ ئەوەی بزانیت چ زانیارییەک لەگەڵ ڕاپۆرتەکەت دەنێردرێت، و هیچ پەڕگەیەک لەسەر مۆبایلەکەت پاشەکەوت ناکرێت."));
         sub.setTextColor(SYSTEM_GREEN);
-        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         titleCol.addView(sub);
         header.addView(titleCol);
 
@@ -1955,17 +1955,17 @@ public class AsycudaMaterialUi {
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        scLp.topMargin = dp(activity, 10);
+        scLp.topMargin = dp(activity, 7);
         scroll.setLayoutParams(scLp);
 
         final TextView previewTv = new TextView(activity);
         previewTv.setText(ramBuffer != null ? ramBuffer : "");
         previewTv.setTextColor(TEXT_PRIMARY);
-        previewTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        previewTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         previewTv.setTypeface(Typeface.MONOSPACE);
-        int p = dp(activity, 12);
+        int p = dp(activity, 10);
         previewTv.setPadding(p, p, p, p);
-        previewTv.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 12, SEPARATOR_HAIRLINE));
+        previewTv.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
         scroll.addView(previewTv);
         root.addView(scroll);
 
@@ -1991,13 +1991,13 @@ public class AsycudaMaterialUi {
     public static void showSecuritySandboxErrorModal(MainActivity activity, String reason,
                                                      Runnable onRestartSession, Runnable onExitApp) {
         if (activity == null || activity.isFinishing()) return;
-        Dialog dialog = createModalDialog(activity, 0.78f, 520, false);
+        Dialog dialog = createModalDialog(activity, 0.74f, 460, false);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
@@ -2005,12 +2005,20 @@ public class AsycudaMaterialUi {
                 "تم إيقاف الجلسة لحماية أمان بياناتك",
                 "دانیشتنەکە ڕاگیرا بۆ پاراستنی ئاسایشی زانیارییەکانت"));
         title.setTextColor(SYSTEM_RED);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
         root.addView(header);
         root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scLp.topMargin = dp(activity, 7);
+        scLp.bottomMargin = dp(activity, 8);
+        scroll.setLayoutParams(scLp);
 
         TextView body = new TextView(activity);
         body.setText(tr(activity,
@@ -2018,16 +2026,12 @@ public class AsycudaMaterialUi {
                 "تعذر تشغيل نظام الحماية الداخلي بشكل صحيح عند بدء التشغيل. وللحفاظ على أمان حسابك في نظام أسيكودا وضمان اتصال التطبيق بخادم الكمارك العراقية الرسمي (asy.mof.gov.iq) فقط، تم إيقاف الجلسة تلقائياً. يرجى إعادة تشغيل الجلسة للمحاولة مرة أخرى.\n\nالتفاصيل الفنية: " + (reason != null ? reason : ""),
                 "سیستەمی پاراستنی ناوخۆیی لە کاتی دەستپێکردندا بە دروستی کارینەکرد. بۆ پاراستنی هەژماری ئەسیکۆداکەت و دڵنیابوون لەوەی بەرنامەکە تەنها پەیوەندی بە ڕاژەی فەرمی گومرگی عێراق (asy.mof.gov.iq) دەکات، دانیشتنەکە بە شێوەی خۆکار ڕاگیرا. تکایە دانیشتنەکە دووبارە پێبکەرەوە.\n\nوردەکاری تەکنیکی: " + (reason != null ? reason : "")));
         body.setTextColor(TEXT_PRIMARY);
-        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        int pad = dp(activity, 12);
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        int pad = dp(activity, 10);
         body.setPadding(pad, pad, pad, pad);
-        body.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 12, Color.parseColor("#4DFF453A")));
-        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        bLp.topMargin = dp(activity, 10);
-        bLp.bottomMargin = dp(activity, 12);
-        body.setLayoutParams(bLp);
-        root.addView(body);
+        body.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 10, Color.parseColor("#4DFF453A")));
+        scroll.addView(body);
+        root.addView(scroll);
 
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
@@ -2056,26 +2060,319 @@ public class AsycudaMaterialUi {
         dialog.show();
     }
 
-    public static void showLanguageModal(MainActivity activity, MenuActionCallback cb) {
-        Dialog dialog = createModalDialog(activity, 0.78f, 520, true);
+    private static Dialog sActiveNetworkDiagDialog;
+
+    /**
+     * Universal Error & Network Diagnostic Modal (Proposal B + Sentry Known-Issues Catalog).
+     * Displays a natural, human-written explanation of any connection, system, or runtime error in EN/AR/KU,
+     * highlights brand-new uncatalogued errors with a prompt to share to Sentry, provides a user-consented
+     * Verified Fix button for known issues, and includes a compact developer button
+     * ({@code </> View Error Code & Technical Log}) for full stack/socket telemetry.
+     */
+    public static void showUniversalNetworkDiagnosticModal(
+            MainActivity activity,
+            String errorCode,
+            String causeBadgeText,
+            String humanExplanation,
+            final StringBuilder technicalLogRamBuffer,
+            boolean isNewUncataloguedError,
+            String verifiedFixButtonText,
+            Runnable onApplyVerifiedFix,
+            Runnable onPreviewFullRamReport,
+            Runnable onRetryConnection,
+            Runnable onOpenReportCenter) {
+        if (activity == null || activity.isFinishing()) return;
+        try {
+            if (sActiveNetworkDiagDialog != null && sActiveNetworkDiagDialog.isShowing()) {
+                sActiveNetworkDiagDialog.dismiss();
+            }
+        } catch (Exception ignored) {
+            // Ignore dismiss of previous dialog
+        }
+
+        final Dialog dialog = createModalDialog(activity, 0.80f, 550, true);
+        sActiveNetworkDiagDialog = dialog;
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 7));
+
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(R.drawable.ic_menu_diagnostics);
+        int accentColor = isNewUncataloguedError ? Color.parseColor("#FFBF5AF2") : Color.parseColor("#FFFF9F0A");
+        icon.setImageTintList(ColorStateList.valueOf(accentColor));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
+        header.addView(icon, icLp);
+
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "Universal Error & Network Diagnostics",
+                "التشخيص الشامل للأعطال والشبكة",
+                "پشکنینی گشتگیری هەڵە و تۆڕ"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        titleCol.addView(title);
+
+        TextView sub = new TextView(activity);
+        String codeLabel = (errorCode != null && !errorCode.isEmpty()) ? errorCode : "DIAGNOSTIC";
+        String badgeLabel = (causeBadgeText != null && !causeBadgeText.isEmpty())
+                ? (codeLabel + "  •  " + causeBadgeText) : codeLabel;
+        sub.setText(badgeLabel);
+        sub.setTextColor(accentColor);
+        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
+        sub.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        titleCol.addView(sub);
+
+        header.addView(titleCol);
+        header.addView(createIconButton(activity, R.drawable.ic_action_close,
+                tr(activity, "Close", "إغلاق", "داخستن"),
+                false, false, v -> dialog.dismiss()));
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scLp.topMargin = dp(activity, 7);
+        scLp.bottomMargin = dp(activity, 6);
+        scroll.setLayoutParams(scLp);
+
+        LinearLayout contentCol = new LinearLayout(activity);
+        contentCol.setOrientation(LinearLayout.VERTICAL);
+
+        // 0. If this is a brand-new / uncatalogued error, show a prominent highlight banner suggesting Sentry share
+        if (isNewUncataloguedError) {
+            TextView newErrBanner = new TextView(activity);
+            newErrBanner.setText(tr(activity,
+                    "NEW UNCATALOGUED ERROR DETECTED\nThis error is not yet recorded in the Known Issues Catalog. Please tap 'Share to Sentry' below so it can be identified and given a direct fix.",
+                    "تم رصد خطأ جديد غير مسجل في قاعدة البيانات\nهذا الخطأ غير مدرج بعد في سجل الأعطال المعروفة. يرجى الضغط على زر (مشاركة إلى Sentry) بالأسفل ليتم تشخيصه وإضافة حل مباشر له.",
+                    "هەڵەیەکی نوێی تۆمارنەکراو دۆزرایەوە\nئەم هەڵەیە هێشتا لە بنکەی زانیاری تۆمار نەکراوە. تکایە دوگمەی (هاوبەشکردن بۆ Sentry) لە خوارەوە دابگرە بۆ زیادکردنی چارەسەر."));
+            newErrBanner.setTextColor(Color.WHITE);
+            newErrBanner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
+            newErrBanner.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            newErrBanner.setLineSpacing(dp(activity, 2), 1.04f);
+            int bPad = dp(activity, 9);
+            newErrBanner.setPadding(bPad, bPad, bPad, bPad);
+            newErrBanner.setBackground(createCardDrawable(activity, Color.parseColor("#38BF5AF2"), 9, Color.parseColor("#FFBF5AF2")));
+            LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            bannerLp.bottomMargin = dp(activity, 6);
+            newErrBanner.setLayoutParams(bannerLp);
+            contentCol.addView(newErrBanner);
+        }
+
+        // 1. Human-understandable explanation card
+        TextView explanationTv = new TextView(activity);
+        explanationTv.setText(humanExplanation != null ? humanExplanation : "");
+        explanationTv.setTextColor(TEXT_PRIMARY);
+        explanationTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        explanationTv.setLineSpacing(dp(activity, 2), 1.06f);
+        int pad = dp(activity, 10);
+        explanationTv.setPadding(pad, pad, pad, pad);
+        explanationTv.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 10,
+                isNewUncataloguedError ? Color.parseColor("#66BF5AF2") : Color.parseColor("#4DFF9F0A")));
+        contentCol.addView(explanationTv);
+
+        // 1b. User-Consented Verified Self-Healing Fix Card & Button (Only executed when user chooses to click)
+        if (verifiedFixButtonText != null && !verifiedFixButtonText.trim().isEmpty() && onApplyVerifiedFix != null) {
+            LinearLayout fixRow = new LinearLayout(activity);
+            fixRow.setOrientation(LinearLayout.VERTICAL);
+            fixRow.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+            fixRow.setBackground(createCardDrawable(activity, Color.parseColor("#1F30D158"), 10, SYSTEM_GREEN));
+            LinearLayout.LayoutParams fixRowLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            fixRowLp.topMargin = dp(activity, 6);
+            fixRow.setLayoutParams(fixRowLp);
+
+            TextView fixHint = new TextView(activity);
+            fixHint.setText(tr(activity,
+                    "Verified Security-Checked Solution Available (Requires Your Approval):",
+                    "يتوفر حل آمن ومعتمد لهذه المشكلة (يتم تطبيقه باختيارك فقط):",
+                    "چارەسەری پارێزراو و باوەڕپێکراو بەردەستە (تەنها بە ڕەزامەندی تۆ جێبەجێ دەکرێت):"));
+            fixHint.setTextColor(SYSTEM_GREEN);
+            fixHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
+            fixHint.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            fixRow.addView(fixHint);
+
+            TextView applyFixBtn = createCupertinoButton(activity,
+                    verifiedFixButtonText,
+                    true, false, v -> {
+                        dialog.dismiss();
+                        onApplyVerifiedFix.run();
+                    });
+            applyFixBtn.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 8, Color.parseColor("#FF248A3D")));
+            applyFixBtn.setTextColor(Color.WHITE);
+            LinearLayout.LayoutParams applyLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            applyLp.topMargin = dp(activity, 5);
+            applyFixBtn.setLayoutParams(applyLp);
+            fixRow.addView(applyFixBtn);
+            contentCol.addView(fixRow);
+        }
+
+        // 2. Collapsible Developer / Technical Log Section (100% Redacted & In-RAM Only, Zeroed on Dismiss)
+        final LinearLayout devCard = new LinearLayout(activity);
+        devCard.setOrientation(LinearLayout.VERTICAL);
+        devCard.setVisibility(View.GONE);
+        devCard.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+        devCard.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
+        LinearLayout.LayoutParams devCardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        devCardLp.topMargin = dp(activity, 6);
+        devCard.setLayoutParams(devCardLp);
+
+        LinearLayout devHeaderRow = new LinearLayout(activity);
+        devHeaderRow.setOrientation(LinearLayout.HORIZONTAL);
+        devHeaderRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout devTitleCol = new LinearLayout(activity);
+        devTitleCol.setOrientation(LinearLayout.VERTICAL);
+        devTitleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView devTitle = new TextView(activity);
+        devTitle.setText(tr(activity,
+                "Redacted Diagnostic Trace (RAM-Only • Zero Disk Writes)",
+                "السجل التشخيصي المنقّح (في الذاكرة المؤقتة RAM فقط)",
+                "تۆماری تەکنیکی پاککراوە (تەنها لە بیرگەی کاتی RAM)"));
+        devTitle.setTextColor(SYSTEM_GREEN);
+        devTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
+        devTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        devTitleCol.addView(devTitle);
+
+        TextView devPrivacySub = new TextView(activity);
+        devPrivacySub.setText(tr(activity,
+                "All credentials, usernames, passwords, TINs, tokens, and server IPs are automatically scrubbed. Buffer is zeroed when closed.",
+                "يتم تلقائياً إخفاء بيانات الدخول وأسماء المستخدمين وكلمات المرور والأرقام الضريبية وعناوين الخادم، ويتم مسح الذاكرة فور الإغلاق.",
+                "زانیاری چوونەژوورەوە و ناوی بەکارهێنەر و وشەی نهێنی بە شێوەی خۆکار لادەبرێن و لە کاتی داخستندا دەسڕێنەوە."));
+        devPrivacySub.setTextColor(TEXT_SECONDARY);
+        devPrivacySub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.8f);
+        devTitleCol.addView(devPrivacySub);
+        devHeaderRow.addView(devTitleCol);
+
+        if (onPreviewFullRamReport != null) {
+            TextView fullRamPreviewBtn = createCupertinoButton(activity,
+                    tr(activity, "Full RAM Preview", "معاينة السجل الكامل", "پێداچوونەوەی تەواو"),
+                    false, false, v -> onPreviewFullRamReport.run());
+            devHeaderRow.addView(fullRamPreviewBtn);
+        }
+        devCard.addView(devHeaderRow);
+
+        final TextView devLogTv = new TextView(activity);
+        devLogTv.setText(technicalLogRamBuffer != null ? technicalLogRamBuffer : "No technical log available.");
+        devLogTv.setTextColor(TEXT_PRIMARY);
+        devLogTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        devLogTv.setTypeface(Typeface.MONOSPACE);
+        devLogTv.setTextIsSelectable(false);
+        LinearLayout.LayoutParams logTvLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        logTvLp.topMargin = dp(activity, 6);
+        devLogTv.setLayoutParams(logTvLp);
+        devCard.addView(devLogTv);
+
+        dialog.setOnDismissListener(d -> {
+            devLogTv.setText("");
+            if (technicalLogRamBuffer != null) {
+                for (int i = 0; i < technicalLogRamBuffer.length(); i++) {
+                    technicalLogRamBuffer.setCharAt(i, '\0');
+                }
+                technicalLogRamBuffer.setLength(0);
+                technicalLogRamBuffer.trimToSize();
+            }
+        });
+
+        // Small Developer / Nerd Button to toggle the technical log
+        final TextView nerdBtn = createCupertinoButton(activity,
+                tr(activity,
+                        "</> View Error Code & Technical Log",
+                        "</> عرض كود الخطأ والسجل التقني",
+                        "</> پیشاندانی کۆدی هەڵە و تۆماری تەکنیکی"),
+                false, false, null);
+        nerdBtn.setOnClickListener(v -> {
+            boolean showing = devCard.getVisibility() == View.VISIBLE;
+            devCard.setVisibility(showing ? View.GONE : View.VISIBLE);
+            nerdBtn.setText(showing
+                    ? tr(activity,
+                            "</> View Error Code & Technical Log",
+                            "</> عرض كود الخطأ والسجل التقني",
+                            "</> پیشاندانی کۆدی هەڵە و تۆماری تەکنیکی")
+                    : tr(activity,
+                            "</> Hide Error Code & Technical Log",
+                            "</> إخفاء كود الخطأ والسجل التقني",
+                            "</> شاردنەوەی کۆدی هەڵە و تۆماری تەکنیکی"));
+        });
+        LinearLayout.LayoutParams nerdLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        nerdLp.topMargin = dp(activity, 10);
+        nerdBtn.setLayoutParams(nerdLp);
+        contentCol.addView(nerdBtn);
+        contentCol.addView(devCard);
+
+        scroll.addView(contentCol);
+        root.addView(scroll);
+
+        // Footer Buttons: Share to Sentry + Retry Connection
+        LinearLayout actions = new LinearLayout(activity);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+
+        if (onOpenReportCenter != null) {
+            TextView reportBtn = createCupertinoButton(activity,
+                    isNewUncataloguedError
+                            ? tr(activity, "Share New Error to Sentry", "مشاركة الخطأ الجديد إلى Sentry", "هاوبەشکردنی هەڵەی نوێ بۆ Sentry")
+                            : tr(activity, "Share to Sentry / Report", "مشاركة إلى Sentry / إبلاغ", "هاوبەشکردن بۆ Sentry"),
+                    isNewUncataloguedError, false, v -> {
+                        dialog.dismiss();
+                        onOpenReportCenter.run();
+                    });
+            LinearLayout.LayoutParams repLp = (LinearLayout.LayoutParams) reportBtn.getLayoutParams();
+            repLp.setMarginEnd(dp(activity, 8));
+            actions.addView(reportBtn);
+        }
+
+        TextView retryBtn = createCupertinoButton(activity,
+                tr(activity, "Retry Session", "إعادة المحاولة", "دووبارە هەوڵدانەوە"),
+                !isNewUncataloguedError, false, v -> {
+                    dialog.dismiss();
+                    if (onRetryConnection != null) {
+                        onRetryConnection.run();
+                    }
+                });
+        actions.addView(retryBtn);
+        root.addView(actions);
+
+        dialog.setContentView(root);
+        dialog.show();
+    }
+
+    public static void showLanguageModal(MainActivity activity, MenuActionCallback cb) {
+        Dialog dialog = createModalDialog(activity, 0.72f, 440, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView headerIcon = new ImageView(activity);
         headerIcon.setImageResource(R.drawable.ic_menu_language);
         headerIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        hiLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        hiLp.setMarginEnd(dp(activity, 8));
         header.addView(headerIcon, hiLp);
 
         TextView title = new TextView(activity);
         title.setText(tr(activity, "Interface Language", "لغة واجهة التطبيق", "زمانی ڕووکاری بەرنامە"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
@@ -2092,11 +2389,17 @@ public class AsycudaMaterialUi {
 
         String current = getAppLanguage(activity);
 
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scLp.topMargin = dp(activity, 7);
+        scroll.setLayoutParams(scLp);
+
         LinearLayout list = new LinearLayout(activity);
         list.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams listLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        listLp.topMargin = dp(activity, 10);
         list.setLayoutParams(listLp);
 
         addLanguageOptionCard(activity, list, "en",
@@ -2129,7 +2432,8 @@ public class AsycudaMaterialUi {
                     showControlCenter(activity, cb);
                 });
 
-        root.addView(list);
+        scroll.addView(list);
+        root.addView(scroll);
         dialog.setContentView(root);
         dialog.show();
     }
@@ -2140,18 +2444,18 @@ public class AsycudaMaterialUi {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(ctx, 14);
-        row.setPadding(pad, dp(ctx, 12), pad, dp(ctx, 12));
+        int pad = dp(ctx, 11);
+        row.setPadding(pad, dp(ctx, 9), pad, dp(ctx, 9));
         row.setBackground(createRippleCardDrawable(ctx,
                 SURFACE_GROUPED_CARD,
-                14,
+                11,
                 isSelected ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
         row.setClickable(true);
         row.setFocusable(true);
         row.setOnClickListener(v -> onSelect.run());
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        rlp.bottomMargin = dp(ctx, 8);
+        rlp.bottomMargin = dp(ctx, 6);
         row.setLayoutParams(rlp);
 
         LinearLayout textCol = new LinearLayout(ctx);
@@ -2161,14 +2465,14 @@ public class AsycudaMaterialUi {
         TextView t = new TextView(ctx);
         t.setText(titleText);
         t.setTextColor(TEXT_PRIMARY);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
         t.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         textCol.addView(t);
 
         TextView s = new TextView(ctx);
         s.setText(subText);
         s.setTextColor(TEXT_SECONDARY);
-        s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         textCol.addView(s);
         row.addView(textCol);
 
@@ -2177,7 +2481,7 @@ public class AsycudaMaterialUi {
                 ? tr(ctx, "Active", AR_ON, "هەڵبژێردراو")
                 : code.toUpperCase(Locale.US));
         badge.setTextColor(isSelected ? SYSTEM_BLUE : TEXT_SECONDARY);
-        badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         badge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         row.addView(badge);
 
@@ -2192,10 +2496,10 @@ public class AsycudaMaterialUi {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(ctx, 13);
-        card.setPadding(pad, dp(ctx, 11), pad, dp(ctx, 11));
+        int pad = dp(ctx, 10);
+        card.setPadding(pad, dp(ctx, 8), pad, dp(ctx, 8));
         card.setBackground(createRippleCardDrawable(ctx,
-                SURFACE_GROUPED_CARD, 14,
+                SURFACE_GROUPED_CARD, 11,
                 isDestructive ? Color.parseColor("#4DFF453A") : SEPARATOR_HAIRLINE));
         card.setClickable(true);
         card.setFocusable(true);
@@ -2207,14 +2511,14 @@ public class AsycudaMaterialUi {
         int iconTint = isDestructive ? SYSTEM_RED : defaultTint;
 
         FrameLayout badgeBox = new FrameLayout(ctx);
-        badgeBox.setBackground(createCardDrawable(ctx, badgeBgColor, 10, 0));
-        LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(dp(ctx, 38), dp(ctx, 38));
-        badgeLp.setMarginEnd(dp(ctx, 11));
+        badgeBox.setBackground(createCardDrawable(ctx, badgeBgColor, 8, 0));
+        LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(dp(ctx, 32), dp(ctx, 32));
+        badgeLp.setMarginEnd(dp(ctx, 9));
 
         ImageView iconView = new ImageView(ctx);
         iconView.setImageResource(iconResId);
         iconView.setImageTintList(ColorStateList.valueOf(iconTint));
-        FrameLayout.LayoutParams icLp = new FrameLayout.LayoutParams(dp(ctx, 20), dp(ctx, 20), Gravity.CENTER);
+        FrameLayout.LayoutParams icLp = new FrameLayout.LayoutParams(dp(ctx, 17), dp(ctx, 17), Gravity.CENTER);
         badgeBox.addView(iconView, icLp);
         card.addView(badgeBox, badgeLp);
 
@@ -2225,14 +2529,14 @@ public class AsycudaMaterialUi {
         TextView t = new TextView(ctx);
         t.setText(titleText);
         t.setTextColor(isDestructive ? SYSTEM_RED : TEXT_PRIMARY);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.2f);
         t.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         textCol.addView(t);
 
         TextView d = new TextView(ctx);
         d.setText(descText);
         d.setTextColor(TEXT_SECONDARY);
-        d.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        d.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.2f);
         textCol.addView(d);
 
         card.addView(textCol);
@@ -2242,16 +2546,16 @@ public class AsycudaMaterialUi {
             pill.setText(statusBadgeText);
             boolean isOn = isAccentIcon;
             pill.setTextColor(isOn ? SYSTEM_GREEN : TEXT_SECONDARY);
-            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.8f);
             pill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-            pill.setPadding(dp(ctx, 8), dp(ctx, 3), dp(ctx, 8), dp(ctx, 3));
+            pill.setPadding(dp(ctx, 6), dp(ctx, 2), dp(ctx, 6), dp(ctx, 2));
             pill.setBackground(createCardDrawable(ctx,
                     isOn ? SYSTEM_GREEN_TINT : SURFACE_INSET_CARD,
-                    8,
+                    6,
                     isOn ? Color.parseColor("#4D30D158") : SEPARATOR_HAIRLINE));
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            plp.setMarginStart(dp(ctx, 6));
+            plp.setMarginStart(dp(ctx, 5));
             card.addView(pill, plp);
         }
 
@@ -2259,7 +2563,7 @@ public class AsycudaMaterialUi {
         glp.width = 0;
         glp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
         glp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
-        int m = dp(ctx, 4);
+        int m = dp(ctx, 3);
         glp.setMargins(m, m, m, m);
         grid.addView(card, glp);
     }
@@ -2306,7 +2610,7 @@ public class AsycudaMaterialUi {
             return Long.compare(b.lastModified(), a.lastModified());
         });
 
-        Dialog dialog = createModalDialog(activity, 0.90f, 700, true);
+        Dialog dialog = createModalDialog(activity, 0.84f, 580, true);
         LinearLayout root = createDialogContainer(activity);
 
         final Set<File> selectedItems = new LinkedHashSet<>();
@@ -2315,13 +2619,13 @@ public class AsycudaMaterialUi {
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView headerIcon = new ImageView(activity);
         headerIcon.setImageResource(R.drawable.ic_folder);
         headerIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
-        hiLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams hiLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        hiLp.setMarginEnd(dp(activity, 8));
         header.addView(headerIcon, hiLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -2334,7 +2638,7 @@ public class AsycudaMaterialUi {
                 "الخزنة — مدير الملفات",
                 "قاسە — بەڕێوەبەری پەڕگەکان"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -2344,7 +2648,7 @@ public class AsycudaMaterialUi {
                 ? tr(activity, "Private Document Storage  •  /Vault", "خزنة المستندات الخاصة  •  /الخزنة", "بیرگەی بەڵگەنامە تایبەتەکان  •  /قاسە")
                 : "📁 /Vault/" + relPath);
         subPath.setTextColor(isAtRoot ? TEXT_SECONDARY : SYSTEM_BLUE);
-        subPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        subPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         titleCol.addView(subPath);
         header.addView(titleCol);
 
@@ -2353,11 +2657,11 @@ public class AsycudaMaterialUi {
         vaultInfoBadge.setText("!");
         vaultInfoBadge.setGravity(Gravity.CENTER);
         vaultInfoBadge.setTextColor(Color.WHITE);
-        vaultInfoBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        vaultInfoBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         vaultInfoBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        vaultInfoBadge.setBackground(createRippleCardDrawable(activity, SYSTEM_BLUE_TINT, 11, SYSTEM_BLUE));
-        LinearLayout.LayoutParams vibLp = new LinearLayout.LayoutParams(dp(activity, 38), dp(activity, 38));
-        vibLp.setMarginEnd(dp(activity, 8));
+        vaultInfoBadge.setBackground(createRippleCardDrawable(activity, SYSTEM_BLUE_TINT, 9, SYSTEM_BLUE));
+        LinearLayout.LayoutParams vibLp = new LinearLayout.LayoutParams(dp(activity, 32), dp(activity, 32));
+        vibLp.setMarginEnd(dp(activity, 6));
         vaultInfoBadge.setLayoutParams(vibLp);
         vaultInfoBadge.setOnClickListener(v -> showEncryptedVaultInfoModal(activity));
         header.addView(vaultInfoBadge);
@@ -2622,25 +2926,25 @@ public class AsycudaMaterialUi {
                 LinearLayout row = new LinearLayout(activity);
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(Gravity.CENTER_VERTICAL);
-                int padH = dp(activity, 14);
-                int padV = dp(activity, 12);
+                int padH = dp(activity, 11);
+                int padV = dp(activity, 9);
                 row.setPadding(padH, padV, padH, padV);
                 row.setBackground(createCardDrawable(activity,
-                        SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+                        SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                rlp.bottomMargin = dp(activity, 10);
+                rlp.bottomMargin = dp(activity, 7);
                 row.setLayoutParams(rlp);
 
                 // 1. Multi-select checkbox pill on the start side
                 TextView checkBtn = new TextView(activity);
                 checkBtn.setGravity(Gravity.CENTER);
                 checkBtn.setTextColor(TEXT_PRIMARY);
-                checkBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+                checkBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
                 checkBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-                checkBtn.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 8, SEPARATOR_HAIRLINE));
-                LinearLayout.LayoutParams chkLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
-                chkLp.setMarginEnd(dp(activity, 10));
+                checkBtn.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 7, SEPARATOR_HAIRLINE));
+                LinearLayout.LayoutParams chkLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
+                chkLp.setMarginEnd(dp(activity, 8));
                 checkBtn.setLayoutParams(chkLp);
 
                 View.OnClickListener toggleRowSelection = v -> {
@@ -2654,23 +2958,23 @@ public class AsycudaMaterialUi {
                 checkBtn.setOnClickListener(toggleRowSelection);
                 row.addView(checkBtn);
 
-                // 2. Folder / File Icon Badge (38dp x 38dp)
+                // 2. Folder / File Icon Badge (32dp x 32dp)
                 FrameLayout typeBadge = new FrameLayout(activity);
                 typeBadge.setBackground(createCardDrawable(activity,
-                        isDir ? SYSTEM_BLUE_TINT : SYSTEM_GRAY_FILL, 10, 0));
-                LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(dp(activity, 38), dp(activity, 38));
-                tbLp.setMarginEnd(dp(activity, 12));
+                        isDir ? SYSTEM_BLUE_TINT : SYSTEM_GRAY_FILL, 9, 0));
+                LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(dp(activity, 32), dp(activity, 32));
+                tbLp.setMarginEnd(dp(activity, 10));
                 ImageView typeIcon = new ImageView(activity);
                 typeIcon.setImageResource(isDir ? R.drawable.ic_folder : R.drawable.ic_menu_documents);
                 typeIcon.setImageTintList(ColorStateList.valueOf(isDir ? SYSTEM_BLUE : TEXT_PRIMARY));
-                typeBadge.addView(typeIcon, new FrameLayout.LayoutParams(dp(activity, 20), dp(activity, 20), Gravity.CENTER));
+                typeBadge.addView(typeIcon, new FrameLayout.LayoutParams(dp(activity, 17), dp(activity, 17), Gravity.CENTER));
                 row.addView(typeBadge, tbLp);
 
                 // 3. Name + Metadata Column (Spacious, single-line middle ellipsize so buttons never crowd)
                 LinearLayout infoCol = new LinearLayout(activity);
                 infoCol.setOrientation(LinearLayout.VERTICAL);
                 LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                infoLp.setMarginEnd(dp(activity, 10));
+                infoLp.setMarginEnd(dp(activity, 8));
                 infoCol.setLayoutParams(infoLp);
 
                 View.OnClickListener primaryRowTap = isDir
@@ -2685,7 +2989,7 @@ public class AsycudaMaterialUi {
                 TextView nameView = new TextView(activity);
                 nameView.setText(f.getName());
                 nameView.setTextColor(TEXT_PRIMARY);
-                nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+                nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.8f);
                 nameView.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
                 nameView.setSingleLine(true);
                 nameView.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
@@ -2704,7 +3008,7 @@ public class AsycudaMaterialUi {
                     metaView.setText(kb + " KB  •  " + dateFmt.format(new Date(f.lastModified())));
                     metaView.setTextColor(TEXT_SECONDARY);
                 }
-                metaView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                metaView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
                 LinearLayout.LayoutParams mvLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 mvLp.topMargin = dp(activity, 2);
@@ -2843,7 +3147,7 @@ public class AsycudaMaterialUi {
     }
 
     private static void showCreateFolderDialog(MainActivity activity, File parentDir, Runnable onCreated) {
-        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.85f : 0.65f, 400, true);
+        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.80f : 0.60f, 360, true);
         if (dlg.getWindow() != null) {
             dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
@@ -2852,19 +3156,19 @@ public class AsycudaMaterialUi {
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_folder_add);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 19), dp(activity, 19));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         TextView title = new TextView(activity);
         title.setText(tr(activity, "Create New Folder", "إنشاء مجلد جديد", "دروستکردنی بوخچەی نوێ"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
@@ -2879,14 +3183,14 @@ public class AsycudaMaterialUi {
         input.setHint(tr(activity, "Folder name...", "اسم المجلد...", "ناوی بوخچە..."));
         input.setHintTextColor(TEXT_TERTIARY);
         input.setTextColor(TEXT_PRIMARY);
-        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         input.setSingleLine(true);
-        input.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
-        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
+        input.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 9, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams inLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        inLp.topMargin = dp(activity, 14);
-        inLp.bottomMargin = dp(activity, 14);
+        inLp.topMargin = dp(activity, 10);
+        inLp.bottomMargin = dp(activity, 10);
         root.addView(input, inLp);
 
         // Top-bar Create (✓) icon placed before the Cancel icon (replaces old bottom footer button)
@@ -2894,13 +3198,24 @@ public class AsycudaMaterialUi {
                 tr(activity, "Create Folder", "إنشاء المجلد", "دروستکردن"),
                 true, false, v -> {
                     String raw = input.getText() != null ? input.getText().toString().trim() : "";
-                    String safe = raw.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe)) {
+                    String safe = raw.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]", "_").trim();
+                    if (safe.length() > 120) {
+                        safe = safe.substring(0, 120).trim();
+                    }
+                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe) || safe.startsWith(".")) {
                         input.setError(tr(activity, "Enter a valid folder name", "أدخل اسماً صحيحاً للمجلد", "ناوێکی دروست بنووسە"));
                         return;
                     }
+                    File vaultRoot = new File(activity.getFilesDir(), "prints");
                     File newDir = new File(parentDir, safe);
+                    if (!isSubPathOrEqual(vaultRoot, newDir)) {
+                        input.setError(tr(activity, "Enter a valid folder name", "أدخل اسماً صحيحاً للمجلد", "ناوێکی دروست بنووسە"));
+                        return;
+                    }
                     if (newDir.exists() || newDir.mkdirs()) {
+                        newDir.setReadable(true, true);
+                        newDir.setWritable(true, true);
+                        newDir.setExecutable(true, true);
                         dlg.dismiss();
                         if (onCreated != null) onCreated.run();
                     } else {
@@ -2908,7 +3223,7 @@ public class AsycudaMaterialUi {
                     }
                 });
         LinearLayout.LayoutParams cbLp = (LinearLayout.LayoutParams) createBtn.getLayoutParams();
-        cbLp.setMarginEnd(dp(activity, 8));
+        cbLp.setMarginEnd(dp(activity, 6));
         header.addView(createBtn, header.getChildCount() - 1);
 
         dlg.setContentView(root);
@@ -2922,7 +3237,7 @@ public class AsycudaMaterialUi {
         final int dotIdx = (!isDir && currentName.lastIndexOf('.') > 0) ? currentName.lastIndexOf('.') : -1;
         final String origExt = dotIdx > 0 ? currentName.substring(dotIdx) : "";
 
-        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.85f : 0.65f, 420, true);
+        Dialog dlg = createModalDialog(activity, isCompactWidth(activity) ? 0.80f : 0.60f, 380, true);
         if (dlg.getWindow() != null) {
             dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
@@ -2931,13 +3246,13 @@ public class AsycudaMaterialUi {
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_action_edit);
         icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        icLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 19), dp(activity, 19));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(icon, icLp);
 
         TextView title = new TextView(activity);
@@ -2945,7 +3260,7 @@ public class AsycudaMaterialUi {
                 ? tr(activity, "Rename Folder", "إعادة تسمية المجلد", "گۆڕینی ناوی بوخچە")
                 : tr(activity, "Rename File", "إعادة تسمية الملف", "گۆڕینی ناوی پەڕگە"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
@@ -2963,10 +3278,10 @@ public class AsycudaMaterialUi {
                 : tr(activity, "New file name...", "اسم الملف الجديد...", "ناوی نوێی پەڕگە..."));
         input.setHintTextColor(TEXT_TERTIARY);
         input.setTextColor(TEXT_PRIMARY);
-        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         input.setSingleLine(true);
-        input.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
-        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 10, SEPARATOR_HAIRLINE));
+        input.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+        input.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 9, SEPARATOR_HAIRLINE));
         if (dotIdx > 0) {
             input.setSelection(0, dotIdx);
         } else {
@@ -2974,16 +3289,19 @@ public class AsycudaMaterialUi {
         }
         LinearLayout.LayoutParams inLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        inLp.topMargin = dp(activity, 14);
-        inLp.bottomMargin = dp(activity, 14);
+        inLp.topMargin = dp(activity, 10);
+        inLp.bottomMargin = dp(activity, 10);
         root.addView(input, inLp);
 
         View saveBtn = createIconButton(activity, R.drawable.ic_action_check,
                 tr(activity, "Save Name", "حفظ الاسم", "پاشەکەوتکردنی ناو"),
                 true, false, v -> {
                     String raw = input.getText() != null ? input.getText().toString().trim() : "";
-                    String safe = raw.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe) || safe.startsWith(".")) {
+                    String safe = raw.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]", "_").trim();
+                    if (safe.length() > 120) {
+                        safe = safe.substring(0, 120).trim();
+                    }
+                    if (safe.isEmpty() || ".".equals(safe) || "..".equals(safe) || safe.startsWith(".") || safe.endsWith(".apk")) {
                         input.setError(tr(activity, "Please enter a valid name", "يرجى إدخال اسم صحيح", "تکایە ناوێکی دروست بنووسە"));
                         return;
                     }
@@ -2994,8 +3312,13 @@ public class AsycudaMaterialUi {
                         dlg.dismiss();
                         return;
                     }
+                    File vaultRoot = new File(activity.getFilesDir(), "prints");
                     File parentDir = targetItem.getParentFile();
                     File destFile = new File(parentDir, safe);
+                    if (!isSubPathOrEqual(vaultRoot, destFile)) {
+                        input.setError(tr(activity, "Please enter a valid name", "يرجى إدخال اسم صحيح", "تکایە ناوێکی دروست بنووسە"));
+                        return;
+                    }
                     if (destFile.exists()) {
                         input.setError(tr(activity,
                                 "An item with this name already exists in this folder",
@@ -3004,6 +3327,8 @@ public class AsycudaMaterialUi {
                         return;
                     }
                     if (targetItem.renameTo(destFile)) {
+                        destFile.setReadable(true, true);
+                        destFile.setWritable(true, true);
                         Toast.makeText(activity, tr(activity,
                                 "Renamed to: " + safe,
                                 "تم تغيير الاسم إلى: " + safe,
@@ -3018,7 +3343,7 @@ public class AsycudaMaterialUi {
                     }
                 });
         LinearLayout.LayoutParams sbLp = (LinearLayout.LayoutParams) saveBtn.getLayoutParams();
-        sbLp.setMarginEnd(dp(activity, 8));
+        sbLp.setMarginEnd(dp(activity, 6));
         header.addView(saveBtn, header.getChildCount() - 1);
 
         dlg.setContentView(root);
@@ -3035,7 +3360,7 @@ public class AsycudaMaterialUi {
             MenuActionCallback cb) {
         if (sourceItems == null || sourceItems.isEmpty()) return;
 
-        Dialog destDlg = createModalDialog(activity, isCompactWidth(activity) ? 0.90f : 0.72f, 520, true);
+        Dialog destDlg = createModalDialog(activity, isCompactWidth(activity) ? 0.84f : 0.68f, 450, true);
         LinearLayout root = createDialogContainer(activity);
 
         // Header
@@ -3415,23 +3740,23 @@ public class AsycudaMaterialUi {
     }
 
     public static void showEncryptedVaultInfoModal(MainActivity activity) {
-        Dialog infoDialog = createModalDialog(activity, 0.78f, 540, true);
+        Dialog infoDialog = createModalDialog(activity, 0.76f, 470, true);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         TextView iconCircle = new TextView(activity);
         iconCircle.setText("!");
         iconCircle.setGravity(Gravity.CENTER);
         iconCircle.setTextColor(Color.WHITE);
-        iconCircle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        iconCircle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         iconCircle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        iconCircle.setBackground(createCardDrawable(activity, SYSTEM_BLUE, 13, 0));
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26));
-        icLp.setMarginEnd(dp(activity, 10));
+        iconCircle.setBackground(createCardDrawable(activity, SYSTEM_BLUE, 12, 0));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 24), dp(activity, 24));
+        icLp.setMarginEnd(dp(activity, 8));
         header.addView(iconCircle, icLp);
 
         TextView title = new TextView(activity);
@@ -3440,7 +3765,7 @@ public class AsycudaMaterialUi {
                 "حول خزنة المستندات الخاصة",
                 "دەربارەی قاسەی تایبەتی بەڵگەنامەکان"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         header.addView(title);
@@ -3450,15 +3775,20 @@ public class AsycudaMaterialUi {
         root.addView(header);
         root.addView(createHairlineDivider(activity));
 
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scLp.topMargin = dp(activity, 8);
+        scroll.setLayoutParams(scLp);
+
         LinearLayout card = new LinearLayout(activity);
         card.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(activity, 14);
+        int pad = dp(activity, 12);
         card.setPadding(pad, pad, pad, pad);
-        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, Color.parseColor("#550A84FF")));
+        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 12, Color.parseColor("#550A84FF")));
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardLp.topMargin = dp(activity, 12);
-        cardLp.bottomMargin = dp(activity, 12);
         card.setLayoutParams(cardLp);
 
         TextView msg = new TextView(activity);
@@ -3476,28 +3806,29 @@ public class AsycudaMaterialUi {
                         + "• ئامادەیە بۆ هاوپێچکردن و چاپکردن: هەر بەڵگەنامەیەک لەناو قاسەکەدا بێت ڕاستەوخۆ لە پەنجەرەی هەڵبژاردنی پەڕگەی ئەسیکۆدا دەردەکەوێت کاتێک دەتەوێت بەڵگەنامە هاوپێچ بکەیت.\n\n"
                         + "• جیاکردنەوەی پەڕگە کەسییەکانت: بەرنامەکە داوای مۆڵەتی گەیشتن بە وێنە و پەڕگە تایبەتییەکانی مۆبایلەکەت ناکات، تەنها ئەو پەڕگانەی خۆت هەڵیاندەبژێریت دەخرێنە ناو قاسەکە و دەتوانیت لە هەر کاتێکدا بیانکەیتەوە، ناویان بگۆڕیت، یان هاوبەشیان پێبکەیت."));
         msg.setTextColor(TEXT_PRIMARY);
-        msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.8f);
         card.addView(msg);
-        root.addView(card);
+        scroll.addView(card);
+        root.addView(scroll);
 
         infoDialog.setContentView(root);
         infoDialog.show();
     }
 
     public static void showAboutAndCreditsModal(MainActivity activity, MenuActionCallback cb) {
-        Dialog dialog = createModalDialog(activity, 0.90f, 720, true);
+        Dialog dialog = createModalDialog(activity, 0.85f, 590, true);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout topBar = new LinearLayout(activity);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 12));
+        topBar.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView infoIcon = new ImageView(activity);
         infoIcon.setImageResource(R.drawable.ic_menu_info);
         infoIcon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
-        LinearLayout.LayoutParams iiLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        iiLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams iiLp = new LinearLayout.LayoutParams(dp(activity, 19), dp(activity, 19));
+        iiLp.setMarginEnd(dp(activity, 8));
         topBar.addView(infoIcon, iiLp);
 
         TextView topTitle = new TextView(activity);
@@ -3506,7 +3837,7 @@ public class AsycudaMaterialUi {
                 "حول التطبيق والتراخيص مفتوحة المصدر",
                 "دەربارەی بەرنامە و مۆڵەتە سەرچاوە کراوەکان"));
         topTitle.setTextColor(TEXT_PRIMARY);
-        topTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        topTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         topTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         topTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         topBar.addView(topTitle);
@@ -3524,7 +3855,7 @@ public class AsycudaMaterialUi {
         ScrollView scroll = new ScrollView(activity);
         LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        scrollLp.topMargin = dp(activity, 10);
+        scrollLp.topMargin = dp(activity, 8);
         scroll.setLayoutParams(scrollLp);
 
         LinearLayout content = new LinearLayout(activity);
@@ -3533,13 +3864,13 @@ public class AsycudaMaterialUi {
         // 1. App Card
         LinearLayout heroCard = new LinearLayout(activity);
         heroCard.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(activity, 16);
+        int pad = dp(activity, 12);
         heroCard.setPadding(pad, pad, pad, pad);
         heroCard.setBackground(createCardDrawable(activity,
-                SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+                SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardLp.bottomMargin = dp(activity, 10);
+        cardLp.bottomMargin = dp(activity, 8);
         heroCard.setLayoutParams(cardLp);
 
         LinearLayout heroTop = new LinearLayout(activity);
@@ -3548,8 +3879,8 @@ public class AsycudaMaterialUi {
 
         ImageView appIcon = new ImageView(activity);
         appIcon.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 50), dp(activity, 50));
-        icLp.setMarginEnd(dp(activity, 14));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 40), dp(activity, 40));
+        icLp.setMarginEnd(dp(activity, 12));
         heroTop.addView(appIcon, icLp);
 
         LinearLayout heroTextCol = new LinearLayout(activity);
@@ -3561,12 +3892,12 @@ public class AsycudaMaterialUi {
                 "نظام أسيكودا العالمي — جمهورية العراق",
                 "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
         appTitle.setTextColor(TEXT_PRIMARY);
-        appTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        appTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         appTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         heroTextCol.addView(appTitle);
 
         TextView verPill = new TextView(activity);
-        verPill.setText("Version " + getAppVersionLabel(activity) + "  •  Android Desktop Environment");
+        verPill.setText("Version " + getAppVersionLabel(activity) + " (Major Release)  •  Android Desktop Environment");
         verPill.setTextColor(SYSTEM_BLUE);
         verPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         verPill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
@@ -3587,9 +3918,9 @@ public class AsycudaMaterialUi {
         heroCard.addView(appDesc, descLp);
 
         TextView whatsNewBtn = createCupertinoButton(activity,
-                tr(activity, "What's New in " + getAppVersionLabel(activity) + " (Changelog)",
-                        "ما الجديد في الإصدار " + getAppVersionLabel(activity) + " (سجل التحديثات)",
-                        "چی نوێ هەیە لە وەشانی " + getAppVersionLabel(activity)),
+                tr(activity, "What's New in Major Release " + getAppVersionLabel(activity) + " (Changelog)",
+                        "ما الجديد في الإصدار الرئيسي " + getAppVersionLabel(activity) + " (سجل التحديثات)",
+                        "چی نوێ هەیە لە وەشانی سەرەکی " + getAppVersionLabel(activity)),
                 false, false, v -> {
                     dialog.dismiss();
                     showWhatsNewModal(activity, () -> showAboutAndCreditsModal(activity, cb));
@@ -3616,9 +3947,9 @@ public class AsycudaMaterialUi {
 
         TextView secBody = new TextView(activity);
         secBody.setText(tr(activity,
-                "This app is 100% open-source so anyone can inspect how it works. Your ASYCUDA username, password, and customs declarations connect directly to the Ministry of Finance server (asy.mof.gov.iq) — this app never sees, saves, or collects them.",
-                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. اسم المستخدم وكلمة المرور والتصاريح الكمركية الخاصة بك تتصل مباشرة بخادم وزارة المالية (asy.mof.gov.iq)، ولا يقوم التطبيق بقراءتها أو حفظها أو جمعها نهائياً.",
-                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت ڕاستەوخۆ دەچنە سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq) و ئەم بەرنامەیە هەرگیز نایانبینێت و پاشەکەوتیان ناکات."));
+                "This app is 100% open-source so anyone can inspect how it works. Your ASYCUDA username, password, and customs declarations connect directly to the Ministry of Finance server (asy.mof.gov.iq) — this app never sees, saves, or collects them. Release " + getAppVersionLabel(activity) + " is a Major Security & Architecture Release; all earlier versions (< v4.1.0) are now unsafe, superseded, and not recommended.",
+                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. اسم المستخدم وكلمة المرور والتصاريح الكمركية الخاصة بك تتصل مباشرة بخادم وزارة المالية (asy.mof.gov.iq)، ولا يقوم التطبيق بقراءتها أو حفظها أو جمعها نهائياً. الإصدار " + getAppVersionLabel(activity) + " هو إصدار رئيسي للأمان والبنية البرمجية، وجميع الإصدارات السابقة (< v4.1.0) أصبحت غير آمنة وغير موصى بها.",
+                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت ڕاستەوخۆ دەچنە سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq) و ئەم بەرنامەیە هەرگیز نایانبینێت و پاشەکەوتیان ناکات. وەشانی " + getAppVersionLabel(activity) + " وەشانێکی سەرەکی ئاسایشە و گشت وەشانەکانی پێشتر (< v4.1.0) چیتر سەلامەت نین و پێشنیار ناکرێن."));
         secBody.setTextColor(TEXT_PRIMARY);
         secBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
@@ -4050,21 +4381,21 @@ public class AsycudaMaterialUi {
     }
 
     /**
-     * Post-install / post-update In-App Changelog Modal ("What's New in v3.8.0").
+     * Post-install / post-update In-App Changelog Modal ("What's New").
      */
     public static void showWhatsNewModal(MainActivity activity, Runnable onContinue) {
-        Dialog dialog = createModalDialog(activity, 0.88f, 660, true);
+        Dialog dialog = createModalDialog(activity, 0.84f, 550, true);
         LinearLayout root = createDialogContainer(activity);
 
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 10));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
 
         ImageView logo = new ImageView(activity);
         logo.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams lgLp = new LinearLayout.LayoutParams(dp(activity, 34), dp(activity, 34));
-        lgLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams lgLp = new LinearLayout.LayoutParams(dp(activity, 28), dp(activity, 28));
+        lgLp.setMarginEnd(dp(activity, 8));
         header.addView(logo, lgLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -4073,21 +4404,21 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "What's New in Release " + getAppVersionLabel(activity),
-                "ما الجديد في التحديث " + getAppVersionLabel(activity),
-                "چی نوێ هەیە لە وەشانی " + getAppVersionLabel(activity)));
+                "What's New in Major Release " + getAppVersionLabel(activity),
+                "ما الجديد في الإصدار الرئيسي " + getAppVersionLabel(activity),
+                "چی نوێ هەیە لە وەشانی سەرەکی " + getAppVersionLabel(activity)));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Reliable Connection Handling, Stronger Account Protection, Vault File Renaming & Better Reporting",
-                "تحسين استقرار الاتصال، وتعزيز حماية الحساب، وإعادة تسمية ملفات الخزنة، وتطوير مركز البلاغات",
-                "باشترکردنی پەیوەندی، پاراستنی زیاتری هەژمار، گۆڕینی ناوی پەڕگەکان و باشترکردنی ناردنی ڕاپۆرت"));
+                "Major Security & Architecture Upgrade — Previous Versions (< v4.1.0) Are Unsafe & Not Recommended",
+                "تحديث رئيسي شامل للأمان والبنية — جميع الإصدارات السابقة (< v4.1.0) غير آمنة وغير موصى بها",
+                "نوێکردنەوەی سەرەکی ئاسایش — گشت وەشانەکانی پێشتر (< v4.1.0) سەلامەت نین و پێشنیار ناکرێن"));
         subtitle.setTextColor(SYSTEM_BLUE);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -4105,16 +4436,15 @@ public class AsycudaMaterialUi {
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        scLp.topMargin = dp(activity, 10);
-        scLp.bottomMargin = dp(activity, 10);
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scLp.topMargin = dp(activity, 8);
         scroll.setLayoutParams(scLp);
 
         LinearLayout card = new LinearLayout(activity);
         card.setOrientation(LinearLayout.VERTICAL);
-        int p = dp(activity, 14);
-        card.setPadding(p, dp(activity, 12), p, dp(activity, 8));
-        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 14, SEPARATOR_HAIRLINE));
+        int p = dp(activity, 12);
+        card.setPadding(p, dp(activity, 10), p, dp(activity, 6));
+        card.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
 
         addPolicyClause(activity, card,
                 tr(activity,
@@ -4158,13 +4488,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "5. Improved Issue Reporting & Privacy Filtering",
-                        "5. تطوير نافذة الإبلاغ عن المشاكل وتنقية السجلات تلقائياً",
-                        "٥. باشترکردنی بەشی ناردنی ڕاپۆرتی کێشەکان و پاراستنی تایبەتمەندی"),
+                        "5. Universal Network Diagnostics, Known-Issues Catalog & 4G Bypass",
+                        "5. نافذة التشخيص الذكي للأعطال وقاعدة البيانات وتمرير اتصال 4G",
+                        "٥. پەنجەرەی دەستنیشانکردنی زیرەکی کێشەکان و تێپەڕاندنی پەیوەندی 4G"),
                 tr(activity,
-                        "Fixed issue report delivery and added a clear log preview window that automatically removes usernames, passwords, tax numbers, and session details before any diagnostic report is sent.",
-                        "إصلاح إرسال البلاغات الفنية وإضافة نافذة واضحة لمعاينة السجلات تقوم تلقائياً بحذف أسماء المستخدمين وكلمات المرور والأرقام الضريبية وتفاصيل الجلسة قبل إرسال أي بلاغ.",
-                        "چارەسەرکردنی ناردنی ڕاپۆرتی کێشەکان و زیادکردنی پەنجەرەی پێداچوونەوەی تۆمارەکان کە بە شێوەی خۆکار ناوی بەکارهێنەر و وشەی نهێنی و ژمارەی باج لادەبات پێش ناردن."));
+                        "Automatically diagnoses network, firewall, and runtime issues against a verified Known-Issues Catalog, lets you route your ASYCUDA session over 4G Mobile Data with one tap when Wi-Fi is blocked, and provides a 100% in-RAM redacted log preview.",
+                        "تشخيص تلقائي لأعطال الشبكة والجدار الناري ومطابقتها مع قاعدة بيانات الأعطال المعروفة، مع إمكانية تمرير جلسة أسيكودا عبر بيانات الهاتف (4G) بضغطة واحدة عند حجب شبكة Wi-Fi، ومعاينة آمنة للسجلات المنقاة داخل الذاكرة العشوائية (RAM).",
+                        "دەستنیشانکردنی خۆکاری کێشەکانی تۆڕ و بەراوردکردنی لەگەڵ بنکەی زانیاری هەڵە ناسراوەکان، لەگەڵ توانای تێپەڕاندنی دانیشتنی ئەسیکۆدا لە ڕێگەی داتای مۆبایل (4G) کاتێک وایفای بلۆک دەکرێت و پێداچوونەوەی پارێزراوی تۆمارەکان لەناو RAM."));
 
         scroll.addView(card);
         root.addView(scroll);
@@ -4219,6 +4549,9 @@ public class AsycudaMaterialUi {
                 .putString(KEY_ACCEPTED_UTC, utcStr)
                 .putString(KEY_ACCEPTED_LOCAL, localStr)
                 .apply();
+        // On a fresh install where the user just accepted Terms & Conditions, mark the current
+        // version's What's New dialog as seen so two full-screen modals do not stack back-to-back.
+        markWhatsNewSeen(ctx);
     }
 
     public static String getTermsAcceptanceBadgeTitle(Context ctx) {
@@ -4268,19 +4601,19 @@ public class AsycudaMaterialUi {
             TermsAcceptedHandler onAccepted,
             Runnable onDeclined) {
 
-        Dialog dialog = createModalDialog(activity, 0.90f, 700, false);
+        Dialog dialog = createModalDialog(activity, 0.85f, 580, false);
         LinearLayout root = createDialogContainer(activity);
 
         // Header Row with Logo + Title + Language Switcher Pills
         LinearLayout header = new LinearLayout(activity);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 8));
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 6));
 
         ImageView logo = new ImageView(activity);
         logo.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams lgLp = new LinearLayout.LayoutParams(dp(activity, 32), dp(activity, 32));
-        lgLp.setMarginEnd(dp(activity, 10));
+        LinearLayout.LayoutParams lgLp = new LinearLayout.LayoutParams(dp(activity, 28), dp(activity, 28));
+        lgLp.setMarginEnd(dp(activity, 8));
         header.addView(logo, lgLp);
 
         LinearLayout titleCol = new LinearLayout(activity);
@@ -4293,7 +4626,7 @@ public class AsycudaMaterialUi {
                 "الشروط والأحكام وإخلاء المسؤولية القانونية",
                 "مەرج و ڕێساکان و بەرپرسیارێتی یاسایی"));
         title.setTextColor(TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(title);
 
@@ -4303,7 +4636,7 @@ public class AsycudaMaterialUi {
                 "خاضع للمادة (259/2) من القانون المدني العراقي رقم 40 لسنة 1951 والمادة (18/أولاً) من قانون المعاملات الإلكترونية رقم 78 لسنة 2012",
                 "بەپێی ماددەی (٢٥٩/٢) لە یاسای شارستانی عێراقی ژمارە ٤٠ی ١٩٥١ و ماددەی (١٨/١) لە یاسای مامەڵە ئەلیکترۆنییەکان ژمارە ٧٨ی ٢٠١٢"));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -4321,11 +4654,11 @@ public class AsycudaMaterialUi {
             TextView lBtn = new TextView(activity);
             lBtn.setText(l[1]);
             lBtn.setTextColor(sel ? TEXT_PRIMARY : TEXT_SECONDARY);
-            lBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            lBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             lBtn.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, sel ? Typeface.BOLD : Typeface.NORMAL));
-            lBtn.setPadding(dp(activity, 9), dp(activity, 5), dp(activity, 9), dp(activity, 5));
+            lBtn.setPadding(dp(activity, 8), dp(activity, 4), dp(activity, 8), dp(activity, 4));
             lBtn.setBackground(createRippleCardDrawable(activity,
-                    sel ? SYSTEM_BLUE : SURFACE_GROUPED_CARD, 8, sel ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
+                    sel ? SYSTEM_BLUE : SURFACE_GROUPED_CARD, 7, sel ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
             LinearLayout.LayoutParams lLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lLp.setMarginStart(dp(activity, 4));
@@ -4345,9 +4678,9 @@ public class AsycudaMaterialUi {
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(true);
         LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        scLp.topMargin = dp(activity, 8);
-        scLp.bottomMargin = dp(activity, 8);
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scLp.topMargin = dp(activity, 6);
+        scLp.bottomMargin = dp(activity, 6);
         scroll.setLayoutParams(scLp);
 
         LinearLayout scrollContent = new LinearLayout(activity);
@@ -4355,9 +4688,9 @@ public class AsycudaMaterialUi {
 
         LinearLayout bodyCard = new LinearLayout(activity);
         bodyCard.setOrientation(LinearLayout.VERTICAL);
-        int p = dp(activity, 13);
-        bodyCard.setPadding(p, dp(activity, 11), p, dp(activity, 8));
-        bodyCard.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 14, SEPARATOR_HAIRLINE));
+        int p = dp(activity, 11);
+        bodyCard.setPadding(p, dp(activity, 9), p, dp(activity, 6));
+        bodyCard.setBackground(createCardDrawable(activity, SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
@@ -4407,22 +4740,22 @@ public class AsycudaMaterialUi {
         LinearLayout checkCard = new LinearLayout(activity);
         checkCard.setOrientation(LinearLayout.HORIZONTAL);
         checkCard.setGravity(Gravity.CENTER_VERTICAL);
-        checkCard.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
-        checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+        checkCard.setPadding(dp(activity, 10), dp(activity, 8), dp(activity, 10), dp(activity, 8));
+        checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 10, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams ckLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        ckLp.topMargin = dp(activity, 10);
+        ckLp.topMargin = dp(activity, 8);
         checkCard.setLayoutParams(ckLp);
 
         TextView checkBox = new TextView(activity);
         checkBox.setGravity(Gravity.CENTER);
         checkBox.setText("");
         checkBox.setTextColor(Color.WHITE);
-        checkBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        checkBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         checkBox.setTypeface(Typeface.create("sans-serif-bold", Typeface.BOLD));
         checkBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
-        LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(dp(activity, 22), dp(activity, 22));
-        boxLp.setMarginEnd(dp(activity, 12));
+        LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        boxLp.setMarginEnd(dp(activity, 10));
         checkCard.addView(checkBox, boxLp);
 
         TextView checkLabel = new TextView(activity);
@@ -4431,7 +4764,7 @@ public class AsycudaMaterialUi {
                 "لقد قرأت الشروط والأحكام أعلاه وأوافق موافقة إلكترونية ملزمة على شرط الإعفاء الكامل من المسؤولية وفقاً للمادة (259/2) من القانون المدني العراقي رقم 40 لسنة 1951 والمادة (18/أولاً) من قانون التوقيع الإلكتروني والمعاملات الإلكترونية رقم 78 لسنة 2012.",
                 "مەرج و ڕێساکانی سەرەوەم خوێندووەتەوە و بە شێوەیەکی ئەلیکترۆنی پابەندکەر ڕازیم بە مەرجی بەخشین لە بەرپرسیارێتی یاسایی بەپێی ماددەی (٢٥٩/٢) لە یاسای شارستانی عێراقی ژمارە ٤٠ی ١٩٥١ و ماددەی (١٨/یەکەم) لە یاسای مامەڵە ئەلیکترۆنییەکان ژمارە ٧٨ی ٢٠١٢."));
         checkLabel.setTextColor(TEXT_PRIMARY);
-        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.4f);
+        checkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         checkLabel.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         checkLabel.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         checkCard.addView(checkLabel);
@@ -4444,6 +4777,10 @@ public class AsycudaMaterialUi {
         LinearLayout btnRow = new LinearLayout(activity);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams brLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        brLp.topMargin = dp(activity, 4);
+        btnRow.setLayoutParams(brLp);
 
         TextView declineBtn = createCupertinoButton(activity,
                 tr(activity, "Decline & Exit", "رفض وخروج", "ڕەتکردنەوە و دەرچوون"),
@@ -4472,12 +4809,12 @@ public class AsycudaMaterialUi {
             if (isChecked[0]) {
                 checkBox.setText("✓");
                 checkBox.setBackground(createCardDrawable(activity, SYSTEM_GREEN, 6, SYSTEM_GREEN));
-                checkCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 12, Color.parseColor("#6630D158")));
+                checkCard.setBackground(createRippleCardDrawable(activity, SYSTEM_GREEN_TINT, 10, Color.parseColor("#6630D158")));
                 acceptBtn.setAlpha(1.0f);
             } else {
                 checkBox.setText("");
                 checkBox.setBackground(createCardDrawable(activity, SURFACE_INPUT_FIELD, 6, GRABBER_COLOR));
-                checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 12, SEPARATOR_HAIRLINE));
+                checkCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 10, SEPARATOR_HAIRLINE));
                 acceptBtn.setAlpha(0.42f);
             }
         });
@@ -4506,18 +4843,18 @@ public class AsycudaMaterialUi {
         TextView h = new TextView(ctx);
         h.setText(heading);
         h.setTextColor(TEXT_PRIMARY);
-        h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.8f);
         h.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         parent.addView(h);
 
         TextView b = new TextView(ctx);
         b.setText(bodyText);
         b.setTextColor(TEXT_SECONDARY);
-        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        blp.topMargin = dp(ctx, 3);
-        blp.bottomMargin = dp(ctx, 10);
+        blp.topMargin = dp(ctx, 2);
+        blp.bottomMargin = dp(ctx, 8);
         parent.addView(b, blp);
     }
 
@@ -4526,13 +4863,13 @@ public class AsycudaMaterialUi {
                                        String authors, String description) {
         LinearLayout item = new LinearLayout(ctx);
         item.setOrientation(LinearLayout.VERTICAL);
-        int p = dp(ctx, 12);
-        item.setPadding(p, dp(ctx, 10), p, dp(ctx, 10));
+        int p = dp(ctx, 10);
+        item.setPadding(p, dp(ctx, 8), p, dp(ctx, 8));
         item.setBackground(createCardDrawable(ctx,
-                SURFACE_INSET_CARD, 12, SEPARATOR_HAIRLINE));
+                SURFACE_INSET_CARD, 10, SEPARATOR_HAIRLINE));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(ctx, 8);
+        lp.bottomMargin = dp(ctx, 6);
         item.setLayoutParams(lp);
 
         LinearLayout titleRow = new LinearLayout(ctx);
@@ -4542,7 +4879,7 @@ public class AsycudaMaterialUi {
         TextView pName = new TextView(ctx);
         pName.setText(project);
         pName.setTextColor(TEXT_PRIMARY);
-        pName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        pName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
         pName.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         pName.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         titleRow.addView(pName);
@@ -4550,27 +4887,27 @@ public class AsycudaMaterialUi {
         TextView licBadge = new TextView(ctx);
         licBadge.setText(license);
         licBadge.setTextColor(SYSTEM_BLUE);
-        licBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
+        licBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.5f);
         licBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        licBadge.setPadding(dp(ctx, 8), dp(ctx, 2), dp(ctx, 8), dp(ctx, 2));
+        licBadge.setPadding(dp(ctx, 7), dp(ctx, 2), dp(ctx, 7), dp(ctx, 2));
         licBadge.setBackground(createCardDrawable(ctx,
-                SYSTEM_BLUE_TINT, 8, 0));
+                SYSTEM_BLUE_TINT, 7, 0));
         titleRow.addView(licBadge);
         item.addView(titleRow);
 
         TextView authView = new TextView(ctx);
         authView.setText(authors);
         authView.setTextColor(TEXT_PRIMARY);
-        authView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        authView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        alp.topMargin = dp(ctx, 3);
+        alp.topMargin = dp(ctx, 2);
         item.addView(authView, alp);
 
         TextView descView = new TextView(ctx);
         descView.setText(description);
         descView.setTextColor(TEXT_SECONDARY);
-        descView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        descView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dlp.topMargin = dp(ctx, 2);
@@ -4587,7 +4924,7 @@ public class AsycudaMaterialUi {
         glp.width = 0;
         glp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
         glp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
-        int m = dp(ctx, 4);
+        int m = dp(ctx, 3);
         glp.setMargins(m, m, m, m);
         grid.addView(btn, glp);
     }
@@ -4596,12 +4933,12 @@ public class AsycudaMaterialUi {
         TextView tv = new TextView(ctx);
         tv.setText(text);
         tv.setTextColor(TEXT_SECONDARY);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.2f);
         tv.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        tv.setLetterSpacing(0.06f);
+        tv.setLetterSpacing(0.05f);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(ctx, 6);
+        lp.bottomMargin = dp(ctx, 4);
         tv.setLayoutParams(lp);
         return tv;
     }
@@ -4663,7 +5000,7 @@ public class AsycudaMaterialUi {
             if (Build.VERSION.SDK_INT >= 31) {
                 try {
                     w.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-                    wlp.setBlurBehindRadius(dp(activity, 28));
+                    wlp.setBlurBehindRadius(dp(activity, 24));
                 } catch (Exception ignored) { /* Best-effort UI operation */ }
             }
             w.setAttributes(wlp);
@@ -4671,26 +5008,183 @@ public class AsycudaMaterialUi {
         return dialog;
     }
 
+    /**
+     * Space-friendly dialog root container that:
+     * 1. Caps maximum height to 84% of screen height when content overflows, while wrapping tightly when content fits.
+     * 2. Automatically inserts a dedicated, non-overlapping Scroll-Down Arrow Indicator Row directly below
+     *    any primary ScrollView (and above any footer row). Because the indicator is its own layout row
+     *    outside the ScrollView, it NEVER covers or overlaps any displayed information.
+     */
+    private static final class DialogRootContainer extends LinearLayout {
+        private ScrollView mPrimaryScrollView;
+        private LinearLayout mScrollArrowRow;
+        private boolean mHasOverflow = false;
+        private boolean mAddingInternalArrow = false;
+
+        DialogRootContainer(Context ctx) {
+            super(ctx);
+            setOrientation(LinearLayout.VERTICAL);
+            setLayoutDirection(isRtl(ctx) ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+            int p = dp(ctx, 13);
+            setPadding(p, dp(ctx, 8), p, dp(ctx, 11));
+            setBackground(createSheetContainerDrawable(ctx, 18));
+            setElevation(dp(ctx, 18));
+
+            FrameLayout grabberRow = new FrameLayout(ctx);
+            LinearLayout.LayoutParams grLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            grLp.bottomMargin = dp(ctx, 6);
+            View grabber = new View(ctx);
+            grabber.setBackground(createCardDrawable(ctx, GRABBER_COLOR, 2, 0));
+            FrameLayout.LayoutParams glp = new FrameLayout.LayoutParams(dp(ctx, 30), dp(ctx, 3), Gravity.CENTER_HORIZONTAL);
+            grabberRow.addView(grabber, glp);
+            super.addView(grabberRow, -1, grLp);
+
+            mScrollArrowRow = buildScrollArrowRow(ctx);
+        }
+
+        private LinearLayout buildScrollArrowRow(Context ctx) {
+            LinearLayout bar = new LinearLayout(ctx);
+            bar.setOrientation(LinearLayout.HORIZONTAL);
+            bar.setGravity(Gravity.CENTER);
+            bar.setPadding(dp(ctx, 12), dp(ctx, 4), dp(ctx, 12), dp(ctx, 4));
+            bar.setBackground(createRippleCardDrawable(ctx,
+                    SYSTEM_BLUE_TINT, 9, Color.parseColor("#550A84FF")));
+            bar.setVisibility(View.GONE);
+            bar.setClickable(true);
+            bar.setFocusable(true);
+
+            ImageView leftArrow = new ImageView(ctx);
+            leftArrow.setImageResource(R.drawable.ic_extra_key_arrow_down);
+            leftArrow.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+            LinearLayout.LayoutParams laLp = new LinearLayout.LayoutParams(dp(ctx, 13), dp(ctx, 13));
+            laLp.setMarginEnd(dp(ctx, 6));
+            bar.addView(leftArrow, laLp);
+
+            TextView label = new TextView(ctx);
+            label.setText(tr(ctx,
+                    "Scroll down for more",
+                    "مرر للأسفل لعرض المزيد",
+                    "بۆ بینینی زیاتر بکشێنە خوارەوە"));
+            label.setTextColor(SYSTEM_BLUE);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            label.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            bar.addView(label);
+
+            ImageView rightArrow = new ImageView(ctx);
+            rightArrow.setImageResource(R.drawable.ic_extra_key_arrow_down);
+            rightArrow.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+            LinearLayout.LayoutParams raLp = new LinearLayout.LayoutParams(dp(ctx, 13), dp(ctx, 13));
+            raLp.setMarginStart(dp(ctx, 6));
+            bar.addView(rightArrow, raLp);
+
+            bar.setOnClickListener(v -> {
+                if (mPrimaryScrollView != null) {
+                    int step = Math.max(dp(ctx, 110), (int) (mPrimaryScrollView.getHeight() * 0.72f));
+                    mPrimaryScrollView.smoothScrollBy(0, step);
+                }
+            });
+            return bar;
+        }
+
+        @Override
+        public void addView(View child, int index, ViewGroup.LayoutParams params) {
+            if (!mAddingInternalArrow && mPrimaryScrollView == null && child instanceof ScrollView) {
+                mPrimaryScrollView = (ScrollView) child;
+                LinearLayout.LayoutParams scLp;
+                if (params instanceof LinearLayout.LayoutParams) {
+                    scLp = (LinearLayout.LayoutParams) params;
+                } else {
+                    scLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
+                scLp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                scLp.weight = 1f;
+                super.addView(child, index, scLp);
+
+                mAddingInternalArrow = true;
+                try {
+                    LinearLayout.LayoutParams arrowLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    arrowLp.topMargin = dp(getContext(), 5);
+                    arrowLp.bottomMargin = dp(getContext(), 2);
+                    super.addView(mScrollArrowRow, -1, arrowLp);
+                } finally {
+                    mAddingInternalArrow = false;
+                }
+                attachScrollMonitor(mPrimaryScrollView);
+                return;
+            }
+            super.addView(child, index, params);
+        }
+
+        private void attachScrollMonitor(ScrollView sv) {
+            sv.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> updateScrollArrowState());
+            sv.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> postUpdateScrollArrow());
+            sv.getViewTreeObserver().addOnGlobalLayoutListener(this::updateScrollArrowState);
+            sv.post(this::updateScrollArrowState);
+        }
+
+        private void postUpdateScrollArrow() {
+            post(this::updateScrollArrowState);
+        }
+
+        private void updateScrollArrowState() {
+            if (mPrimaryScrollView == null || mScrollArrowRow == null) return;
+            View inner = mPrimaryScrollView.getChildCount() > 0 ? mPrimaryScrollView.getChildAt(0) : null;
+            int svH = mPrimaryScrollView.getHeight();
+            if (inner == null || svH <= 0) return;
+
+            int totalContentH = inner.getHeight()
+                    + mPrimaryScrollView.getPaddingTop()
+                    + mPrimaryScrollView.getPaddingBottom();
+            if (totalContentH > svH + dp(getContext(), 4)) {
+                mHasOverflow = true;
+            }
+
+            if (!mHasOverflow) {
+                if (mScrollArrowRow.getVisibility() != View.GONE) {
+                    mScrollArrowRow.setVisibility(View.GONE);
+                }
+                return;
+            }
+
+            boolean canScrollDownMore = mPrimaryScrollView.canScrollVertically(1);
+            if (canScrollDownMore) {
+                if (mScrollArrowRow.getVisibility() != View.VISIBLE) {
+                    mScrollArrowRow.setVisibility(View.VISIBLE);
+                }
+                mScrollArrowRow.setAlpha(1.0f);
+                mScrollArrowRow.setClickable(true);
+            } else {
+                // Keep layout slot reserved (INVISIBLE) so ScrollView height never jitters when reaching the bottom
+                if (mScrollArrowRow.getVisibility() == View.GONE) {
+                    mScrollArrowRow.setVisibility(View.INVISIBLE);
+                } else {
+                    mScrollArrowRow.setVisibility(View.INVISIBLE);
+                }
+                mScrollArrowRow.setClickable(false);
+            }
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            int maxH = (int) (getContext().getResources().getDisplayMetrics().heightPixels * 0.84f);
+            int mode = MeasureSpec.getMode(heightMeasureSpec);
+            int size = MeasureSpec.getSize(heightMeasureSpec);
+            int cappedSpec;
+            if (mode == MeasureSpec.UNSPECIFIED) {
+                cappedSpec = MeasureSpec.makeMeasureSpec(maxH, MeasureSpec.AT_MOST);
+            } else {
+                cappedSpec = MeasureSpec.makeMeasureSpec(Math.min(size, maxH), mode);
+            }
+            super.onMeasure(widthMeasureSpec, cappedSpec);
+            postUpdateScrollArrow();
+        }
+    }
+
     private static LinearLayout createDialogContainer(Context ctx) {
-        LinearLayout root = new LinearLayout(ctx);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setLayoutDirection(isRtl(ctx) ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
-        int p = dp(ctx, 18);
-        root.setPadding(p, dp(ctx, 10), p, dp(ctx, 16));
-        root.setBackground(createSheetContainerDrawable(ctx, 22));
-        root.setElevation(dp(ctx, 20));
-
-        FrameLayout grabberRow = new FrameLayout(ctx);
-        LinearLayout.LayoutParams grLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        grLp.bottomMargin = dp(ctx, 10);
-        View grabber = new View(ctx);
-        grabber.setBackground(createCardDrawable(ctx, GRABBER_COLOR, 3, 0));
-        FrameLayout.LayoutParams glp = new FrameLayout.LayoutParams(dp(ctx, 36), dp(ctx, 4), Gravity.CENTER_HORIZONTAL);
-        grabberRow.addView(grabber, glp);
-        root.addView(grabberRow, grLp);
-
-        return root;
+        return new DialogRootContainer(ctx);
     }
 
     public static Drawable createSheetContainerDrawable(Context ctx, int radiusDp) {
@@ -4726,16 +5220,16 @@ public class AsycudaMaterialUi {
         int baseFill = isPrimary ? SYSTEM_BLUE : SYSTEM_GRAY_FILL;
         int fill = isDestructive ? SYSTEM_RED_TINT : baseFill;
         int stroke = isDestructive ? Color.parseColor("#4DFF453A") : 0;
-        return createRippleCardDrawable(ctx, fill, 10, stroke);
+        return createRippleCardDrawable(ctx, fill, 9, stroke);
     }
 
     public static TextView createCupertinoButton(Context ctx, String label, boolean isPrimary, boolean isDestructive, View.OnClickListener listener) {
         TextView tv = new TextView(ctx);
         tv.setText(label);
         tv.setTextColor(isDestructive ? SYSTEM_RED : TEXT_PRIMARY);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.8f);
         tv.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
-        tv.setPadding(dp(ctx, 14), dp(ctx, 8), dp(ctx, 14), dp(ctx, 8));
+        tv.setPadding(dp(ctx, 12), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7));
         tv.setBackground(createCupertinoButtonDrawable(ctx, isPrimary, isDestructive));
         tv.setClickable(true);
         tv.setFocusable(true);
@@ -4759,13 +5253,13 @@ public class AsycudaMaterialUi {
             }
         }
         if (listener != null) box.setOnClickListener(listener);
-        int size = dp(ctx, 38);
+        int size = dp(ctx, 32);
         box.setLayoutParams(new LinearLayout.LayoutParams(size, size));
 
         ImageView icon = new ImageView(ctx);
         icon.setImageResource(iconResId);
         icon.setImageTintList(ColorStateList.valueOf(isDestructive ? SYSTEM_RED : TEXT_PRIMARY));
-        int icSize = dp(ctx, 20);
+        int icSize = dp(ctx, 17);
         box.addView(icon, new FrameLayout.LayoutParams(icSize, icSize, Gravity.CENTER));
         return box;
     }
@@ -4809,10 +5303,10 @@ public class AsycudaMaterialUi {
                                                        Runnable onImportFromPhone, Runnable onUseExistingVault) {
         if (activity == null || activity.isFinishing()) return;
         boolean compact = isCompactWidth(activity);
-        Dialog dlg = createModalDialog(activity, compact ? 0.86f : 0.68f, 390, true);
+        Dialog dlg = createModalDialog(activity, compact ? 0.82f : 0.64f, 350, true);
         LinearLayout outer = createDialogContainer(activity);
-        int p = dp(activity, 14);
-        outer.setPadding(p, dp(activity, 10), p, p);
+        int p = dp(activity, 12);
+        outer.setPadding(p, dp(activity, 8), p, p);
 
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(true);

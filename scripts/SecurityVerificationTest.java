@@ -106,6 +106,25 @@ public final class SecurityVerificationTest {
         } finally {
             Files.deleteIfExists(emptyJar.toPath());
         }
+
+        // 3. Unsigned directory-only JAR must be rejected (R5-03)
+        File unsignedDirJar = File.createTempFile("unsigned_dir_test_", ".jar");
+        try {
+            try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(unsignedDirJar))) {
+                JarEntry meta = new JarEntry("META-INF/MANIFEST.MF");
+                jos.putNextEntry(meta);
+                jos.write("Manifest-Version: 1.0\n\n".getBytes(StandardCharsets.UTF_8));
+                jos.closeEntry();
+                JarEntry dirEntry = new JarEntry("un/asytax/");
+                jos.putNextEntry(dirEntry);
+                jos.closeEntry();
+            }
+            if (AsycudaSecurityValidator.verifyDownloadedJarIntegrity(unsignedDirJar)) {
+                throw new AssertionError("Unsigned directory-only JAR was falsely accepted by production validator (R5-03)!");
+            }
+        } finally {
+            Files.deleteIfExists(unsignedDirJar.toPath());
+        }
     }
 
     private static void testBridgeAuthAndPathTraversal() throws IOException {
@@ -127,6 +146,15 @@ public final class SecurityVerificationTest {
         String mgrSrc = new String(Files.readAllBytes(mgrFile.toPath()), StandardCharsets.UTF_8);
         if (!mgrSrc.contains("MessageDigest.isEqual") || !mgrSrc.contains("isLoopbackPeerOwnedByOurUid")) {
             throw new AssertionError("AsycudaStandaloneManager must enforce constant-time MessageDigest.isEqual and loopback UID peer verification");
+        }
+        if (!mgrSrc.contains("MAX_CELLULAR_RELAY_PORTS") || mgrSrc.contains("NextGen-Customs-")) {
+            throw new AssertionError("AsycudaStandaloneManager must enforce MAX_CELLULAR_RELAY_PORTS and use official ASYCUDA-Iraq-Android catalog URL (R5-02/R5-04)");
+        }
+        File bootFile = resolveProjectFile("java-bridge/AsycudaBoot.java");
+        String bootSrc = new String(Files.readAllBytes(bootFile.toPath()), StandardCharsets.UTF_8);
+        if (bootSrc.contains("public static boolean sendToAndroidApk(")
+                || bootSrc.contains("public static boolean sendToAndroidApkSync(")) {
+            throw new AssertionError("sendToAndroidApk and sendToAndroidApkSync must be private static in AsycudaBoot (R5-01)");
         }
     }
 
@@ -211,6 +239,10 @@ public final class SecurityVerificationTest {
                 "Android shared_prefs must be blocked by AsycudaBoot.checkBlockedHostPath");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/user/0/iq.asycuda/files/legal_consent_receipt.json"),
                 "Consent receipt path must be blocked by AsycudaBoot.checkBlockedHostPath");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/files/known_errors_catalog.json"),
+                "Known-Errors Catalog path must be blocked from JVM access by AsycudaBoot.checkBlockedHostPath");
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("../known_errors_catalog.json"),
+                "Relative Known-Errors Catalog path must be blocked from JVM access by AsycudaBoot.checkBlockedHostPath");
 
         // 3. Enforce strict Zero-Hardcoded-IP / Zero-Hardcoded-Port-Fallback Policy across production files
         String[] prodFilesToCheck = new String[] {

@@ -1,6 +1,8 @@
 # Built application files
 build/
 **/build/
+**/build_classes/
+*.class
 *.apk
 *.aab
 .externalNativeBuild/

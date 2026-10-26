@@ -227,6 +227,7 @@ public class AsycudaStandaloneManager {
     private static final String BRIDGE_AUTH_TOKEN = UUID.randomUUID().toString();
     private static volatile AsycudaStandaloneManager sInstance = null;
     private static volatile boolean sExtractingOrBooting = false;
+    private static final AtomicBoolean sBootstrapRunning = new AtomicBoolean(false);
     private static final AtomicBoolean sSyncInProgress = new AtomicBoolean(false);
     private static final AtomicBoolean sApkDownloadActive = new AtomicBoolean(false);
     private static final AtomicBoolean sStartupAppCheckDone = new AtomicBoolean(false);
@@ -309,6 +310,7 @@ public class AsycudaStandaloneManager {
         } catch (Exception ignored) {
             // Ensure shutdown completes even if activity teardown throws
         } finally {
+            wipeRedactedRamDiagRingBuffer();
             android.os.Process.killProcess(android.os.Process.myPid());
             System.exit(0);
         }
@@ -651,19 +653,21 @@ public class AsycudaStandaloneManager {
             return;
         }
 
-        // Gate 1: Notification Permission on Android 13+ (Wait until granted or dismissed; zero storage permissions needed)
-        if (!hasNotificationPermission(activity) && !activity.getSharedPreferences("asy_perms", Context.MODE_PRIVATE).getBoolean("asked_notif", false)) {
+        // Gate 1: Notification Permission on Android 13+ (Requested non-blockingly after Terms are accepted so startup never pauses)
+        if (Build.VERSION.SDK_INT >= 33
+                && !hasNotificationPermission(activity)
+                && !activity.getSharedPreferences("asy_perms", Context.MODE_PRIVATE).getBoolean("asked_notif", false)) {
             activity.getSharedPreferences("asy_perms", Context.MODE_PRIVATE).edit().putBoolean("asked_notif", true).apply();
-            updateStatus(AsycudaMaterialUi.tr(activity,
-                    "Please allow or dismiss the notification prompt to continue...",
-                    "يرجى السماح بالإشعارات أو إغلاق النافذة للمتابعة...",
-                    "تکایە ڕێگە بە ئاگادارکردنەوەکان بدە بۆ بەردەوامبوون..."));
-            return;
+            try {
+                activity.requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 0);
+            } catch (Exception ignored) {
+                // Ignore if notification prompt is suppressed by OS
+            }
         }
 
         hideSplashButton();
 
-        if (sExtractingOrBooting || sSyncInProgress.get()) {
+        if (sExtractingOrBooting || sBootstrapRunning.get() || sSyncInProgress.get()) {
             return;
         }
 
@@ -691,15 +695,15 @@ public class AsycudaStandaloneManager {
         LinearLayout card = new LinearLayout(activity);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        int pad = dp(activity, 28);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackground(AsycudaMaterialUi.createSheetContainerDrawable(activity, 22));
-        card.setElevation(dp(activity, 20));
+        int pad = dp(activity, 20);
+        card.setPadding(pad, dp(activity, 18), pad, dp(activity, 18));
+        card.setBackground(AsycudaMaterialUi.createSheetContainerDrawable(activity, 18));
+        card.setElevation(dp(activity, 18));
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(activity, 68), dp(activity, 68));
-        iconLp.bottomMargin = dp(activity, 12);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(activity, 50), dp(activity, 50));
+        iconLp.bottomMargin = dp(activity, 9);
         card.addView(icon, iconLp);
 
         TextView title = new TextView(activity);
@@ -708,7 +712,7 @@ public class AsycudaStandaloneManager {
                 "نظام أسيكودا العالمي — جمهورية العراق",
                 "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
         title.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         title.setGravity(Gravity.CENTER);
         card.addView(title);
@@ -719,17 +723,17 @@ public class AsycudaStandaloneManager {
                 "الهيئة العامة للكمارك • الإصدار " + AsycudaMaterialUi.getAppVersionLabel(activity),
                 "دەستەی گشتیی گومرگ • وەشانی " + AsycudaMaterialUi.getAppVersionLabel(activity)));
         sub.setTextColor(AsycudaMaterialUi.TEXT_SECONDARY);
-        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         sub.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        subLp.topMargin = dp(activity, 4);
-        subLp.bottomMargin = dp(activity, 18);
+        subLp.topMargin = dp(activity, 3);
+        subLp.bottomMargin = dp(activity, 13);
         card.addView(sub, subLp);
 
         mSplashProgress = new ProgressBar(activity);
         mSplashProgress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(AsycudaMaterialUi.SYSTEM_BLUE));
-        card.addView(mSplashProgress, new LinearLayout.LayoutParams(dp(activity, 32), dp(activity, 32)));
+        card.addView(mSplashProgress, new LinearLayout.LayoutParams(dp(activity, 26), dp(activity, 26)));
 
         mSplashStatus = new TextView(activity);
         mSplashStatus.setText(AsycudaMaterialUi.tr(activity,
@@ -737,11 +741,11 @@ public class AsycudaStandaloneManager {
                 "جاري تجهيز بيئة التشغيل الآمنة...",
                 "ئامادەکردنی ژینگەی پارێزراو..."));
         mSplashStatus.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
-        mSplashStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        mSplashStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         mSplashStatus.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams stLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        stLp.topMargin = dp(activity, 14);
+        stLp.topMargin = dp(activity, 11);
         card.addView(mSplashStatus, stLp);
 
         mActionBtn = AsycudaMaterialUi.createCupertinoButton(activity,
@@ -749,13 +753,13 @@ public class AsycudaStandaloneManager {
                 true, false, null);
         LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        btnLp.topMargin = dp(activity, 14);
+        btnLp.topMargin = dp(activity, 11);
         mActionBtn.setLayoutParams(btnLp);
         mActionBtn.setVisibility(View.GONE);
         card.addView(mActionBtn);
 
         FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
-                dp(activity, 470), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+                dp(activity, 380), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         mSplashOverlay.addView(card, cardLp);
         root.addView(mSplashOverlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -797,6 +801,11 @@ public class AsycudaStandaloneManager {
     }
 
     private void bootstrapEnvironmentAndStart(MainActivity activity) {
+        if (!sBootstrapRunning.compareAndSet(false, true)) {
+            return;
+        }
+        sExtractingOrBooting = true;
+        hideSplashButton();
         try {
             startKeepAliveService(activity);
 
@@ -808,7 +817,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_1_0_r6");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_1_0_r9");
             ensureNetworkChangeMonitor(activity.getApplicationContext(), filesDir);
 
             if (!runtimeMarker.exists()) {
@@ -873,14 +882,15 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r3"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r4"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r5"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r6"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r7"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r8"));
                 extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
                 ensureFileCreated(bootPatchMarker);
             } else {
                 // Verify and enforce SHA-256 integrity of local bridge JARs on every startup
                 extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
             }
-
-            File clientJarFile = new File(clientDir, PREFIX_JARS + "client.jar");
 
             // Migrate any files from legacy workspace folder into unified prints vault
             File legacyWorkspace = new File(filesDir, DIR_LEGACY_WORKSPACE);
@@ -903,14 +913,24 @@ public class AsycudaStandaloneManager {
             }
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
-            boolean initialDownloadRequired = !clientJarFile.exists();
+            boolean initialDownloadRequired = !areAllManifestJarsPresent(clientDir);
+            evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), filesDir);
             syncGovernmentJars(clientDir, initialDownloadRequired, null);
 
-            if (!clientJarFile.exists()) {
+            if (!areAllManifestJarsPresent(clientDir)) {
                 updateStatus(AsycudaMaterialUi.tr(activity,
                         "Internet connection to asy.mof.gov.iq is required for initial installation of official ASYCUDA packages.",
                         "يلزم الاتصال بخادم الكمارك الرسمي (asy.mof.gov.iq) لتحميل ملفات نظام أسيكودا لأول مرة.",
                         "پێویستە پەیوەندی بە ڕاژەی فەرمی گومرگ (asy.mof.gov.iq) هەبێت بۆ داگرتنی پەڕگەکانی ئەسیکۆدا بۆ یەکەم جار."));
+                diagnoseAndShowUniversalNetworkModal(
+                        activity,
+                        "initial_package_download",
+                        sLastSyncException,
+                        "Initial installation requires downloading the 131 official JAR packages from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp, but the server could not be reached.",
+                        () -> {
+                            hideSplashButton();
+                            new Thread(() -> bootstrapEnvironmentAndStart(activity), "Asycuda-BootstrapRetry").start();
+                        });
                 UI.post(() -> {
                     if (mSplashProgress != null) mSplashProgress.setVisibility(View.GONE);
                     if (mActionBtn != null) {
@@ -958,18 +978,86 @@ public class AsycudaStandaloneManager {
             Thread.currentThread().interrupt();
         } catch (Exception t) {
             updateStatus("Startup error: " + t.getMessage());
+            diagnoseAndShowUniversalNetworkModal(
+                    activity,
+                    "bootstrap_startup_exception",
+                    t,
+                    "Startup exception in bootstrapEnvironmentAndStart: " + t.getClass().getName() + ": " + t.getMessage(),
+                    () -> {
+                        hideSplashButton();
+                        new Thread(() -> bootstrapEnvironmentAndStart(activity), "Asycuda-BootstrapRetry").start();
+                    });
         } finally {
             sExtractingOrBooting = false;
+            sBootstrapRunning.set(false);
         }
     }
 
+    private boolean areAllManifestJarsPresent(File clientDir) {
+        if (clientDir == null) return false;
+        File jarsDir = new File(clientDir, "jars");
+        File jnlpFile = new File(clientDir, FILE_AWIQ_JNLP);
+        if (!jnlpFile.isFile() || jnlpFile.length() == 0) {
+            return false;
+        }
+        String[] mandatoryCoreJars = { "client.jar", "core.jar", "soutil.jar", "kswing.jar", "skin.jar" };
+        for (String coreName : mandatoryCoreJars) {
+            File cf = new File(jarsDir, coreName);
+            if (!cf.isFile() || cf.length() == 0) {
+                return false;
+            }
+        }
+        try {
+            String jnlpXml = readTail(jnlpFile, 65536);
+            List<String> hrefs = parseJnlpJarHrefs(jnlpXml);
+            if (hrefs.isEmpty()) return false;
+            int expectedCount = 0;
+            int presentCount = 0;
+            for (String href : hrefs) {
+                String rawName = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
+                String flatName = rawName.replaceAll(REGEX_UNSAFE_FILENAME, "");
+                if (flatName.isEmpty() || flatName.startsWith("00_")) continue;
+                expectedCount++;
+                File f = new File(jarsDir, flatName);
+                if (f.isFile() && f.length() > 0) {
+                    presentCount++;
+                }
+            }
+            return expectedCount > 0 && presentCount >= Math.max(1, expectedCount - 1);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static final String GITHUB_KNOWN_ERRORS_CATALOG_URL =
+            "https://raw.githubusercontent.com/MohammedALShimmary/ASYCUDA-Iraq-Android/main/lorie-app/src/main/assets/known-errors-catalog.json";
+    private static final int MAX_CELLULAR_RELAY_PORTS = 8;
+    private static final String FILE_KNOWN_ERRORS_CATALOG = "known_errors_catalog.json";
+    private static final String ASSET_KNOWN_ERRORS_CATALOG = "known-errors-catalog.json";
+    private static final Set<String> ALLOWED_VERIFIED_FIX_IDS = new HashSet<>(java.util.Arrays.asList(
+            "NONE",
+            "OPEN_NETWORK_SETTINGS",
+            "REFRESH_DNS_OR_4G",
+            "ROUTE_4G_CELLULAR",
+            "LAUNCH_WITH_CACHED_JARS",
+            "CLEAN_LOCKS_AND_RECONNECT",
+            "REFRESH_DNS_AND_RETRY",
+            "PURGE_SOCLASS_CACHE",
+            "VERIFY_AND_RESYNC_JARS",
+            "REPAIR_JAVA_RUNTIME",
+            "REINIT_X11_DISPLAY",
+            "CLEAR_TEMP_AND_LOCKS",
+            "OPEN_APP_UPDATE_CENTER"
+    ));
+
     /**
-     * Checks GitHub Releases on launch in the background; if a newer APK version is published,
-     * opens the Update Center modal automatically so the user is notified right away.
+     * Checks GitHub Releases on launch in the background and syncs the read-only Known-Errors
+     * Catalog JSON (`lorie-app/src/main/assets/known-errors-catalog.json`) using HTTP ETag caching.
      */
     private void checkStartupAppUpdateQuietly(MainActivity activity) {
         if (!sStartupAppCheckDone.compareAndSet(false, true)) return;
         new Thread(() -> {
+            syncKnownErrorsCatalogQuietly(activity.getApplicationContext());
             HttpURLConnection ghConn = null;
             try {
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
@@ -1006,7 +1094,123 @@ public class AsycudaStandaloneManager {
         }, "Asycuda-StartupAppUpdateCheck").start();
     }
 
+    /**
+     * Option A + C — Read-only background sync of {@code lorie-app/src/main/assets/known-errors-catalog.json}
+     * from our official GitHub repository. Strictly validates that the JSON is data-only and
+     * references only allowlisted {@code verifiedFixId} constants before saving to internal
+     * storage ({@code 0600} owner-only).
+     */
+    private void syncKnownErrorsCatalogQuietly(Context appCtx) {
+        if (appCtx == null) return;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(GITHUB_KNOWN_ERRORS_CATALOG_URL);
+            String lowPath = url.getPath() != null ? url.getPath().toLowerCase(Locale.US) : "";
+            if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol())
+                    || !"raw.githubusercontent.com".equalsIgnoreCase(url.getHost())
+                    || !lowPath.startsWith("/mohammedalshimmary/asycuda-iraq-android/")) {
+                return;
+            }
+            android.content.SharedPreferences sp = appCtx.getSharedPreferences("asy_catalog_sync", Context.MODE_PRIVATE);
+            String cachedEtag = sp.getString("etag", "");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(6000);
+            conn.setUseCaches(false);
+            if (cachedEtag != null && !cachedEtag.isEmpty()) {
+                conn.setRequestProperty("If-None-Match", cachedEtag);
+            }
+            int code = conn.getResponseCode();
+            if (code == 304) {
+                return;
+            }
+            if (code == 200) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                try (InputStream in = conn.getInputStream()) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    int total = 0;
+                    while ((n = in.read(buf)) != -1) {
+                        total += n;
+                        if (total > 262144) {
+                            // Reject abnormally large catalog (> 256 KB)
+                            return;
+                        }
+                        bos.write(buf, 0, n);
+                    }
+                }
+                String jsonStr = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+                if (validateKnownErrorsCatalogJson(jsonStr)) {
+                    File catalogFile = new File(appCtx.getFilesDir(), FILE_KNOWN_ERRORS_CATALOG);
+                    setWritableOwnerOnly(catalogFile);
+                    try (FileOutputStream fos = new FileOutputStream(catalogFile)) {
+                        fos.write(jsonStr.getBytes(StandardCharsets.UTF_8));
+                        fos.getFD().sync();
+                    }
+                    setReadableOwnerOnly(catalogFile);
+                    String newEtag = conn.getHeaderField("ETag");
+                    if (newEtag != null && !newEtag.isEmpty()) {
+                        sp.edit().putString("etag", newEtag).apply();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Offline or GitHub unreachable — app uses local cached or bundled APK catalog
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static boolean validateKnownErrorsCatalogJson(String jsonStr) {
+        if (jsonStr == null || jsonStr.isEmpty() || jsonStr.length() > 262144) return false;
+        try {
+            JSONObject root = new JSONObject(jsonStr);
+            org.json.JSONArray entries = root.optJSONArray("entries");
+            if (entries == null || entries.length() == 0 || entries.length() > 200) {
+                return false;
+            }
+            for (int i = 0; i < entries.length(); i++) {
+                JSONObject item = entries.optJSONObject(i);
+                if (item == null) return false;
+                String id = item.optString("id", "");
+                String badge = item.optString("badge", "");
+                String fixId = item.optString("verifiedFixId", "NONE");
+                String titleEn = item.optString("titleEn", "");
+                String titleAr = item.optString("titleAr", "");
+                String titleKu = item.optString("titleKu", "");
+                String expEn = item.optString("explanationEn", "");
+                String expAr = item.optString("explanationAr", "");
+                String expKu = item.optString("explanationKu", "");
+                if (id.isEmpty() || id.length() > 64
+                        || badge.length() > 140
+                        || titleEn.length() > 300 || titleAr.length() > 300 || titleKu.length() > 300
+                        || expEn.length() > 2000 || expAr.length() > 2000 || expKu.length() > 2000
+                        || !ALLOWED_VERIFIED_FIX_IDS.contains(fixId)) {
+                    return false;
+                }
+                org.json.JSONArray kwArr = item.optJSONArray("matchKeywords");
+                if (kwArr != null && kwArr.length() > 24) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static volatile boolean sNetworkMonitorRegistered = false;
+    private static volatile boolean sUserConsented4gBypass = false;
+    private static volatile android.net.Network sCellularBypassNetwork = null;
+    private static volatile String sCellularBypassMofIp = null;
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, ServerSocket> sCellularRmiRelaySockets =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile ServerSocket sCellularRmiRelaySocket = null;
+    private static volatile int sCellularRmiRelayPort = -1;
+    private static volatile ServerSocket sCellularHttpsRelaySocket = null;
+    private static volatile int sCellularHttpsRelayPort = -1;
+    private static volatile Exception sLastSyncException = null;
 
     private void ensureNetworkChangeMonitor(Context appCtx, File filesDir) {
         if (sNetworkMonitorRegistered || appCtx == null) return;
@@ -1017,7 +1221,10 @@ public class AsycudaStandaloneManager {
                 cm.registerDefaultNetworkCallback(new android.net.ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onAvailable(android.net.Network network) {
-                        new Thread(() -> refreshGlibcHostsCache(filesDir), "Asycuda-NetHandoverDns").start();
+                        new Thread(() -> {
+                            evaluateMofRouteAndCellularBypass(appCtx, filesDir);
+                            refreshGlibcHostsCache(filesDir);
+                        }, "Asycuda-NetHandoverDns").start();
                     }
                 });
             }
@@ -1027,11 +1234,309 @@ public class AsycudaStandaloneManager {
     }
 
     /**
+     * User-Consented Cellular (4G) Multipath Bypass While Connected to Wi-Fi.
+     * Never activates automatically on startup — only runs when the user explicitly clicks the
+     * {@code Apply Fix: Route Session via 4G Mobile Data} button in the Universal Diagnostics Window
+     * ({@code sUserConsented4gBypass == true}).
+     */
+    private synchronized void evaluateMofRouteAndCellularBypass(Context appCtx, File filesDir) {
+        if (!sUserConsented4gBypass || appCtx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            sCellularBypassNetwork = null;
+            sCellularBypassMofIp = null;
+            stopCellularRmiRelay();
+            return;
+        }
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) appCtx.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return;
+            android.net.Network activeNet = cm.getActiveNetwork();
+            if (activeNet == null) {
+                sCellularBypassNetwork = null;
+                sCellularBypassMofIp = null;
+                stopCellularRmiRelay();
+                return;
+            }
+            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(activeNet);
+            boolean isWifi = isWifiTransportActive(cm, caps);
+            int rmiPort = extractDynamicMofRmiPort(new File(filesDir, DIR_CLIENT + "/" + FILE_AWIQ_JNLP));
+
+            if (!isWifi) {
+                // Device is already directly on 4G Mobile Data (Wi-Fi turned off)
+                sCellularBypassNetwork = null;
+                sCellularBypassMofIp = null;
+                stopCellularRmiRelay();
+                return;
+            }
+
+            // If 4G bypass network is already established in this session, keep it active and ensure relays are bound
+            if (sCellularBypassNetwork != null && sCellularBypassMofIp != null) {
+                android.net.NetworkCapabilities cellCaps = cm.getNetworkCapabilities(sCellularBypassNetwork);
+                if (cellCaps != null && cellCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    ensureCellularHttpsRelay();
+                    if (rmiPort > 0) {
+                        ensureCellularRmiRelay(rmiPort);
+                    }
+                    refreshGlibcHostsCache(filesDir);
+                    return;
+                }
+            }
+
+            // User explicitly consented to route ASYCUDA via 4G Mobile Data while on blocked Wi-Fi
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            final android.net.Network[] cellHolder = new android.net.Network[1];
+            android.net.NetworkRequest req = new android.net.NetworkRequest.Builder()
+                    .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build();
+            android.net.ConnectivityManager.NetworkCallback cb = new android.net.ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onAvailable(android.net.Network network) {
+                    cellHolder[0] = network;
+                    latch.countDown();
+                }
+            };
+            try {
+                cm.requestNetwork(req, cb);
+                latch.await(4500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (Exception ignored) {
+                // Cellular network unavailable or permission denied
+            }
+            android.net.Network cellNet = cellHolder[0];
+            if (cellNet != null) {
+                InetAddress cellAddr = null;
+                try {
+                    cellAddr = cellNet.getByName(ALLOWED_MOF_HOST);
+                } catch (Exception ignored) {
+                    // Fallback to system resolver on active network if cellular DNS is warming up
+                    try {
+                        cellAddr = InetAddress.getByName(ALLOWED_MOF_HOST);
+                    } catch (Exception ignored2) {
+                        // Unresolvable
+                    }
+                }
+                if (cellAddr != null && cellAddr.getHostAddress() != null) {
+                    sCellularBypassNetwork = cellNet;
+                    sCellularBypassMofIp = cellAddr.getHostAddress().trim();
+                    ensureCellularHttpsRelay();
+                    if (rmiPort > 0) {
+                        ensureCellularRmiRelay(rmiPort);
+                    }
+                    refreshGlibcHostsCache(filesDir);
+                    updateStatus(AsycudaMaterialUi.tr(appCtx,
+                            "Routing session via 4G Mobile Data (User-Approved Fix)...",
+                            "جاري تمرير الجلسة عبر بيانات الهاتف 4G (بموافقة المستخدم)...",
+                            "تێپەڕاندنی دانیشتن لە ڕێگەی داتای 4G..."));
+                    return;
+                }
+            } else {
+                try {
+                    cm.unregisterNetworkCallback(cb);
+                } catch (Exception ignored) {
+                    // Ignore callback unregister error
+                }
+            }
+        } catch (Exception ignored) {
+            // Fallback to normal routing
+        }
+        sCellularBypassNetwork = null;
+        sCellularBypassMofIp = null;
+        stopCellularRmiRelay();
+    }
+
+    private boolean isWifiTransportActive(
+            android.net.ConnectivityManager cm,
+            android.net.NetworkCapabilities activeCaps) {
+        if (activeCaps != null && activeCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+            return true;
+        }
+        if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && activeCaps != null && activeCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) {
+            try {
+                for (android.net.Network net : cm.getAllNetworks()) {
+                    if (net == null) continue;
+                    android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(net);
+                    if (nc != null && !nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+                            && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Ignore network enumeration error
+            }
+        }
+        return false;
+    }
+
+    private boolean probeNetworkCanReachMof(android.net.Network net, int port, int timeoutMs) {
+        if (net == null || port <= 0) return false;
+        try {
+            InetAddress addr = net.getByName(ALLOWED_MOF_HOST);
+            if (addr == null) return false;
+            try (Socket s = net.getSocketFactory().createSocket()) {
+                s.connect(new java.net.InetSocketAddress(addr, port), timeoutMs);
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private synchronized void ensureCellularRmiRelay(final int rmiPort) {
+        if (rmiPort <= 1024 || rmiPort > 65535 || rmiPort == 47891
+                || (rmiPort >= 6000 && rmiPort <= 6010) || rmiPort == sCellularHttpsRelayPort) {
+            return;
+        }
+        ServerSocket existing = sCellularRmiRelaySockets.get(rmiPort);
+        if (existing != null && !existing.isClosed()) {
+            return;
+        }
+        if (sCellularRmiRelaySockets.size() >= MAX_CELLULAR_RELAY_PORTS) {
+            return;
+        }
+        try {
+            final ServerSocket ss = new ServerSocket(rmiPort, 32, InetAddress.getByName("127.0.0.1"));
+            sCellularRmiRelaySockets.put(rmiPort, ss);
+            sCellularRmiRelaySocket = ss;
+            sCellularRmiRelayPort = rmiPort;
+            Thread relayThread = new Thread(() -> {
+                while (!ss.isClosed() && !Thread.currentThread().isInterrupted()) {
+                    try {
+                        final Socket localSock = ss.accept();
+                        if (!isLoopbackPeerOwnedByOurUid(localSock)) {
+                            localSock.close();
+                            continue;
+                        }
+                        new Thread(() -> pipeCellularRelayConnection(localSock, rmiPort),
+                                "Asycuda-4GRelayConn-" + rmiPort).start();
+                    } catch (Exception e) {
+                        if (ss.isClosed()) break;
+                    }
+                }
+            }, "Asycuda-4GRmiRelay-" + rmiPort);
+            relayThread.setDaemon(true);
+            relayThread.start();
+        } catch (Exception ignored) {
+            // Port already bound or unavailable
+        }
+    }
+
+    private void pipeCellularRelayConnection(final Socket localSock, final int rmiPort) {
+        Socket remoteSock = null;
+        try {
+            android.net.Network cellNet = sCellularBypassNetwork;
+            String mofIp = sCellularBypassMofIp;
+            if (cellNet == null || mofIp == null) {
+                localSock.close();
+                return;
+            }
+            remoteSock = cellNet.getSocketFactory().createSocket();
+            remoteSock.connect(new java.net.InetSocketAddress(InetAddress.getByName(mofIp), rmiPort), 10000);
+            remoteSock.setTcpNoDelay(true);
+            localSock.setTcpNoDelay(true);
+            final Socket finalRemote = remoteSock;
+            Thread up = new Thread(() -> copySocketStream(localSock, finalRemote), "Asycuda-4GUp-" + rmiPort);
+            up.setDaemon(true);
+            up.start();
+            copySocketStream(finalRemote, localSock);
+        } catch (Exception ignored) {
+            // Relay socket closed
+        } finally {
+            try { localSock.close(); } catch (Exception ignored) { /* Ignore */ }
+            if (remoteSock != null) {
+                try { remoteSock.close(); } catch (Exception ignored) { /* Ignore */ }
+            }
+        }
+    }
+
+    private void copySocketStream(Socket inSock, Socket outSock) {
+        try {
+            InputStream in = inSock.getInputStream();
+            OutputStream out = outSock.getOutputStream();
+            byte[] buf = new byte[32768];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                out.write(buf, 0, n);
+                out.flush();
+            }
+        } catch (Exception ignored) {
+            // Normal stream EOF/close
+        } finally {
+            try { outSock.shutdownOutput(); } catch (Exception ignored) { /* Ignore */ }
+        }
+    }
+
+    private synchronized void ensureCellularHttpsRelay() {
+        ServerSocket existing = sCellularHttpsRelaySocket;
+        if (existing != null && !existing.isClosed() && sCellularHttpsRelayPort > 0) {
+            return;
+        }
+        try {
+            final int remoteHttpsPort = new URL(MOF_CODEBASE_URL).getDefaultPort();
+            final ServerSocket ss = new ServerSocket(0, 32, InetAddress.getByName("127.0.0.1"));
+            sCellularHttpsRelaySocket = ss;
+            sCellularHttpsRelayPort = ss.getLocalPort();
+            Thread relayThread = new Thread(() -> {
+                while (!ss.isClosed() && !Thread.currentThread().isInterrupted()) {
+                    try {
+                        final Socket localSock = ss.accept();
+                        if (!isLoopbackPeerOwnedByOurUid(localSock)) {
+                            localSock.close();
+                            continue;
+                        }
+                        new Thread(() -> pipeCellularRelayConnection(localSock, remoteHttpsPort),
+                                "Asycuda-4GHttpsConn").start();
+                    } catch (Exception e) {
+                        if (ss.isClosed()) break;
+                    }
+                }
+            }, "Asycuda-4GHttpsRelay");
+            relayThread.setDaemon(true);
+            relayThread.start();
+        } catch (Exception ignored) {
+            // Local ephemeral port unavailable
+        }
+    }
+
+    private static synchronized void stopCellularRmiRelay() {
+        for (ServerSocket ss : sCellularRmiRelaySockets.values()) {
+            try {
+                ss.close();
+            } catch (Exception ignored) {
+                // Ignore close error
+            }
+        }
+        sCellularRmiRelaySockets.clear();
+        sCellularRmiRelaySocket = null;
+        sCellularRmiRelayPort = -1;
+        if (sCellularHttpsRelaySocket != null) {
+            try {
+                sCellularHttpsRelaySocket.close();
+            } catch (Exception ignored) {
+                // Ignore close error
+            }
+            sCellularHttpsRelaySocket = null;
+        }
+        sCellularHttpsRelayPort = -1;
+    }
+
+    /**
      * Dynamically resolves {@code host} (never using any hardcoded server IP or fallback IP):
-     * 1. Queries Android's currently active {@link android.net.Network#getByName(String)} (4G or Wi-Fi).
-     * 2. Queries standard {@link InetAddress#getByName(String)}.
+     * 1. Queries the active 4G Cellular bypass network if Wi-Fi is blocked by the MoF firewall.
+     * 2. Queries Android's currently active {@link android.net.Network#getByName(String)} (4G or Wi-Fi).
+     * 3. Queries standard {@link InetAddress#getByName(String)}.
      */
     private InetAddress resolveHostDynamically(String host) {
+        try {
+            android.net.Network cellBypass = sCellularBypassNetwork;
+            if (cellBypass != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                InetAddress addr = cellBypass.getByName(host);
+                if (addr != null && addr.getAddress() != null) {
+                    return InetAddress.getByAddress(host, addr.getAddress());
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through to active network
+        }
         try {
             MainActivity act = sCurrentActivity;
             if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1060,13 +1565,26 @@ public class AsycudaStandaloneManager {
 
     /**
      * Dynamically resolves asy.mof.gov.iq and updates usr/glibc/etc/hosts so glibc inside the JVM
-     * can resolve asy.mof.gov.iq across Wi-Fi and 4G. If the device is momentarily offline during
-     * a network switch, preserves any existing usr/glibc/etc/hosts entry instead of wiping it.
+     * can resolve asy.mof.gov.iq across Wi-Fi and 4G. When the 4G Cellular Multipath Relay is active
+     * because the current Wi-Fi ISP is blocked by the MoF firewall, points asy.mof.gov.iq to 127.0.0.1
+     * so the JVM routes through the Android 4G socket relay.
      */
     private void refreshGlibcHostsCache(File filesDir) {
         try {
             File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
             if (hostsFile.getParentFile() != null) ensureDir(hostsFile.getParentFile());
+            if (sCellularBypassNetwork != null && sCellularRmiRelaySocket != null && !sCellularRmiRelaySocket.isClosed()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("127.0.0.1 localhost\n");
+                sb.append("::1 localhost\n");
+                sb.append("127.0.0.1 asy.mof.gov.iq\n");
+                try (FileOutputStream fos = new FileOutputStream(hostsFile)) {
+                    fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+                    fos.getFD().sync();
+                }
+                setReadableOwnerOnly(hostsFile);
+                return;
+            }
             InetAddress resolved = resolveHostDynamically(ALLOWED_MOF_HOST);
             if (resolved == null || resolved.getHostAddress() == null) {
                 if (hostsFile.exists() && hostsFile.length() > 30) {
@@ -1217,6 +1735,7 @@ public class AsycudaStandaloneManager {
      */
     private int syncGovernmentJars(File clientDir, boolean manualForceCheck, AsycudaMaterialUi.UpdateCenterController modalCtrl) {
         int updatedCount = 0;
+        sLastSyncException = null;
         try {
             if (clientDir != null && clientDir.getParentFile() != null) {
                 refreshGlibcHostsCache(clientDir.getParentFile());
@@ -1268,6 +1787,16 @@ public class AsycudaStandaloneManager {
                 fos.getFD().sync();
             } catch (Exception ignored) {
                 // Ignore local JNLP cache write failure
+            }
+            if (sCellularBypassNetwork != null) {
+                ensureCellularHttpsRelay();
+                int newRmiPort = extractDynamicMofRmiPort(localJnlp);
+                if (newRmiPort > 0) {
+                    ensureCellularRmiRelay(newRmiPort);
+                    if (clientDir != null && clientDir.getParentFile() != null) {
+                        refreshGlibcHostsCache(clientDir.getParentFile());
+                    }
+                }
             }
 
             List<String> remoteHrefs = parseJnlpJarHrefs(jnlpXml);
@@ -1420,6 +1949,64 @@ public class AsycudaStandaloneManager {
                     }
                 }
                 updatedCount = dlSuccessCounter.get();
+
+                // Second-pass retry for any JARs that timed out during high-concurrency pass 1
+                List<String> retryUrls = new ArrayList<>();
+                List<File> retryFiles = new ArrayList<>();
+                for (int d = 0; d < dlTotal; d++) {
+                    File f = toDownloadFiles.get(d);
+                    if (!f.isFile() || f.length() == 0) {
+                        retryUrls.add(toDownloadUrls.get(d));
+                        retryFiles.add(f);
+                    }
+                }
+                if (!retryUrls.isEmpty() && !sApkDownloadActive.get()) {
+                    final int retryTotal = retryUrls.size();
+                    final AtomicInteger retryDone = new AtomicInteger(0);
+                    ExecutorService retryPool = Executors.newFixedThreadPool(4);
+                    List<Future<Boolean>> retryFutures = new ArrayList<>(retryTotal);
+                    for (int r = 0; r < retryTotal; r++) {
+                        final String rUrl = retryUrls.get(r);
+                        final File rFile = retryFiles.get(r);
+                        retryFutures.add(retryPool.submit(() -> {
+                            boolean ok = false;
+                            for (int attempt = 1; attempt <= 3 && !sApkDownloadActive.get(); attempt++) {
+                                if (downloadJarAtomically(rUrl, rFile, sslFactory)) {
+                                    ok = true;
+                                    break;
+                                }
+                            }
+                            int doneR = retryDone.incrementAndGet();
+                            if (ok) dlSuccessCounter.incrementAndGet();
+                            String msg = "Completing remaining packages from asy.mof.gov.iq (" + doneR + "/" + retryTotal + ")...";
+                            updateStatus(msg);
+                            if (modalCtrl != null) {
+                                modalCtrl.setMofUpdateStatus(msg, rFile.getName(), doneR, retryTotal, false);
+                            }
+                            return ok;
+                        }));
+                    }
+                    retryPool.shutdown();
+                    for (Future<Boolean> rf : retryFutures) {
+                        try {
+                            rf.get();
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        } catch (ExecutionException ignored) {
+                            // Handled by counter
+                        }
+                    }
+                    updatedCount = dlSuccessCounter.get();
+                }
+
+                int stillMissing = 0;
+                for (File f : toDownloadFiles) {
+                    if (!f.isFile() || f.length() == 0) stillMissing++;
+                }
+                if (stillMissing > 0) {
+                    sLastSyncException = new IOException("Incomplete package download: " + stillMissing + " of " + dlTotal + " official JARs timed out over current connection.");
+                }
             }
 
             // Rebuild classpath.txt with preserved bridge jars first and only verified existing government jars
@@ -1469,6 +2056,7 @@ public class AsycudaStandaloneManager {
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         } catch (Exception err) {
+            sLastSyncException = err;
             try {
                 verifyAndPurgeCachedJars(clientDir);
                 String[] list = new File(clientDir, "jars").list();
@@ -1477,6 +2065,8 @@ public class AsycudaStandaloneManager {
                         + (err.getMessage() != null ? ": " + err.getMessage() : "");
                 int rmiPort = extractDynamicMofRmiPort(new File(clientDir, FILE_AWIQ_JNLP));
                 boolean rmiOnline = rmiPort > 0 && probeMofRmiPortOnline(rmiPort, 2500);
+                appendNetworkDiagnosticLogEntry(clientDir, "AsycudaStandaloneManager.syncGovernmentJars", err,
+                        "HTTPS JNLP/JAR sync failed (" + errDetail + "); rmiPort=" + rmiPort + ", rmiOnline=" + rmiOnline + ", cachedJars=" + cached);
                 if (rmiOnline) {
                     updateStatus("Customs Server (:" + rmiPort + ") online — using " + cached + " verified local packages");
                     if (modalCtrl != null) {
@@ -1490,6 +2080,17 @@ public class AsycudaStandaloneManager {
                     if (modalCtrl != null) {
                         modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
                                 errDetail, 0, 0, false);
+                    }
+                    // Only show the startup diagnostic modal here if all local manifest JARs already exist
+                    // (otherwise bootstrapEnvironmentAndStart handles initial_package_download right after return)
+                    if (sCurrentActivity != null && (areAllManifestJarsPresent(clientDir) || modalCtrl != null)) {
+                        MainActivity act = sCurrentActivity;
+                        diagnoseAndShowUniversalNetworkModal(
+                                act,
+                                manualForceCheck ? "mof_jar_sync" : "startup_mof_unreachable",
+                                err,
+                                "EXIT CODE = 12 | SERVER NOT FOUND | " + errDetail,
+                                () -> restartAsycudaSession(act));
                     }
                 }
                 Thread.sleep(300);
@@ -1518,6 +2119,11 @@ public class AsycudaStandaloneManager {
                     if (!val.isEmpty()) {
                         String lowVal = val.toLowerCase(Locale.US);
                         if (lowVal.startsWith("-") || lowVal.contains(ALLOWED_MOF_HOST)) {
+                            if (sCellularBypassNetwork != null && sCellularHttpsRelayPort > 0
+                                    && lowVal.startsWith("https://" + ALLOWED_MOF_HOST + "/")) {
+                                val = "https://" + ALLOWED_MOF_HOST + ":" + sCellularHttpsRelayPort
+                                        + val.substring(("https://" + ALLOWED_MOF_HOST).length());
+                            }
                             args.add(val);
                         }
                     }
@@ -1534,6 +2140,9 @@ public class AsycudaStandaloneManager {
         List<String> args = parseJnlpApplicationArgs(jnlpFile);
         for (String arg : args) {
             String low = arg.toLowerCase(Locale.US);
+            if (low.startsWith("https://") || low.startsWith("http://")) {
+                continue;
+            }
             int idx = low.indexOf(ALLOWED_MOF_HOST + ":");
             if (idx >= 0) {
                 int start = idx + (ALLOWED_MOF_HOST + ":").length();
@@ -1638,12 +2247,17 @@ public class AsycudaStandaloneManager {
         }
         HttpURLConnection conn = null;
         try {
-            MainActivity act = sCurrentActivity;
-            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
-                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
-                if (activeNet != null) {
-                    conn = (HttpURLConnection) activeNet.openConnection(url);
+            android.net.Network cellBypass = sCellularBypassNetwork;
+            if (cellBypass != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                conn = (HttpURLConnection) cellBypass.openConnection(url);
+            } else {
+                MainActivity act = sCurrentActivity;
+                if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
+                    android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
+                    if (activeNet != null) {
+                        conn = (HttpURLConnection) activeNet.openConnection(url);
+                    }
                 }
             }
         } catch (Exception ignored) {
@@ -1813,7 +2427,10 @@ public class AsycudaStandaloneManager {
 
                 ensureX11ServerSocketReady(activity, filesDir);
 
-                // Pre-populate usr/glibc/etc/hosts with resolved IP for asy.mof.gov.iq
+                // Evaluate active route and activate 4G Cellular Multipath Bypass if Wi-Fi ISP is blocked by MoF firewall
+                evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), filesDir);
+
+                // Pre-populate usr/glibc/etc/hosts with resolved IP (or 127.0.0.1 4G relay) for asy.mof.gov.iq
                 refreshGlibcHostsCache(filesDir);
 
                 File clientDir = new File(filesDir, DIR_CLIENT);
@@ -1867,7 +2484,8 @@ public class AsycudaStandaloneManager {
                                     String jarName = entry.substring(PREFIX_JARS.length());
                                     if (!jarName.contains("/") && !jarName.contains("\\")) {
                                         File jarFile = new File(clientDir, entry);
-                                        if (jarFile.isFile() && jarFile.length() > 0) {
+                                        if (jarFile.isFile() && jarFile.length() > 0
+                                                && verifyDownloadedJarIntegrity(jarFile)) {
                                             filteredCp.append(":").append(entry);
                                         }
                                     }
@@ -1947,6 +2565,12 @@ public class AsycudaStandaloneManager {
                 return;
             } catch (Exception t) {
                 updateStatus("Failed to launch JVM: " + t.getMessage());
+                diagnoseAndShowUniversalNetworkModal(
+                        activity,
+                        "jvm_process_spawn_failed",
+                        t,
+                        "Failed to spawn JVM process: " + t.getClass().getName() + ": " + t.getMessage(),
+                        () -> restartAsycudaSession(activity));
                 return;
             }
         }
@@ -1955,16 +2579,775 @@ public class AsycudaStandaloneManager {
             Thread.sleep(2200);
             if (!isProcessAlive(proc)) {
                 int code = proc.exitValue();
-                String errTail = readTail(logFile, 400);
+                String errTail = readTail(logFile, 1200);
                 updateStatus("JVM exited (code " + code + "):\n" + errTail);
+                if (code != 0 || isAbnormalJvmExit(code, errTail)) {
+                    diagnoseAndShowUniversalNetworkModal(
+                            activity,
+                            "jvm_early_exit_" + code,
+                            null,
+                            "JVM exited with code " + code + "\n" + errTail,
+                            () -> restartAsycudaSession(activity));
+                }
             } else {
                 hideSplashDelayed(600);
+                watchJvmProcessForNetworkExit(activity, proc, logFile);
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         } catch (Exception t) {
             updateStatus("JVM status error: " + t.getMessage());
         }
+    }
+
+    private static boolean isAbnormalJvmExit(int exitCode, String logTail) {
+        if (exitCode != 0) return true;
+        if (logTail == null || logTail.isEmpty()) return false;
+        String upper = logTail.toUpperCase(Locale.US);
+        return upper.contains("NETWORK ERROR")
+                || upper.contains("SERVER NOT FOUND")
+                || upper.contains("EXIT CODE = 12")
+                || upper.contains("EXCEPTION")
+                || upper.contains("ERROR:")
+                || upper.contains("OUTOFMEMORYERROR")
+                || upper.contains("UNSATISFIEDLINKERROR")
+                || upper.contains("NOCLASSDEFFOUNDERROR")
+                || upper.contains("CORRUPTED");
+    }
+
+    private void watchJvmProcessForNetworkExit(final MainActivity activity, final Process proc, final File logFile) {
+        Thread watcher = new Thread(() -> {
+            boolean shownLiveLogModal = false;
+            try {
+                while (isProcessAlive(proc)) {
+                    if (sJavaProcess != proc) {
+                        return;
+                    }
+                    if (!shownLiveLogModal && logFile != null && logFile.exists()) {
+                        String liveTail = readTail(logFile, 1200);
+                        String upper = liveTail.toUpperCase(Locale.US);
+                        if (upper.contains("SERVER NOT FOUND")
+                                || upper.contains("EXIT CODE = 12")
+                                || upper.contains("*** FATAL ERROR:")
+                                || upper.contains("OUTOFMEMORYERROR")
+                                || upper.contains("UNSATISFIEDLINKERROR")) {
+                            shownLiveLogModal = true;
+                            MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
+                            if (act != null && !act.isFinishing()) {
+                                diagnoseAndShowUniversalNetworkModal(
+                                        act,
+                                        "jvm_live_fatal_error",
+                                        null,
+                                        liveTail,
+                                        () -> restartAsycudaSession(act));
+                            }
+                        }
+                    }
+                    Thread.sleep(800);
+                }
+                int exitCode = proc.waitFor();
+                if (sJavaProcess != proc) {
+                    // Process was intentionally restarted or shut down by the user
+                    return;
+                }
+                String logTail = readTail(logFile, 2400);
+                if (!shownLiveLogModal && isAbnormalJvmExit(exitCode, logTail)) {
+                    MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
+                    if (act != null && !act.isFinishing()) {
+                        diagnoseAndShowUniversalNetworkModal(
+                                act,
+                                "jvm_session_exit_" + exitCode,
+                                null,
+                                "JVM exited with code " + exitCode + "\n" + logTail,
+                                () -> restartAsycudaSession(act));
+                    }
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            } catch (Exception ignored) {
+                // Ignore watcher termination error
+            }
+        }, "Asycuda-JvmExitWatcher");
+        watcher.setDaemon(true);
+        watcher.start();
+    }
+
+    private static String captureCodeLineLocation(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        if (t != null) {
+            StackTraceElement[] trace = t.getStackTrace();
+            if (trace != null && trace.length > 0) {
+                StackTraceElement top = trace[0];
+                sb.append(top.getClassName()).append(".").append(top.getMethodName())
+                        .append("(").append(top.getFileName()).append(":").append(top.getLineNumber()).append(")");
+                for (StackTraceElement el : trace) {
+                    if (el.getClassName() != null && (el.getClassName().startsWith("com.termux.x11")
+                            || el.getClassName().startsWith("asycuda")
+                            || el.getClassName().startsWith("so.kernel"))) {
+                        String loc = el.getClassName() + "." + el.getMethodName()
+                                + "(" + el.getFileName() + ":" + el.getLineNumber() + ")";
+                        if (!sb.toString().contains(loc)) {
+                            sb.append(" <- ").append(loc);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        StackTraceElement[] callerTrace = new Throwable().getStackTrace();
+        for (StackTraceElement el : callerTrace) {
+            if (el.getClassName() != null && el.getClassName().contains("AsycudaStandaloneManager")
+                    && !"captureCodeLineLocation".equals(el.getMethodName())
+                    && !"appendNetworkDiagnosticLogEntry".equals(el.getMethodName())
+                    && !"diagnoseAndShowUniversalNetworkModal".equals(el.getMethodName())) {
+                if (sb.length() > 0) sb.append(" | Triggered at ");
+                sb.append(el.getFileName()).append(":").append(el.getLineNumber())
+                        .append(" (").append(el.getMethodName()).append(")");
+                break;
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "AsycudaStandaloneManager.java (DiagnosticMonitor)";
+    }
+
+    private static final StringBuilder sRedactedRamDiagRingBuffer = new StringBuilder(4096);
+
+    private static void wipeRedactedRamDiagRingBuffer() {
+        synchronized (sRedactedRamDiagRingBuffer) {
+            for (int i = 0; i < sRedactedRamDiagRingBuffer.length(); i++) {
+                sRedactedRamDiagRingBuffer.setCharAt(i, '\0');
+            }
+            sRedactedRamDiagRingBuffer.setLength(0);
+            sRedactedRamDiagRingBuffer.trimToSize();
+        }
+    }
+
+    private void appendNetworkDiagnosticLogEntry(File clientDir, String callerMethod, Throwable err, String summary) {
+        if (clientDir == null) return;
+        try {
+            String codeLine = captureCodeLineLocation(err);
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
+            StringBuilder entry = new StringBuilder();
+            entry.append("[UNIVERSAL-DIAGNOSTIC] ").append(timestamp)
+                    .append(" | Method: ").append(callerMethod)
+                    .append(" | CodeLine: ").append(codeLine)
+                    .append(" | Summary: ").append(redactSensitiveLogContent(summary)).append("\n");
+            if (err != null) {
+                entry.append("[UNIVERSAL-DIAGNOSTIC-EXCEPTION] ").append(err.getClass().getName())
+                        .append(": ").append(redactSensitiveLogContent(err.getMessage())).append("\n");
+            }
+            String redactedEntry = redactSensitiveLogContent(entry.toString());
+            for (int i = 0; i < entry.length(); i++) {
+                entry.setCharAt(i, '\0');
+            }
+            entry.setLength(0);
+            synchronized (sRedactedRamDiagRingBuffer) {
+                if (sRedactedRamDiagRingBuffer.length() + redactedEntry.length() > 6144) {
+                    int drop = Math.min(sRedactedRamDiagRingBuffer.length(), redactedEntry.length() + 1024);
+                    for (int i = 0; i < drop; i++) {
+                        sRedactedRamDiagRingBuffer.setCharAt(i, '\0');
+                    }
+                    sRedactedRamDiagRingBuffer.delete(0, drop);
+                }
+                sRedactedRamDiagRingBuffer.append(redactedEntry);
+            }
+        } catch (Exception ignored) {
+            // Best-effort in-RAM redacted diagnostic append (zero disk writes)
+        }
+    }
+
+    private org.json.JSONArray loadKnownErrorsCatalogEntries(Context ctx) {
+        if (ctx == null) return null;
+        // 1. Try synced catalog in private internal storage (/files/known_errors_catalog.json)
+        File syncedFile = new File(ctx.getFilesDir(), FILE_KNOWN_ERRORS_CATALOG);
+        if (syncedFile.isFile() && syncedFile.length() > 0 && syncedFile.length() <= 262144) {
+            try {
+                byte[] bytes = readFileBytes(syncedFile);
+                String json = new String(bytes, StandardCharsets.UTF_8);
+                if (validateKnownErrorsCatalogJson(json)) {
+                    return new JSONObject(json).optJSONArray("entries");
+                }
+            } catch (Exception ignored) {
+                // Fall back to bundled APK asset catalog
+            }
+        }
+        // 2. Fallback to bundled offline APK asset catalog (assets/known-errors-catalog.json)
+        try (InputStream in = ctx.getAssets().open(ASSET_KNOWN_ERRORS_CATALOG);
+             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                bos.write(buf, 0, n);
+            }
+            String json = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+            if (validateKnownErrorsCatalogJson(json)) {
+                return new JSONObject(json).optJSONArray("entries");
+            }
+        } catch (Exception ignored) {
+            // Ignore asset read error
+        }
+        return null;
+    }
+
+    private static JSONObject findCatalogEntryById(org.json.JSONArray entries, String targetId) {
+        if (entries == null || targetId == null) return null;
+        for (int i = 0; i < entries.length(); i++) {
+            JSONObject obj = entries.optJSONObject(i);
+            if (obj != null && targetId.equalsIgnoreCase(obj.optString("id", ""))) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    private static JSONObject findCatalogEntryByKeywords(org.json.JSONArray entries, String combinedUpperText) {
+        if (entries == null || combinedUpperText == null || combinedUpperText.isEmpty()) return null;
+        for (int i = 0; i < entries.length(); i++) {
+            JSONObject obj = entries.optJSONObject(i);
+            if (obj == null) continue;
+            org.json.JSONArray kwArr = obj.optJSONArray("matchKeywords");
+            if (kwArr == null) continue;
+            for (int k = 0; k < kwArr.length(); k++) {
+                String kw = kwArr.optString(k, "").trim().toUpperCase(Locale.US);
+                if (!kw.isEmpty() && combinedUpperText.contains(kw)) {
+                    return obj;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolveVerifiedFixButtonLabel(MainActivity activity, String verifiedFixId, String fixedInVersion) {
+        if (verifiedFixId == null || "NONE".equals(verifiedFixId)) return null;
+        switch (verifiedFixId) {
+            case "ROUTE_4G_CELLULAR":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Route Session via 4G Mobile Data",
+                        "تطبيق الحل: تمرير الجلسة عبر بيانات الهاتف 4G",
+                        "جێبەجێکردنی چارەسەر: پەیوەندیکردن لە ڕێگەی داتای 4G");
+            case "REFRESH_DNS_OR_4G":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Flush DNS Cache & Route via 4G",
+                        "تطبيق الحل: تحديث ذاكرة DNS والتمرير عبر 4G",
+                        "جێبەجێکردنی چارەسەر: نوێکردنەوەی DNS و پەیوەندی 4G");
+            case "OPEN_NETWORK_SETTINGS":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Open Device Internet Settings",
+                        "تطبيق الحل: فتح إعدادات الإنترنت في الجهاز",
+                        "جێبەجێکردنی چارەسەر: کردنەوەی ڕێکخستنەکانی ئینتەرنێت");
+            case "LAUNCH_WITH_CACHED_JARS":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Launch Using Verified Local Packages",
+                        "تطبيق الحل: التشغيل باستخدام الحزم المحلية الموثقة",
+                        "جێبەجێکردنی چارەسەر: کارپێکردن بە گورزە ناوخۆییەکان");
+            case "CLEAN_LOCKS_AND_RECONNECT":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Clean Session Locks & Reconnect",
+                        "تطبيق الحل: تنظيف أقفال الجلسة وإعادة الاتصال",
+                        "جێبەجێکردنی چارەسەر: پاککردنەوەی قفڵەکان و پەیوەندیکردنەوە");
+            case "REFRESH_DNS_AND_RETRY":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Refresh Server Route & Reconnect",
+                        "تطبيق الحل: تحديث مسار الخادم وإعادة الاتصال",
+                        "جێبەجێکردنی چارەسەر: نوێکردنەوەی ڕێڕەوی ڕاژە و هەوڵدانەوە");
+            case "PURGE_SOCLASS_CACHE":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Rebuild Local Customs Cache (.SOClassCache)",
+                        "تطبيق الحل: إعادة بناء ذاكرة الجداول المحلية (.SOClassCache)",
+                        "جێبەجێکردنی چارەسەر: دروستکردنەوەی بیرگەی (.SOClassCache)");
+            case "VERIFY_AND_RESYNC_JARS":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Verify & Re-Download Official Packages",
+                        "تطبيق الحل: فحص وإعادة تحميل الحزم الرسمية",
+                        "جێبەجێکردنی چارەسەر: پشکنین و داگرتنەوەی گورزە فەرمییەکان");
+            case "REPAIR_JAVA_RUNTIME":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Repair & Re-Extract Java Runtime",
+                        "تطبيق الحل: إصلاح وإعادة استخراج بيئة جافا",
+                        "جێبەجێکردنی چارەسەر: چاککردنەوە و دەرهێنانەوەی ژینگەی جاڤا");
+            case "REINIT_X11_DISPLAY":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Reset Display Server (:0) & Restart",
+                        "تطبيق الحل: إعادة تهيئة نافذة العرض (:0) وإعادة التشغيل",
+                        "جێبەجێکردنی چارەسەر: ڕێکخستنەوەی پەنجەرەی پیشاندان و دەستپێکردنەوە");
+            case "CLEAR_TEMP_AND_LOCKS":
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Clear Temporary Cache & Restart Session",
+                        "تطبيق الحل: مسح الملفات المؤقتة وإعادة تشغيل الجلسة",
+                        "جێبەجێکردنی چارەسەر: سڕینەوەی پەڕگە کاتییەکان و دەستپێکردنەوە");
+            case "OPEN_APP_UPDATE_CENTER":
+                String verLabel = (fixedInVersion != null && !fixedInVersion.isEmpty()) ? (" (" + fixedInVersion + ")") : "";
+                return AsycudaMaterialUi.tr(activity,
+                        "Apply Fix: Open Update Center" + verLabel,
+                        "تطبيق الحل: فتح مركز تحديث التطبيق" + verLabel,
+                        "جێبەجێکردنی چارەسەر: کردنەوەی ناوەندی نوێکردنەوە" + verLabel);
+            default:
+                return null;
+        }
+    }
+
+    private Runnable createVerifiedFixAction(
+            final MainActivity activity,
+            final String verifiedFixId,
+            final Runnable onRetry) {
+        if (activity == null || verifiedFixId == null || "NONE".equals(verifiedFixId)) return null;
+        return () -> {
+            switch (verifiedFixId) {
+                case "OPEN_NETWORK_SETTINGS":
+                    try {
+                        Intent netIntent = new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS);
+                        netIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(netIntent);
+                    } catch (Exception e) {
+                        try {
+                            activity.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
+                        } catch (Exception ignored) {
+                            // Ignore settings launch error
+                        }
+                    }
+                    break;
+
+                case "ROUTE_4G_CELLULAR":
+                case "REFRESH_DNS_OR_4G":
+                    hideSplashButton();
+                    updateStatus(AsycudaMaterialUi.tr(activity,
+                            "Activating user-approved 4G Mobile Data route for ASYCUDA...",
+                            "جاري تفعيل مسار بيانات الهاتف (4G) المعتمد لنظام أسيكودا...",
+                            "چالاککردنی ڕێڕەوی داتای مۆبایل (4G) بۆ ئەسیکۆدا..."));
+                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                            "Activating user-approved 4G Mobile Data route for ASYCUDA...",
+                            "جاري تفعيل مسار بيانات الهاتف (4G) المعتمد لنظام أسيكودا...",
+                            "چالاککردنی ڕێڕەوی داتای مۆبایل (4G) بۆ ئەسیکۆدا..."), Toast.LENGTH_LONG).show();
+                    new Thread(() -> {
+                        sUserConsented4gBypass = true;
+                        evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), activity.getFilesDir());
+                        refreshGlibcHostsCache(activity.getFilesDir());
+                        if (onRetry != null) {
+                            UI.post(onRetry);
+                        } else {
+                            UI.post(() -> restartAsycudaSession(activity));
+                        }
+                    }, "Asycuda-VerifiedFix-4G").start();
+                    break;
+
+                case "LAUNCH_WITH_CACHED_JARS":
+                    new Thread(() -> {
+                        File filesDir = activity.getFilesDir();
+                        File clientDir = new File(filesDir, DIR_CLIENT);
+                        verifyAndPurgeCachedJars(clientDir);
+                        File clientJar = new File(clientDir, PREFIX_JARS + "client.jar");
+                        if (clientJar.isFile() && clientJar.length() > 0) {
+                            UI.post(() -> restartAsycudaSession(activity));
+                        } else if (onRetry != null) {
+                            UI.post(onRetry);
+                        }
+                    }, "Asycuda-VerifiedFix-CachedLaunch").start();
+                    break;
+
+                case "PURGE_SOCLASS_CACHE":
+                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                            "Rebuilding local .SOClassCache and restarting session...",
+                            "جاري مسح وإعادة بناء ذاكرة .SOClassCache وإعادة التشغيل...",
+                            "دروستکردنەوەی بیرگەی .SOClassCache و دەستپێکردنەوە..."), Toast.LENGTH_LONG).show();
+                    new Thread(() -> {
+                        File filesDir = activity.getFilesDir();
+                        deleteRecursive(new File(filesDir, "home/.SOClassCache"));
+                        deleteRecursive(new File(filesDir, DIR_CLIENT + "/tmp"));
+                        UI.post(() -> restartAsycudaSession(activity));
+                    }, "Asycuda-VerifiedFix-SOClassCache").start();
+                    break;
+
+                case "VERIFY_AND_RESYNC_JARS":
+                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                            "Verifying package signatures and syncing from asy.mof.gov.iq...",
+                            "جاري فحص التواقيع الرقمية للحزم والمزامنة مع الخادم الرسمي...",
+                            "پشکنینی گورزەکان و هاوکاتکردن لەگەڵ ڕاژەی فەرمی..."), Toast.LENGTH_LONG).show();
+                    new Thread(() -> {
+                        File clientDir = new File(activity.getFilesDir(), DIR_CLIENT);
+                        verifyAndPurgeCachedJars(clientDir);
+                        syncGovernmentJars(clientDir, true, null);
+                        UI.post(() -> restartAsycudaSession(activity));
+                    }, "Asycuda-VerifiedFix-ResyncJars").start();
+                    break;
+
+                case "REPAIR_JAVA_RUNTIME":
+                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                            "Repairing and re-extracting Java 8 runtime environment...",
+                            "جاري إصلاح وإعادة استخراج بيئة تشغيل جافا 8...",
+                            "چاککردنەوە و دەرهێنانەوەی ژینگەی کارپێکردنی جاڤا 8..."), Toast.LENGTH_LONG).show();
+                    new Thread(() -> {
+                        File filesDir = activity.getFilesDir();
+                        deleteQuietly(new File(filesDir, ".extracted_v3_2"));
+                        deleteQuietly(new File(filesDir, ".bootpatch_v4_1_0_r9"));
+                        UI.post(() -> restartAsycudaSession(activity));
+                    }, "Asycuda-VerifiedFix-RepairRuntime").start();
+                    break;
+
+                case "REINIT_X11_DISPLAY":
+                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
+                            "Resetting graphical display server (:0) and restarting...",
+                            "جاري إعادة تهيئة نافذة العرض (:0) وإعادة التشغيل...",
+                            "ڕێکخستنەوەی پەنجەرەی پیشاندان (:0) و دەستپێکردنەوە..."), Toast.LENGTH_SHORT).show();
+                    new Thread(() -> {
+                        File filesDir = activity.getFilesDir();
+                        File usrTmp = new File(filesDir, DIR_USR_TMP);
+                        deleteQuietly(new File(usrTmp, ".X0-lock"));
+                        deleteQuietly(new File(usrTmp, ".X11-unix/X0"));
+                        sCmdEntry = null;
+                        try {
+                            ensureX11ServerSocketReady(activity, filesDir);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
+                        UI.post(() -> restartAsycudaSession(activity));
+                    }, "Asycuda-VerifiedFix-ResetX11").start();
+                    break;
+
+                case "OPEN_APP_UPDATE_CENTER":
+                    runUnifiedUpdateCheckModal(activity, true);
+                    break;
+
+                case "CLEAN_LOCKS_AND_RECONNECT":
+                case "REFRESH_DNS_AND_RETRY":
+                case "CLEAR_TEMP_AND_LOCKS":
+                default:
+                    new Thread(() -> {
+                        File filesDir = activity.getFilesDir();
+                        File clientDir = new File(filesDir, DIR_CLIENT);
+                        deleteRecursive(new File(clientDir, "tmp"));
+                        File[] locks = clientDir.listFiles();
+                        if (locks != null) {
+                            for (File lf : locks) {
+                                if (lf.getName().endsWith(".lck")) deleteQuietly(lf);
+                            }
+                        }
+                        refreshGlibcHostsCache(filesDir);
+                        if (onRetry != null) {
+                            UI.post(onRetry);
+                        } else {
+                            UI.post(() -> restartAsycudaSession(activity));
+                        }
+                    }, "Asycuda-VerifiedFix-CleanRestart").start();
+                    break;
+            }
+        };
+    }
+
+    /**
+     * Proposal B + Sentry Known-Issues Catalog Engine.
+     * Detects, logs (with exact Java file/method/line number), and explains in clear human language
+     * all known network, system, and security issues from the local/synced catalog, provides a
+     * user-consented Verified Fix button, and highlights brand-new uncatalogued errors with a
+     * prompt to share to Sentry.
+     */
+    private void diagnoseAndShowUniversalNetworkModal(
+            final MainActivity activity,
+            final String stage,
+            final Throwable caughtException,
+            final String rawContextLog,
+            final Runnable onRetry) {
+        if (activity == null || activity.isFinishing()) return;
+        final String callerCodeLine = captureCodeLineLocation(caughtException);
+        new Thread(() -> {
+            try {
+                File filesDir = activity.getFilesDir();
+                File clientDir = new File(filesDir, DIR_CLIENT);
+                File jnlpFile = new File(clientDir, FILE_AWIQ_JNLP);
+                int rmiPort = extractDynamicMofRmiPort(jnlpFile);
+                int probeRmiPort = rmiPort > 0 ? rmiPort : 443;
+
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
+                android.net.Network activeNet = (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? cm.getActiveNetwork() : null;
+                android.net.NetworkCapabilities caps = (cm != null && activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                        ? cm.getNetworkCapabilities(activeNet) : null;
+
+                boolean hasInternetCap = caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                boolean isWifi = isWifiTransportActive(cm, caps);
+                boolean isCellular = !isWifi && caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR);
+                boolean isVpn = caps != null && caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN);
+
+                String transportName = "NONE (Offline)";
+                if (isWifi) transportName = isVpn ? "Wi-Fi + VPN" : "Wi-Fi (TRANSPORT_WIFI)";
+                else if (isCellular) transportName = isVpn ? "4G/5G Mobile Data + VPN" : "4G/5G Mobile Data (TRANSPORT_CELLULAR)";
+                else if (isVpn) transportName = "VPN Tunnel (TRANSPORT_VPN)";
+                else if (activeNet != null) transportName = "Active Network";
+
+                // 1. DNS Resolution Probe
+                String resolvedIp = null;
+                String dnsError = null;
+                long dnsStart = System.currentTimeMillis();
+                try {
+                    InetAddress addr = activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                            ? activeNet.getByName(ALLOWED_MOF_HOST)
+                            : InetAddress.getByName(ALLOWED_MOF_HOST);
+                    if (addr != null) resolvedIp = addr.getHostAddress();
+                } catch (Exception dnsEx) {
+                    dnsError = dnsEx.getClass().getSimpleName() + ": " + dnsEx.getMessage();
+                }
+                long dnsMs = System.currentTimeMillis() - dnsStart;
+
+                // 2. TCP Port :443 (HTTPS JNLP/JAR Server) Probe
+                boolean port443Ok = false;
+                String port443Err = null;
+                long port443Start = System.currentTimeMillis();
+                if (resolvedIp != null) {
+                    try (Socket s443 = (activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            ? activeNet.getSocketFactory().createSocket() : new Socket()) {
+                        s443.connect(new java.net.InetSocketAddress(InetAddress.getByName(resolvedIp), 443), 2600);
+                        port443Ok = true;
+                    } catch (Exception e443) {
+                        port443Err = e443.getClass().getSimpleName() + ": " + e443.getMessage();
+                    }
+                }
+                long port443Ms = System.currentTimeMillis() - port443Start;
+
+                // 3. TCP Port (ASYCUDA RMI Application Server) Probe
+                boolean portRmiOk = false;
+                String portRmiErr = null;
+                long portRmiStart = System.currentTimeMillis();
+                if (resolvedIp != null) {
+                    try (Socket sRmi = (activeNet != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                            ? activeNet.getSocketFactory().createSocket() : new Socket()) {
+                        sRmi.connect(new java.net.InetSocketAddress(InetAddress.getByName(resolvedIp), probeRmiPort), 2600);
+                        portRmiOk = true;
+                    } catch (Exception eRmi) {
+                        portRmiErr = eRmi.getClass().getSimpleName() + ": " + eRmi.getMessage();
+                    }
+                }
+                long portRmiMs = System.currentTimeMillis() - portRmiStart;
+
+                // 4. Check 4G Cellular Multipath Bypass status
+                boolean bypassActive = sUserConsented4gBypass && sCellularBypassNetwork != null
+                        && sCellularRmiRelaySocket != null && !sCellularRmiRelaySocket.isClosed();
+
+                String excText = caughtException != null
+                        ? (caughtException.getClass().getName() + ": " + caughtException.getMessage()) : "";
+                String combinedUpper = ((rawContextLog != null ? rawContextLog : "") + "\n" + excText).toUpperCase(Locale.US);
+                boolean isDesktopMainExit12 = combinedUpper.contains("EXIT CODE = 12") || combinedUpper.contains("SERVER NOT FOUND");
+
+                String primaryCodeLocation = callerCodeLine;
+                if (isDesktopMainExit12) {
+                    primaryCodeLocation = "so.kernel.client.DesktopMain.connection(DesktopMain.java:235 -> 353) [ClientTransportLayer.establishSignallingChannel(\""
+                            + ALLOWED_MOF_HOST + "\", " + probeRmiPort + ")] | Caught by " + callerCodeLine;
+                }
+
+                // Load Known-Issues Catalog (Synced GitHub DB + Bundled APK Fallback)
+                org.json.JSONArray catalogEntries = loadKnownErrorsCatalogEntries(activity);
+                JSONObject matchedEntry = null;
+
+                // Priority 1: Match specific System / Security / Runtime exceptions in the log or Throwable first
+                if (!isDesktopMainExit12 && !"initial_package_download".equals(stage) && !stage.startsWith("manual_")) {
+                    matchedEntry = findCatalogEntryByKeywords(catalogEntries, combinedUpper);
+                }
+
+                // Priority 2: Match live network telemetry conditions if not already matched to a system/runtime issue
+                if (matchedEntry == null) {
+                    if (activeNet == null || !hasInternetCap) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-001");
+                    } else if (resolvedIp == null) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-002");
+                    } else if ((caughtException instanceof javax.net.ssl.SSLException)
+                            || combinedUpper.contains("SSLHANDSHAKE") || combinedUpper.contains("CERTPATHVALIDATOR")) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-005");
+                    } else if ((caughtException instanceof SecurityException)
+                            || combinedUpper.contains("BLOCKED OUTBOUND") || combinedUpper.contains("SECURITYEXCEPTION")) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-SEC-001");
+                    } else if (!port443Ok && portRmiOk && "initial_package_download".equals(stage)) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-004");
+                    } else if (isWifi && (!portRmiOk || isDesktopMainExit12)) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-003");
+                    } else if (!portRmiOk || isDesktopMainExit12 || "initial_package_download".equals(stage) || stage.startsWith("manual_")) {
+                        matchedEntry = findCatalogEntryByKeywords(catalogEntries, combinedUpper);
+                        if (matchedEntry == null) {
+                            matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-007");
+                        }
+                    }
+                }
+
+                boolean isNewUncataloguedError = (matchedEntry == null);
+                String errorCodeBadge;
+                String humanTitle;
+                String humanExplanation;
+                String verifiedFixId;
+                String fixedInVersion = "";
+
+                if (matchedEntry != null) {
+                    errorCodeBadge = matchedEntry.optString("badge", matchedEntry.optString("id", "SENTRY-KNOWN"));
+                    humanTitle = AsycudaMaterialUi.tr(activity,
+                            matchedEntry.optString("titleEn", "Known Issue Detected"),
+                            matchedEntry.optString("titleAr", "تم رصد مشكلة معروفة"),
+                            matchedEntry.optString("titleKu", "کێشەیەکی ناسراو دۆزرایەوە"));
+                    humanExplanation = AsycudaMaterialUi.tr(activity,
+                            matchedEntry.optString("explanationEn", ""),
+                            matchedEntry.optString("explanationAr", ""),
+                            matchedEntry.optString("explanationKu", ""));
+                    verifiedFixId = matchedEntry.optString("verifiedFixId", "NONE");
+                    fixedInVersion = matchedEntry.optString("fixedInVersion", "");
+                    String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
+                    if (!fixedInVersion.isEmpty() && isRemoteVersionNewer(fixedInVersion, currentVer)) {
+                        verifiedFixId = "OPEN_APP_UPDATE_CENTER";
+                    }
+                } else {
+                    // Brand-New / Uncatalogued Error -> Extract generic human explanation & highlight Sentry share
+                    errorCodeBadge = "SENTRY-NEW-000 • UNCATALOGUED_RUNTIME_ERROR";
+                    String simpleErrName = caughtException != null
+                            ? caughtException.getClass().getSimpleName()
+                            : extractFirstExceptionNameFromLog(rawContextLog, stage);
+                    String rawErrMsg = caughtException != null && caughtException.getMessage() != null
+                            ? caughtException.getMessage()
+                            : extractFirstErrorLineFromLog(rawContextLog);
+                    String simpleErrMsg = redactSensitiveLogContent(rawErrMsg);
+                    humanTitle = AsycudaMaterialUi.tr(activity,
+                            "New Uncatalogued Error (" + simpleErrName + ")",
+                            "خطأ جديد غير مسجل (" + simpleErrName + ")",
+                            "هەڵەیەکی نوێی تۆمارنەکراو (" + simpleErrName + ")");
+                    humanExplanation = AsycudaMaterialUi.tr(activity,
+                            "An unexpected error occurred that is not yet in the Known Issues Catalog:\n\n"
+                            + "• Detected Type: " + simpleErrName + "\n"
+                            + "• Details: " + simpleErrMsg + "\n"
+                            + "• Code Location: " + primaryCodeLocation + "\n"
+                            + "• Network Status: " + transportName + " (Server Port :" + probeRmiPort + " " + (portRmiOk ? "Online" : "Unreachable") + ")\n\n"
+                            + "What you can do right now:\n"
+                            + "1. Tap 'Share New Error to Sentry' below so our engineering team can identify this error and publish a direct fix to the catalog.\n"
+                            + "2. Or tap 'Apply Fix: Clear Temporary Cache & Restart Session' to recover immediately.",
+                            "حدث خطأ غير متوقع وغير مدرج بعد في قاعدة بيانات الأعطال المعروفة:\n\n"
+                            + "• نوع الخطأ المرصود: " + simpleErrName + "\n"
+                            + "• التفاصيل المتاحة: " + simpleErrMsg + "\n"
+                            + "• موقع الكود البرمجي: " + primaryCodeLocation + "\n"
+                            + "• حالة الشبكة: " + transportName + " (منفذ الخادم :" + probeRmiPort + " " + (portRmiOk ? "متصل" : "غير مستجيب") + ")\n\n"
+                            + "الخطوات المقترحة الآن:\n"
+                            + "1. اضغط على زر (مشاركة الخطأ الجديد إلى Sentry) بالأسفل ليتم تسجيل هذا الخطأ في قاعدة البيانات وإضافة حل مباشر له.\n"
+                            + "2. أو اضغط على زر (مسح الملفات المؤقتة وإعادة تشغيل الجلسة) للاستئناف فوراً.",
+                            "هەڵەیەکی چاوەڕواننەکراو ڕوویدا کە هێشتا لە بنکەی زانیاری تۆمار نەکراوە:\n\n"
+                            + "• جۆری هەڵە: " + simpleErrName + "\n"
+                            + "• وردەکاری: " + simpleErrMsg + "\n"
+                            + "• شوێنی کۆد: " + primaryCodeLocation + "\n\n"
+                            + "تکایە دوگمەی (هاوبەشکردنی هەڵەی نوێ بۆ Sentry) لە خوارەوە دابگرە تا چارەسەری بۆ زیاد بکرێت.");
+                    verifiedFixId = "CLEAR_TEMP_AND_LOCKS";
+                }
+
+                StringBuilder tech = new StringBuilder();
+                tech.append("=== ASYCUDA UNIVERSAL DIAGNOSTIC & SENTRY CATALOG LOG (IN-RAM REDACTED) ===\n");
+                tech.append("PrivacyPolicy    : STRICT_RAM_ONLY (Credentials, usernames, passwords, TINs, tokens, and server IPs scrubbed; zero disk writes)\n");
+                tech.append("Timestamp        : ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS Z", Locale.US).format(new Date())).append("\n");
+                tech.append("Diagnostic Stage : ").append(stage).append("\n");
+                tech.append("Catalog Status   : ").append(isNewUncataloguedError ? "NEW_UNCATALOGUED_ERROR (Suggest Sentry Share)" : "KNOWN_CATALOG_MATCH").append("\n");
+                tech.append("Error Code       : ").append(errorCodeBadge).append("\n");
+                tech.append("Verified Fix ID  : ").append(verifiedFixId).append("\n");
+                tech.append("Code Line Source : ").append(primaryCodeLocation).append("\n");
+                tech.append("Active Transport : ").append(transportName).append("\n");
+                tech.append("DNS Lookup       : ").append(ALLOWED_MOF_HOST).append(" -> ")
+                        .append(resolvedIp != null ? "RESOLVED_OK [IP_REDACTED]" : "FAILED (" + redactSensitiveLogContent(dnsError) + ")")
+                        .append(" (").append(dnsMs).append(" ms)\n");
+                tech.append("HTTPS Web (:443) : ").append(port443Ok ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(port443Err) + ")")
+                        .append(" (").append(port443Ms).append(" ms)\n");
+                tech.append("RMI Port (:").append(probeRmiPort).append(") : ").append(portRmiOk ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(portRmiErr) + ")")
+                        .append(" (").append(portRmiMs).append(" ms)\n");
+                tech.append("4G User Relay    : ").append(bypassActive ? "USER_ENABLED on 127.0.0.1:" + sCellularRmiRelayPort : "OPT_IN_INACTIVE (Default)")
+                        .append("\n");
+
+                File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
+                if (hostsFile.exists()) {
+                    String hostsTail = readTail(hostsFile, 256);
+                    boolean usesLoopbackRelay = hostsTail.contains("127.0.0.1 asy.mof.gov.iq");
+                    boolean hasMofEntry = hostsTail.contains("asy.mof.gov.iq");
+                    String safeHostsState = usesLoopbackRelay
+                            ? "127.0.0.1 asy.mof.gov.iq (Local 4G Loopback Relay)"
+                            : (hasMofEntry ? "[IP_REDACTED] asy.mof.gov.iq (Direct Host Mapping)" : "localhost only");
+                    tech.append("glibc /etc/hosts : ").append(safeHostsState).append("\n");
+                }
+                if (caughtException != null) {
+                    tech.append("\n--- JAVA EXCEPTION STACK TRACE (REDACTED) ---\n");
+                    tech.append(caughtException.getClass().getName()).append(": ")
+                            .append(redactSensitiveLogContent(caughtException.getMessage())).append("\n");
+                    StackTraceElement[] st = caughtException.getStackTrace();
+                    int limit = Math.min(st != null ? st.length : 0, 8);
+                    for (int i = 0; i < limit; i++) {
+                        tech.append("  at ").append(redactSensitiveLogContent(st[i].toString())).append("\n");
+                    }
+                }
+                if (rawContextLog != null && !rawContextLog.trim().isEmpty()) {
+                    tech.append("\n--- SESSION / ASYCUDA LOG TAIL (REDACTED) ---\n");
+                    tech.append(redactSensitiveLogContent(rawContextLog.trim())).append("\n");
+                }
+
+                appendNetworkDiagnosticLogEntry(clientDir, "diagnoseAndShowUniversalNetworkModal[" + stage + "]",
+                        caughtException, errorCodeBadge + " | " + primaryCodeLocation);
+
+                final String fTitle = humanTitle;
+                final String fBadge = errorCodeBadge;
+                final String fExplain = humanExplanation;
+                final StringBuilder fTechRamBuffer = new StringBuilder(redactSensitiveLogContent(tech.toString()));
+                for (int i = 0; i < tech.length(); i++) {
+                    tech.setCharAt(i, '\0');
+                }
+                tech.setLength(0);
+                final boolean fIsNew = isNewUncataloguedError;
+                final String fFixBtnLabel = resolveVerifiedFixButtonLabel(activity, verifiedFixId, fixedInVersion);
+                final Runnable fFixAction = createVerifiedFixAction(activity, verifiedFixId, onRetry);
+                final String fSummaryContext = redactSensitiveLogContent(errorCodeBadge + " | " + primaryCodeLocation);
+
+                UI.post(() -> {
+                    if (!activity.isFinishing()) {
+                        AsycudaMaterialUi.showUniversalNetworkDiagnosticModal(
+                                activity,
+                                fTitle,
+                                fBadge,
+                                fExplain,
+                                fTechRamBuffer,
+                                fIsNew,
+                                fFixBtnLabel,
+                                fFixAction,
+                                () -> AsycudaMaterialUi.showDiagnosticDataPreviewModal(
+                                        activity,
+                                        buildDiagnosticPreviewBufferInRam(activity, fSummaryContext)),
+                                () -> {
+                                    new Thread(() -> {
+                                        refreshGlibcHostsCache(activity.getFilesDir());
+                                        if (onRetry != null) {
+                                            UI.post(onRetry);
+                                        } else {
+                                            UI.post(() -> restartAsycudaSession(activity));
+                                        }
+                                    }, "Asycuda-DiagRetry").start();
+                                },
+                                () -> openFeedbackAndBugReportModal(activity));
+                    }
+                });
+            } catch (Exception ignored) {
+                // Best-effort diagnostic modal
+            }
+        }, "Asycuda-UniversalNetDiag").start();
+    }
+
+    private static String extractFirstExceptionNameFromLog(String rawLog, String fallbackStage) {
+        if (rawLog != null && !rawLog.isEmpty()) {
+            for (String line : rawLog.split("\n")) {
+                String t = line.trim();
+                if (t.contains("Exception") || t.contains("Error")) {
+                    int colon = t.indexOf(':');
+                    String head = colon > 0 ? t.substring(0, colon).trim() : t;
+                    int lastDot = head.lastIndexOf('.');
+                    String candidate = lastDot >= 0 ? head.substring(lastDot + 1) : head;
+                    if (candidate.length() > 2 && candidate.length() <= 64) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        return fallbackStage != null ? fallbackStage : "RuntimeError";
+    }
+
+    private static String extractFirstErrorLineFromLog(String rawLog) {
+        if (rawLog != null && !rawLog.isEmpty()) {
+            String[] lines = rawLog.split("\n");
+            for (int i = lines.length - 1; i >= 0; i--) {
+                String t = lines[i].trim();
+                if (!t.isEmpty() && !t.startsWith("at ")) {
+                    return t.length() > 180 ? t.substring(0, 180) + "..." : t;
+                }
+            }
+        }
+        return "See developer technical log below for full trace.";
     }
 
     private static void patchLibJliForTargetSdk34(File jreDir) {
@@ -2043,6 +3426,8 @@ public class AsycudaStandaloneManager {
 
     private void extractTarXzAsset(Context ctx, String assetName, File destDir) throws IOException {
         String destCanonPrefix = destDir.getCanonicalPath() + File.separator;
+        boolean isRuntimeArchive = "runtime-arm64.tar.xz".equals(assetName);
+        int extractedCount = 0;
         try (InputStream raw = ctx.getAssets().open(assetName);
              BufferedInputStream bis = new BufferedInputStream(raw, 65536);
              XZInputStream xzis = new XZInputStream(bis);
@@ -2051,6 +3436,14 @@ public class AsycudaStandaloneManager {
             TarArchiveEntry entry;
             byte[] buf = new byte[32768];
             while ((entry = tis.getNextTarEntry()) != null) {
+                extractedCount++;
+                if (isRuntimeArchive && extractedCount % 250 == 0) {
+                    final int countSnap = extractedCount;
+                    updateStatus(AsycudaMaterialUi.tr(ctx,
+                            "Setting up the Java environment (1/2) — " + countSnap + " files...",
+                            "جاري تجهيز بيئة التشغيل جافا (1/2) — " + countSnap + " ملف...",
+                            "ئامادەکردنی ژینگەی جاڤا (1/2) — " + countSnap + " پەڕگە..."));
+                }
                 File outFile = new File(destDir, entry.getName());
                 String outCanon = outFile.getCanonicalPath();
                 if (!outCanon.equals(destDir.getCanonicalPath()) && !outCanon.startsWith(destCanonPrefix)) {
@@ -2240,6 +3633,19 @@ public class AsycudaStandaloneManager {
                         Toast.LENGTH_LONG).show();
                 runUnifiedUpdateCheckModal(act, true);
             });
+        } else if (msg.startsWith("BIND_4G_RELAY_PORT|")) {
+            if (sUserConsented4gBypass && sCellularBypassNetwork != null) {
+                try {
+                    int dynamicPort = Integer.parseInt(msg.substring("BIND_4G_RELAY_PORT|".length()).trim());
+                    if (dynamicPort > 1024 && dynamicPort <= 65535 && dynamicPort != 47891
+                            && (dynamicPort < 6000 || dynamicPort > 6010)
+                            && dynamicPort != sCellularHttpsRelayPort) {
+                        ensureCellularRmiRelay(dynamicPort);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Ignore malformed port
+                }
+            }
         } else if (msg.startsWith("SECURITY_ERROR|")) {
             final String reason = msg.substring("SECURITY_ERROR|".length()).trim();
             UI.post(() -> AsycudaMaterialUi.showSecuritySandboxErrorModal(
@@ -2306,10 +3712,28 @@ public class AsycudaStandaloneManager {
     }
 
     private boolean isAllowedBridgeUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return false;
         try {
-            Uri u = Uri.parse(url);
+            Uri u = Uri.parse(url.trim());
             String scheme = u.getScheme();
-            return SCHEME_HTTPS.equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme);
+            String host = u.getHost() != null ? u.getHost().toLowerCase(Locale.US) : "";
+            String path = u.getPath() != null ? u.getPath().toLowerCase(Locale.US) : "";
+            if (SCHEME_HTTPS.equalsIgnoreCase(scheme)) {
+                if (ALLOWED_MOF_HOST.equals(host)
+                        || "www.asycuda.org".equals(host)
+                        || "asycuda.org".equals(host)) {
+                    return true;
+                }
+                if ("github.com".equals(host)) {
+                    return path.startsWith("/mohammedalshimmary/asycuda-iraq-android");
+                }
+            }
+            if ("http".equalsIgnoreCase(scheme) || SCHEME_HTTPS.equalsIgnoreCase(scheme)) {
+                int port = u.getPort();
+                return ("127.0.0.1".equals(host) || "localhost".equals(host))
+                        && port > 1024 && port == sCellularHttpsRelayPort;
+            }
+            return false;
         } catch (Exception t) {
             return false;
         }
@@ -2404,28 +3828,28 @@ public class AsycudaStandaloneManager {
         pill.setTag(FLOATING_PILL_TAG);
         pill.setOrientation(LinearLayout.HORIZONTAL);
         pill.setGravity(Gravity.CENTER_VERTICAL);
-        int hp = dp(activity, 13);
-        int vp = dp(activity, 7);
+        int hp = dp(activity, 11);
+        int vp = dp(activity, 5);
         pill.setPadding(hp, vp, hp, vp);
         pill.setAlpha(0.90f);
-        pill.setElevation(dp(activity, 12));
+        pill.setElevation(dp(activity, 10));
 
         GradientDrawable pillBg = new GradientDrawable();
         pillBg.setColor(Color.parseColor("#E61C1C1E"));
-        pillBg.setCornerRadius(dp(activity, 20));
+        pillBg.setCornerRadius(dp(activity, 16));
         pillBg.setStroke(Math.max(1, dp(activity, 1)), Color.parseColor("#FF38383A"));
         pill.setBackground(pillBg);
 
         ImageView dot = new ImageView(activity);
         dot.setImageResource(R.drawable.ic_asycuda_logo);
-        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(activity, 18), dp(activity, 18));
-        dotLp.rightMargin = dp(activity, 7);
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(activity, 16), dp(activity, 16));
+        dotLp.rightMargin = dp(activity, 6);
         pill.addView(dot, dotLp);
 
         TextView label = new TextView(activity);
         label.setText("ASYCUDA");
         label.setTextColor(Color.WHITE);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         label.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         label.setLetterSpacing(0.04f);
         pill.addView(label);
@@ -2603,7 +4027,14 @@ public class AsycudaStandaloneManager {
                     Thread.currentThread().interrupt();
                 }
             }
-            launchAsycudaJvm(activity);
+            File filesDir = activity.getFilesDir();
+            File runtimeMarker = new File(filesDir, ".extracted_v3_2");
+            File clientDir = new File(filesDir, DIR_CLIENT);
+            if (!runtimeMarker.exists() || !areAllManifestJarsPresent(clientDir)) {
+                bootstrapEnvironmentAndStart(activity);
+            } else {
+                launchAsycudaJvm(activity);
+            }
         }, "Asycuda-SessionRestart").start();
     }
 
@@ -3090,6 +4521,12 @@ public class AsycudaStandaloneManager {
             sb.append("\n=== 5. Recent Client Log (client.log) ===\n");
             sb.append(redactSensitiveLogContent(readTail(clientLog, 2000))).append("\n");
         }
+        synchronized (sRedactedRamDiagRingBuffer) {
+            if (sRedactedRamDiagRingBuffer.length() > 0) {
+                sb.append("\n=== 6. In-RAM Universal Diagnostic Trace ===\n");
+                sb.append(sRedactedRamDiagRingBuffer).append("\n");
+            }
+        }
         return sb;
     }
 
@@ -3157,6 +4594,12 @@ public class AsycudaStandaloneManager {
             // 4. Core ASYCUDA & Client Logs (tail only + strict credential/token redaction)
             addFileToZipIfExists(zos, new File(clientDir, FILE_ASYCUDA_LOG), FILE_ASYCUDA_LOG, true);
             addFileToZipIfExists(zos, new File(clientDir, FILE_CLIENT_LOG), FILE_CLIENT_LOG, true);
+            synchronized (sRedactedRamDiagRingBuffer) {
+                if (sRedactedRamDiagRingBuffer.length() > 0) {
+                    addBytesToZip(zos, "universal_diagnostics_ram.txt",
+                            sRedactedRamDiagRingBuffer.toString().getBytes(StandardCharsets.UTF_8));
+                }
+            }
 
             // 5. Recent Android Logcat scoped strictly to our own process PID
             String myPid = String.valueOf(android.os.Process.myPid());

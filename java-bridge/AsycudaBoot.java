@@ -91,16 +91,63 @@ public class AsycudaBoot {
     }
 
     public static void handleDesktopAction(final String action, final String target) {
+        if (!isAuthorizedDesktopActionCaller()) {
+            return;
+        }
         new Thread(new Runnable() {
             @Override
             public void run() {
                 if ("BROWSE".equals(action)) {
-                    sendToAndroidApk("BROWSE|" + target);
+                    if (isAllowedOutboundBrowseUrl(target)) {
+                        sendToAndroidApk("BROWSE|" + target);
+                    }
                 } else {
                     processAndOpenFile(new File(target));
                 }
             }
         }, "Asycuda-Opener").start();
+    }
+
+    private static boolean isAuthorizedDesktopActionCaller() {
+        StackTraceElement[] stack = new Throwable().getStackTrace();
+        if (stack == null || stack.length <= 1) return false;
+        boolean sawAllowedBridgeCaller = false;
+        for (int i = 1; i < stack.length; i++) {
+            String cn = stack[i].getClassName();
+            if (cn == null) continue;
+            if ("java.awt.Desktop".equals(cn)
+                    || cn.startsWith("javax.jnlp.ServiceManager")
+                    || "asycuda.AsycudaBoot".equals(cn)
+                    || cn.startsWith("asycuda.AsycudaBoot$")) {
+                sawAllowedBridgeCaller = true;
+                break;
+            }
+        }
+        return sawAllowedBridgeCaller;
+    }
+
+    private static boolean isAllowedOutboundBrowseUrl(String rawUrl) {
+        if (rawUrl == null || rawUrl.trim().isEmpty()) return false;
+        try {
+            java.net.URL u = new java.net.URL(rawUrl.trim());
+            String proto = u.getProtocol();
+            String host = u.getHost() != null ? u.getHost().toLowerCase(Locale.US) : "";
+            if ("https".equalsIgnoreCase(proto)) {
+                if ("asy.mof.gov.iq".equals(host)
+                        || "www.asycuda.org".equals(host)
+                        || "asycuda.org".equals(host)
+                        || "github.com".equals(host)) {
+                    return true;
+                }
+            }
+            if ("http".equalsIgnoreCase(proto) || "https".equalsIgnoreCase(proto)) {
+                return ("127.0.0.1".equals(host) || "localhost".equals(host))
+                        && u.getPort() > 1024;
+            }
+            return false;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     public static void processAndOpenFile(File rawFile) {
@@ -171,16 +218,34 @@ public class AsycudaBoot {
         return rawFile.length() > 0;
     }
 
-    public static boolean sendToAndroidApk(String msg) {
+    private static boolean sendToAndroidApk(String msg) {
+        return sendToAndroidApkInternal(msg, false);
+    }
+
+    private static boolean sendToAndroidApkSync(String msg) {
+        return sendToAndroidApkInternal(msg, true);
+    }
+
+    private static boolean sendToAndroidApkInternal(String msg, boolean waitForCloseAck) {
         java.net.InetSocketAddress loopbackAddr = new java.net.InetSocketAddress(
                 java.net.InetAddress.getLoopbackAddress(), 47891);
         try (java.nio.channels.SocketChannel ch = java.nio.channels.SocketChannel.open(loopbackAddr)) {
+            if (waitForCloseAck) {
+                ch.socket().setSoTimeout(1500);
+            }
             String token = BRIDGE_SESSION_TOKEN;
             String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
             byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
             java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(payloadBytes);
             while (buf.hasRemaining()) {
                 ch.write(buf);
+            }
+            if (waitForCloseAck) {
+                try {
+                    ch.socket().getInputStream().read();
+                } catch (Throwable ignoredAck) {
+                    // Timeout or EOF after bridge completes synchronous command
+                }
             }
             return true;
         } catch (Throwable t) {
@@ -1396,11 +1461,123 @@ public class AsycudaBoot {
         } catch (Throwable ignored) {
             // System properties are best-effort
         }
+        installMofHttpsTrustStore();
     }
 
+    /**
+     * Installs a composite X.509 TrustManager combining the OpenJDK 8 default cacerts TrustManager
+     * with the official Iraqi Ministry of Finance certificate (mof.crt) before the JVM SecurityManager
+     * locks down file access, so https://asy.mof.gov.iq/aw/help/index.html loads cleanly over TLS.
+     */
+    private static void installMofHttpsTrustStore() {
+        try {
+            javax.net.ssl.TrustManagerFactory defaultTmf = javax.net.ssl.TrustManagerFactory.getInstance(
+                    javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+            defaultTmf.init((java.security.KeyStore) null);
+            javax.net.ssl.X509TrustManager defaultTm = null;
+            for (javax.net.ssl.TrustManager tm : defaultTmf.getTrustManagers()) {
+                if (tm instanceof javax.net.ssl.X509TrustManager) {
+                    defaultTm = (javax.net.ssl.X509TrustManager) tm;
+                    break;
+                }
+            }
+
+            File crtFile = new File("/data/data/iq.asycuda/files/client/mof.crt");
+            if (!crtFile.isFile()) {
+                crtFile = new File("mof.crt");
+            }
+            javax.net.ssl.X509TrustManager mofTm = null;
+            if (crtFile.isFile()) {
+                java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+                ks.load(null, null);
+                java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+                try (FileInputStream fis = new FileInputStream(crtFile)) {
+                    int idx = 0;
+                    for (java.security.cert.Certificate cert : cf.generateCertificates(fis)) {
+                        ks.setCertificateEntry("mof_" + (idx++), cert);
+                    }
+                }
+                javax.net.ssl.TrustManagerFactory mofTmf = javax.net.ssl.TrustManagerFactory.getInstance(
+                        javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+                mofTmf.init(ks);
+                for (javax.net.ssl.TrustManager tm : mofTmf.getTrustManagers()) {
+                    if (tm instanceof javax.net.ssl.X509TrustManager) {
+                        mofTm = (javax.net.ssl.X509TrustManager) tm;
+                        break;
+                    }
+                }
+            }
+
+            if (defaultTm == null && mofTm == null) return;
+            final javax.net.ssl.X509TrustManager finalDefaultTm = defaultTm;
+            final javax.net.ssl.X509TrustManager finalMofTm = mofTm;
+
+            javax.net.ssl.X509TrustManager compositeTm = new javax.net.ssl.X509TrustManager() {
+                @Override
+                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType)
+                        throws java.security.cert.CertificateException {
+                    if (chain == null || chain.length == 0) {
+                        throw new java.security.cert.CertificateException("Empty client certificate chain");
+                    }
+                    if (finalDefaultTm != null) {
+                        finalDefaultTm.checkClientTrusted(chain, authType);
+                        return;
+                    }
+                    if (finalMofTm != null) {
+                        finalMofTm.checkClientTrusted(chain, authType);
+                        return;
+                    }
+                    throw new java.security.cert.CertificateException("No X509TrustManager available to validate client certificate chain");
+                }
+
+                @Override
+                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType)
+                        throws java.security.cert.CertificateException {
+                    if (chain == null || chain.length == 0) {
+                        throw new java.security.cert.CertificateException("Empty server certificate chain");
+                    }
+                    if (finalDefaultTm != null) {
+                        try {
+                            finalDefaultTm.checkServerTrusted(chain, authType);
+                            return;
+                        } catch (java.security.cert.CertificateException e) {
+                            if (finalMofTm == null) throw e;
+                        }
+                    }
+                    if (finalMofTm != null) {
+                        finalMofTm.checkServerTrusted(chain, authType);
+                        return;
+                    }
+                    throw new java.security.cert.CertificateException("No X509TrustManager available to validate server certificate chain");
+                }
+
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    List<java.security.cert.X509Certificate> all = new ArrayList<java.security.cert.X509Certificate>();
+                    if (finalDefaultTm != null) {
+                        all.addAll(Arrays.asList(finalDefaultTm.getAcceptedIssuers()));
+                    }
+                    if (finalMofTm != null) {
+                        all.addAll(Arrays.asList(finalMofTm.getAcceptedIssuers()));
+                    }
+                    return all.toArray(new java.security.cert.X509Certificate[0]);
+                }
+            };
+
+            javax.net.ssl.SSLContext sslCtx = javax.net.ssl.SSLContext.getInstance("TLS");
+            sslCtx.init(null, new javax.net.ssl.TrustManager[] { compositeTm }, new java.security.SecureRandom());
+            javax.net.ssl.SSLContext.setDefault(sslCtx);
+            javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslCtx.getSocketFactory());
+        } catch (Throwable ignored) {
+            // Best-effort truststore augmentation
+        }
+    }
+
+    private static final int MAX_CELLULAR_RELAY_PORTS = 8;
     private static final Set<String> ALLOWED_CUSTOMS_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final Set<String> ALLOWED_VIRTUAL_RMI_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final Set<Integer> ALLOWED_MOF_PORTS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    private static final Set<Integer> REQUESTED_RELAY_PORTS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
     static {
         // -1 is Java SecurityManager's standard sentinel for DNS resolution in checkConnect(host, -1)
         ALLOWED_MOF_PORTS.add(Integer.valueOf(-1));
@@ -1571,8 +1748,12 @@ public class AsycudaBoot {
                                                     Object portVal = getPortMethod.invoke(item);
                                                     if (portVal instanceof Number) {
                                                         int p = ((Number) portVal).intValue();
-                                                        if (p > 0 && p <= 65535) {
+                                                        if (p > 1024 && p <= 65535 && p != 47891 && (p < 6000 || p > 6010)) {
                                                             ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
+                                                            if (REQUESTED_RELAY_PORTS.size() < MAX_CELLULAR_RELAY_PORTS
+                                                                    && REQUESTED_RELAY_PORTS.add(Integer.valueOf(p))) {
+                                                                sendToAndroidApkSync("BIND_4G_RELAY_PORT|" + p);
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1623,6 +1804,11 @@ public class AsycudaBoot {
                 || "::1".equals(h)
                 || "0:0:0:0:0:0:0:1".equals(h)
                 || ("0.0.0.0".equals(h) && port == -1)) {
+            if (port > 1024 && port != 47891 && (port < 6000 || port > 6010)
+                    && REQUESTED_RELAY_PORTS.size() < MAX_CELLULAR_RELAY_PORTS
+                    && !ALLOWED_MOF_PORTS.contains(Integer.valueOf(port))) {
+                syncMofTransportState();
+            }
             return;
         }
         // Allow local single-label device hostname resolution during InetAddress.getLocalHost() (port == -1)
@@ -1721,6 +1907,7 @@ public class AsycudaBoot {
                 || (norm.startsWith("/proc/") && (norm.endsWith("/environ") || norm.endsWith("/mem") || norm.endsWith("/maps") || norm.endsWith("/cmdline")))
                 || norm.contains("/shared_prefs")
                 || norm.contains("legal_consent_receipt.json")
+                || norm.contains("known_errors_catalog.json")
                 || norm.contains("/databases/")
                 || norm.endsWith("/databases")
                 || norm.contains("/datastore/")
