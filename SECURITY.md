@@ -27,8 +27,8 @@ Every asset published on the [official `v4.1.0` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.1.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 43`, `targetSdkVersion 34`) | `83153e3175804bec926b8bc668f3ca63cd31f8debf56f515475e575503b5091d` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`) & config (`zero` government JARs bundled; all official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `7a7236dadc352ba4380387f6f539c9f1387ac9154bc4bbe2918a9fc75257992a` |
+| [**`ASYCUDA_Iraq_v4.1.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/ASYCUDA_Iraq_v4.1.0.apk) | Signed Android release APK (`iq.asycuda`, `versionCode 43`, `targetSdkVersion 34`) | `7f0e32cd509ee46734229404e91ff65a3ba15f508c1660af5ebead4464b6e026` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`) & config (`zero` government JARs bundled; all official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `6a1c70d6960bbad0a8faa9383e3a963240c91ae571498cd0b197e4cf9174c29c` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.1.0/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + Eclipse Temurin OpenJDK `8u504-b01` LTS (`1.8.0_504-b01`) runtime environment | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
 
