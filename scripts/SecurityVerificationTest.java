@@ -43,6 +43,7 @@ public final class SecurityVerificationTest {
             "WRITE_EXTERNAL_STORAGE",
             "ACCESS_WIFI_STATE",
             "CHANGE_WIFI_STATE",
+            "CHANGE_NETWORK_STATE",
             "BIND_ACCESSIBILITY_SERVICE"
         };
         for (String perm : forbidden) {
@@ -147,14 +148,20 @@ public final class SecurityVerificationTest {
         if (!mgrSrc.contains("MessageDigest.isEqual") || !mgrSrc.contains("isLoopbackPeerOwnedByOurUid")) {
             throw new AssertionError("AsycudaStandaloneManager must enforce constant-time MessageDigest.isEqual and loopback UID peer verification");
         }
-        if (!mgrSrc.contains("MAX_CELLULAR_RELAY_PORTS") || mgrSrc.contains("NextGen-Customs-")) {
-            throw new AssertionError("AsycudaStandaloneManager must enforce MAX_CELLULAR_RELAY_PORTS and use official ASYCUDA-Iraq-Android catalog URL (R5-02/R5-04)");
+        if (mgrSrc.contains("NextGen-Customs-") || !mgrSrc.contains("MohammedALShimmary/ASYCUDA-Iraq-Android")) {
+            throw new AssertionError("AsycudaStandaloneManager must use the official ASYCUDA-Iraq-Android catalog URL (R5-04)");
+        }
+        if (mgrSrc.contains("requestNetwork(") || mgrSrc.contains("BIND_4G_RELAY_PORT")
+                || mgrSrc.contains("ROUTE_4G_CELLULAR") || mgrSrc.contains("sCellularBypassNetwork")) {
+            throw new AssertionError("The 4G network bypass relay was removed in v4.1.0; the app must never request, bind, or relay traffic over a secondary network");
         }
         File bootFile = resolveProjectFile("java-bridge/AsycudaBoot.java");
         String bootSrc = new String(Files.readAllBytes(bootFile.toPath()), StandardCharsets.UTF_8);
-        if (bootSrc.contains("public static boolean sendToAndroidApk(")
-                || bootSrc.contains("public static boolean sendToAndroidApkSync(")) {
-            throw new AssertionError("sendToAndroidApk and sendToAndroidApkSync must be private static in AsycudaBoot (R5-01)");
+        if (bootSrc.contains("BIND_4G_RELAY_PORT") || bootSrc.contains("REQUESTED_RELAY_PORTS")) {
+            throw new AssertionError("AsycudaBoot must not request 4G relay ports (4G bypass removed in v4.1.0)");
+        }
+        if (bootSrc.contains("public static boolean sendToAndroidApk(")) {
+            throw new AssertionError("sendToAndroidApk must be private static in AsycudaBoot (R5-01)");
         }
     }
 

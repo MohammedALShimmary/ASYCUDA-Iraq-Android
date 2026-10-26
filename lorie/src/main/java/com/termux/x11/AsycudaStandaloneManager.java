@@ -914,7 +914,6 @@ public class AsycudaStandaloneManager {
 
             // Smart Startup Sync: Check MOF Server (asy.mof.gov.iq) for dynamic JNLP list & JAR updates
             boolean initialDownloadRequired = !areAllManifestJarsPresent(clientDir);
-            evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), filesDir);
             syncGovernmentJars(clientDir, initialDownloadRequired, null);
 
             if (!areAllManifestJarsPresent(clientDir)) {
@@ -1031,14 +1030,12 @@ public class AsycudaStandaloneManager {
 
     private static final String GITHUB_KNOWN_ERRORS_CATALOG_URL =
             "https://raw.githubusercontent.com/MohammedALShimmary/ASYCUDA-Iraq-Android/main/lorie-app/src/main/assets/known-errors-catalog.json";
-    private static final int MAX_CELLULAR_RELAY_PORTS = 8;
     private static final String FILE_KNOWN_ERRORS_CATALOG = "known_errors_catalog.json";
     private static final String ASSET_KNOWN_ERRORS_CATALOG = "known-errors-catalog.json";
     private static final Set<String> ALLOWED_VERIFIED_FIX_IDS = new HashSet<>(java.util.Arrays.asList(
             "NONE",
             "OPEN_NETWORK_SETTINGS",
-            "REFRESH_DNS_OR_4G",
-            "ROUTE_4G_CELLULAR",
+            "SWITCH_TO_MOBILE_DATA",
             "LAUNCH_WITH_CACHED_JARS",
             "CLEAN_LOCKS_AND_RECONNECT",
             "REFRESH_DNS_AND_RETRY",
@@ -1201,15 +1198,6 @@ public class AsycudaStandaloneManager {
     }
 
     private static volatile boolean sNetworkMonitorRegistered = false;
-    private static volatile boolean sUserConsented4gBypass = false;
-    private static volatile android.net.Network sCellularBypassNetwork = null;
-    private static volatile String sCellularBypassMofIp = null;
-    private static final java.util.concurrent.ConcurrentHashMap<Integer, ServerSocket> sCellularRmiRelaySockets =
-            new java.util.concurrent.ConcurrentHashMap<>();
-    private static volatile ServerSocket sCellularRmiRelaySocket = null;
-    private static volatile int sCellularRmiRelayPort = -1;
-    private static volatile ServerSocket sCellularHttpsRelaySocket = null;
-    private static volatile int sCellularHttpsRelayPort = -1;
     private static volatile Exception sLastSyncException = null;
 
     private void ensureNetworkChangeMonitor(Context appCtx, File filesDir) {
@@ -1222,7 +1210,6 @@ public class AsycudaStandaloneManager {
                     @Override
                     public void onAvailable(android.net.Network network) {
                         new Thread(() -> {
-                            evaluateMofRouteAndCellularBypass(appCtx, filesDir);
                             refreshGlibcHostsCache(filesDir);
                         }, "Asycuda-NetHandoverDns").start();
                     }
@@ -1231,119 +1218,6 @@ public class AsycudaStandaloneManager {
         } catch (Exception ignored) {
             // Best-effort network handover monitor
         }
-    }
-
-    /**
-     * User-Consented Cellular (4G) Multipath Bypass While Connected to Wi-Fi.
-     * Never activates automatically on startup — only runs when the user explicitly clicks the
-     * {@code Apply Fix: Route Session via 4G Mobile Data} button in the Universal Diagnostics Window
-     * ({@code sUserConsented4gBypass == true}).
-     */
-    private synchronized void evaluateMofRouteAndCellularBypass(Context appCtx, File filesDir) {
-        if (!sUserConsented4gBypass || appCtx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            sCellularBypassNetwork = null;
-            sCellularBypassMofIp = null;
-            stopCellularRmiRelay();
-            return;
-        }
-        try {
-            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) appCtx.getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm == null) return;
-            android.net.Network activeNet = cm.getActiveNetwork();
-            if (activeNet == null) {
-                sCellularBypassNetwork = null;
-                sCellularBypassMofIp = null;
-                stopCellularRmiRelay();
-                return;
-            }
-            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(activeNet);
-            boolean isWifi = isWifiTransportActive(cm, caps);
-            int rmiPort = extractDynamicMofRmiPort(new File(filesDir, DIR_CLIENT + "/" + FILE_AWIQ_JNLP));
-
-            if (!isWifi) {
-                // Device is already directly on 4G Mobile Data (Wi-Fi turned off)
-                sCellularBypassNetwork = null;
-                sCellularBypassMofIp = null;
-                stopCellularRmiRelay();
-                return;
-            }
-
-            // If 4G bypass network is already established in this session, keep it active and ensure relays are bound
-            if (sCellularBypassNetwork != null && sCellularBypassMofIp != null) {
-                android.net.NetworkCapabilities cellCaps = cm.getNetworkCapabilities(sCellularBypassNetwork);
-                if (cellCaps != null && cellCaps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                    ensureCellularHttpsRelay();
-                    if (rmiPort > 0) {
-                        ensureCellularRmiRelay(rmiPort);
-                    }
-                    refreshGlibcHostsCache(filesDir);
-                    return;
-                }
-            }
-
-            // User explicitly consented to route ASYCUDA via 4G Mobile Data while on blocked Wi-Fi
-            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-            final android.net.Network[] cellHolder = new android.net.Network[1];
-            android.net.NetworkRequest req = new android.net.NetworkRequest.Builder()
-                    .addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
-                    .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .build();
-            android.net.ConnectivityManager.NetworkCallback cb = new android.net.ConnectivityManager.NetworkCallback() {
-                @Override
-                public void onAvailable(android.net.Network network) {
-                    cellHolder[0] = network;
-                    latch.countDown();
-                }
-            };
-            boolean cellAcquired = false;
-            try {
-                cm.requestNetwork(req, cb);
-                cellAcquired = latch.await(4500, java.util.concurrent.TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception ignored) {
-                // Cellular network unavailable or permission denied
-            }
-            android.net.Network cellNet = (cellAcquired || cellHolder[0] != null) ? cellHolder[0] : null;
-            if (cellNet != null) {
-                InetAddress cellAddr = null;
-                try {
-                    cellAddr = cellNet.getByName(ALLOWED_MOF_HOST);
-                } catch (Exception ignored) {
-                    // Fallback to system resolver on active network if cellular DNS is warming up
-                    try {
-                        cellAddr = InetAddress.getByName(ALLOWED_MOF_HOST);
-                    } catch (Exception ignored2) {
-                        // Unresolvable
-                    }
-                }
-                if (cellAddr != null && cellAddr.getHostAddress() != null) {
-                    sCellularBypassNetwork = cellNet;
-                    sCellularBypassMofIp = cellAddr.getHostAddress().trim();
-                    ensureCellularHttpsRelay();
-                    if (rmiPort > 0) {
-                        ensureCellularRmiRelay(rmiPort);
-                    }
-                    refreshGlibcHostsCache(filesDir);
-                    updateStatus(AsycudaMaterialUi.tr(appCtx,
-                            "Routing session via 4G Mobile Data (User-Approved Fix)...",
-                            "جاري تمرير الجلسة عبر بيانات الهاتف 4G (بموافقة المستخدم)...",
-                            "تێپەڕاندنی دانیشتن لە ڕێگەی داتای 4G..."));
-                    return;
-                }
-            } else {
-                try {
-                    cm.unregisterNetworkCallback(cb);
-                } catch (Exception ignored) {
-                    // Ignore callback unregister error
-                }
-            }
-        } catch (Exception ignored) {
-            // Fallback to normal routing
-        }
-        sCellularBypassNetwork = null;
-        sCellularBypassMofIp = null;
-        stopCellularRmiRelay();
     }
 
     private boolean isWifiTransportActive(
@@ -1370,162 +1244,12 @@ public class AsycudaStandaloneManager {
         return false;
     }
 
-    private synchronized void ensureCellularRmiRelay(final int rmiPort) {
-        if (rmiPort <= 1024 || rmiPort > 65535 || rmiPort == 47891
-                || (rmiPort >= 6000 && rmiPort <= 6010) || rmiPort == sCellularHttpsRelayPort) {
-            return;
-        }
-        ServerSocket existing = sCellularRmiRelaySockets.get(rmiPort);
-        if (existing != null && !existing.isClosed()) {
-            return;
-        }
-        if (sCellularRmiRelaySockets.size() >= MAX_CELLULAR_RELAY_PORTS) {
-            return;
-        }
-        try {
-            final ServerSocket ss = new ServerSocket(rmiPort, 32, InetAddress.getByName("127.0.0.1"));
-            sCellularRmiRelaySockets.put(rmiPort, ss);
-            sCellularRmiRelaySocket = ss;
-            sCellularRmiRelayPort = rmiPort;
-            Thread relayThread = new Thread(() -> {
-                while (!ss.isClosed() && !Thread.currentThread().isInterrupted()) {
-                    try {
-                        final Socket localSock = ss.accept();
-                        if (!isLoopbackPeerOwnedByOurUid(localSock)) {
-                            localSock.close();
-                            continue;
-                        }
-                        new Thread(() -> pipeCellularRelayConnection(localSock, rmiPort),
-                                "Asycuda-4GRelayConn-" + rmiPort).start();
-                    } catch (Exception e) {
-                        if (ss.isClosed()) break;
-                    }
-                }
-            }, "Asycuda-4GRmiRelay-" + rmiPort);
-            relayThread.setDaemon(true);
-            relayThread.start();
-        } catch (Exception ignored) {
-            // Port already bound or unavailable
-        }
-    }
-
-    private void pipeCellularRelayConnection(final Socket localSock, final int rmiPort) {
-        Socket remoteSock = null;
-        try {
-            android.net.Network cellNet = sCellularBypassNetwork;
-            String mofIp = sCellularBypassMofIp;
-            if (cellNet == null || mofIp == null) {
-                localSock.close();
-                return;
-            }
-            remoteSock = cellNet.getSocketFactory().createSocket();
-            remoteSock.connect(new java.net.InetSocketAddress(InetAddress.getByName(mofIp), rmiPort), 10000);
-            remoteSock.setTcpNoDelay(true);
-            localSock.setTcpNoDelay(true);
-            final Socket finalRemote = remoteSock;
-            Thread up = new Thread(() -> copySocketStream(localSock, finalRemote), "Asycuda-4GUp-" + rmiPort);
-            up.setDaemon(true);
-            up.start();
-            copySocketStream(finalRemote, localSock);
-        } catch (Exception ignored) {
-            // Relay socket closed
-        } finally {
-            try { localSock.close(); } catch (Exception ignored) { /* Ignore */ }
-            if (remoteSock != null) {
-                try { remoteSock.close(); } catch (Exception ignored) { /* Ignore */ }
-            }
-        }
-    }
-
-    private void copySocketStream(Socket inSock, Socket outSock) {
-        try {
-            InputStream in = inSock.getInputStream();
-            OutputStream out = outSock.getOutputStream();
-            byte[] buf = new byte[32768];
-            int n;
-            while ((n = in.read(buf)) != -1) {
-                out.write(buf, 0, n);
-                out.flush();
-            }
-        } catch (Exception ignored) {
-            // Normal stream EOF/close
-        } finally {
-            try { outSock.shutdownOutput(); } catch (Exception ignored) { /* Ignore */ }
-        }
-    }
-
-    private synchronized void ensureCellularHttpsRelay() {
-        ServerSocket existing = sCellularHttpsRelaySocket;
-        if (existing != null && !existing.isClosed() && sCellularHttpsRelayPort > 0) {
-            return;
-        }
-        try {
-            final int remoteHttpsPort = new URL(MOF_CODEBASE_URL).getDefaultPort();
-            final ServerSocket ss = new ServerSocket(0, 32, InetAddress.getByName("127.0.0.1"));
-            sCellularHttpsRelaySocket = ss;
-            sCellularHttpsRelayPort = ss.getLocalPort();
-            Thread relayThread = new Thread(() -> {
-                while (!ss.isClosed() && !Thread.currentThread().isInterrupted()) {
-                    try {
-                        final Socket localSock = ss.accept();
-                        if (!isLoopbackPeerOwnedByOurUid(localSock)) {
-                            localSock.close();
-                            continue;
-                        }
-                        new Thread(() -> pipeCellularRelayConnection(localSock, remoteHttpsPort),
-                                "Asycuda-4GHttpsConn").start();
-                    } catch (Exception e) {
-                        if (ss.isClosed()) break;
-                    }
-                }
-            }, "Asycuda-4GHttpsRelay");
-            relayThread.setDaemon(true);
-            relayThread.start();
-        } catch (Exception ignored) {
-            // Local ephemeral port unavailable
-        }
-    }
-
-    private static synchronized void stopCellularRmiRelay() {
-        for (ServerSocket ss : sCellularRmiRelaySockets.values()) {
-            try {
-                ss.close();
-            } catch (Exception ignored) {
-                // Ignore close error
-            }
-        }
-        sCellularRmiRelaySockets.clear();
-        sCellularRmiRelaySocket = null;
-        sCellularRmiRelayPort = -1;
-        if (sCellularHttpsRelaySocket != null) {
-            try {
-                sCellularHttpsRelaySocket.close();
-            } catch (Exception ignored) {
-                // Ignore close error
-            }
-            sCellularHttpsRelaySocket = null;
-        }
-        sCellularHttpsRelayPort = -1;
-    }
-
     /**
      * Dynamically resolves {@code host} (never using any hardcoded server IP or fallback IP):
-     * 1. Queries the active 4G Cellular bypass network if Wi-Fi is blocked by the MoF firewall.
-     * 2. Queries Android's currently active {@link android.net.Network#getByName(String)} (4G or Wi-Fi).
-     * 3. Queries standard {@link InetAddress#getByName(String)}.
+     * 1. Queries Android's currently active {@link android.net.Network#getByName(String)} (Wi-Fi or Mobile Data).
+     * 2. Queries standard {@link InetAddress#getByName(String)}.
      */
     private InetAddress resolveHostDynamically(String host) {
-        try {
-            android.net.Network cellBypass = sCellularBypassNetwork;
-            if (cellBypass != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                InetAddress addr = cellBypass.getByName(host);
-                if (addr != null && addr.getAddress() != null) {
-                    return InetAddress.getByAddress(host, addr.getAddress());
-                }
-            }
-        } catch (Exception ignored) {
-            // Fall through to active network
-        }
         try {
             MainActivity act = sCurrentActivity;
             if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1554,26 +1278,12 @@ public class AsycudaStandaloneManager {
 
     /**
      * Dynamically resolves asy.mof.gov.iq and updates usr/glibc/etc/hosts so glibc inside the JVM
-     * can resolve asy.mof.gov.iq across Wi-Fi and 4G. When the 4G Cellular Multipath Relay is active
-     * because the current Wi-Fi ISP is blocked by the MoF firewall, points asy.mof.gov.iq to 127.0.0.1
-     * so the JVM routes through the Android 4G socket relay.
+     * can resolve asy.mof.gov.iq on whichever network Android currently has active (Wi-Fi or Mobile Data).
      */
     private void refreshGlibcHostsCache(File filesDir) {
         try {
             File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
             if (hostsFile.getParentFile() != null) ensureDir(hostsFile.getParentFile());
-            if (sCellularBypassNetwork != null && sCellularRmiRelaySocket != null && !sCellularRmiRelaySocket.isClosed()) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("127.0.0.1 localhost\n");
-                sb.append("::1 localhost\n");
-                sb.append("127.0.0.1 asy.mof.gov.iq\n");
-                try (FileOutputStream fos = new FileOutputStream(hostsFile)) {
-                    fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
-                    fos.getFD().sync();
-                }
-                setReadableOwnerOnly(hostsFile);
-                return;
-            }
             InetAddress resolved = resolveHostDynamically(ALLOWED_MOF_HOST);
             if (resolved == null || resolved.getHostAddress() == null) {
                 if (hostsFile.exists() && hostsFile.length() > 30) {
@@ -1776,16 +1486,6 @@ public class AsycudaStandaloneManager {
                 fos.getFD().sync();
             } catch (Exception ignored) {
                 // Ignore local JNLP cache write failure
-            }
-            if (sCellularBypassNetwork != null) {
-                ensureCellularHttpsRelay();
-                int newRmiPort = extractDynamicMofRmiPort(localJnlp);
-                if (newRmiPort > 0) {
-                    ensureCellularRmiRelay(newRmiPort);
-                    if (clientDir != null && clientDir.getParentFile() != null) {
-                        refreshGlibcHostsCache(clientDir.getParentFile());
-                    }
-                }
             }
 
             List<String> remoteHrefs = parseJnlpJarHrefs(jnlpXml);
@@ -2108,11 +1808,6 @@ public class AsycudaStandaloneManager {
                     if (!val.isEmpty()) {
                         String lowVal = val.toLowerCase(Locale.US);
                         if (lowVal.startsWith("-") || lowVal.contains(ALLOWED_MOF_HOST)) {
-                            if (sCellularBypassNetwork != null && sCellularHttpsRelayPort > 0
-                                    && lowVal.startsWith("https://" + ALLOWED_MOF_HOST + "/")) {
-                                val = "https://" + ALLOWED_MOF_HOST + ":" + sCellularHttpsRelayPort
-                                        + val.substring(("https://" + ALLOWED_MOF_HOST).length());
-                            }
                             args.add(val);
                         }
                     }
@@ -2236,17 +1931,12 @@ public class AsycudaStandaloneManager {
         }
         HttpURLConnection conn = null;
         try {
-            android.net.Network cellBypass = sCellularBypassNetwork;
-            if (cellBypass != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                conn = (HttpURLConnection) cellBypass.openConnection(url);
-            } else {
-                MainActivity act = sCurrentActivity;
-                if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
-                    android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
-                    if (activeNet != null) {
-                        conn = (HttpURLConnection) activeNet.openConnection(url);
-                    }
+            MainActivity act = sCurrentActivity;
+            if (act != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager) act.getSystemService(Context.CONNECTIVITY_SERVICE);
+                android.net.Network activeNet = cm != null ? cm.getActiveNetwork() : null;
+                if (activeNet != null) {
+                    conn = (HttpURLConnection) activeNet.openConnection(url);
                 }
             }
         } catch (Exception ignored) {
@@ -2416,10 +2106,7 @@ public class AsycudaStandaloneManager {
 
                 ensureX11ServerSocketReady(activity, filesDir);
 
-                // Evaluate active route and activate 4G Cellular Multipath Bypass if Wi-Fi ISP is blocked by MoF firewall
-                evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), filesDir);
-
-                // Pre-populate usr/glibc/etc/hosts with resolved IP (or 127.0.0.1 4G relay) for asy.mof.gov.iq
+                // Pre-populate usr/glibc/etc/hosts with the dynamically resolved IP for asy.mof.gov.iq
                 refreshGlibcHostsCache(filesDir);
 
                 File clientDir = new File(filesDir, DIR_CLIENT);
@@ -2808,16 +2495,11 @@ public class AsycudaStandaloneManager {
     private String resolveVerifiedFixButtonLabel(MainActivity activity, String verifiedFixId, String fixedInVersion) {
         if (verifiedFixId == null || "NONE".equals(verifiedFixId)) return null;
         switch (verifiedFixId) {
-            case "ROUTE_4G_CELLULAR":
+            case "SWITCH_TO_MOBILE_DATA":
                 return AsycudaMaterialUi.tr(activity,
-                        "Apply Fix: Route Session via 4G Mobile Data",
-                        "تطبيق الحل: تمرير الجلسة عبر بيانات الهاتف 4G",
-                        "جێبەجێکردنی چارەسەر: پەیوەندیکردن لە ڕێگەی داتای 4G");
-            case "REFRESH_DNS_OR_4G":
-                return AsycudaMaterialUi.tr(activity,
-                        "Apply Fix: Flush DNS Cache & Route via 4G",
-                        "تطبيق الحل: تحديث ذاكرة DNS والتمرير عبر 4G",
-                        "جێبەجێکردنی چارەسەر: نوێکردنەوەی DNS و پەیوەندی 4G");
+                        "Fix: Turn Off Wi-Fi & Use Mobile Data (4G)",
+                        "الحل: أطفئ الواي فاي واستخدم بيانات الهاتف (4G)",
+                        "چارەسەر: وایفای بکوژێنەوە و داتای مۆبایل (4G) بەکاربهێنە");
             case "OPEN_NETWORK_SETTINGS":
                 return AsycudaMaterialUi.tr(activity,
                         "Apply Fix: Open Device Internet Settings",
@@ -2874,6 +2556,38 @@ public class AsycudaStandaloneManager {
         }
     }
 
+    /**
+     * Shows plain guidance asking the user to turn off Wi-Fi and use Mobile Data (4G) if available.
+     * The app does not request, bind, or relay traffic over any network itself.
+     */
+    private void showSwitchToMobileDataGuidance(final MainActivity activity, final Runnable onRetry) {
+        if (activity == null) return;
+        UI.post(() -> AsycudaMaterialUi.showSwitchToMobileDataModal(activity,
+                () -> openWifiSettings(activity),
+                () -> {
+                    if (onRetry != null) {
+                        onRetry.run();
+                    } else {
+                        restartAsycudaSession(activity);
+                    }
+                }));
+    }
+
+    private static void openWifiSettings(MainActivity activity) {
+        try {
+            Intent wifiIntent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                    ? new Intent(android.provider.Settings.Panel.ACTION_WIFI)
+                    : new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+            activity.startActivity(wifiIntent);
+        } catch (Exception e) {
+            try {
+                activity.startActivity(new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS));
+            } catch (Exception ignored) {
+                // Ignore settings launch error
+            }
+        }
+    }
+
     private Runnable createVerifiedFixAction(
             final MainActivity activity,
             final String verifiedFixId,
@@ -2895,27 +2609,8 @@ public class AsycudaStandaloneManager {
                     }
                     break;
 
-                case "ROUTE_4G_CELLULAR":
-                case "REFRESH_DNS_OR_4G":
-                    hideSplashButton();
-                    updateStatus(AsycudaMaterialUi.tr(activity,
-                            "Activating user-approved 4G Mobile Data route for ASYCUDA...",
-                            "جاري تفعيل مسار بيانات الهاتف (4G) المعتمد لنظام أسيكودا...",
-                            "چالاککردنی ڕێڕەوی داتای مۆبایل (4G) بۆ ئەسیکۆدا..."));
-                    Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                            "Activating user-approved 4G Mobile Data route for ASYCUDA...",
-                            "جاري تفعيل مسار بيانات الهاتف (4G) المعتمد لنظام أسيكودا...",
-                            "چالاککردنی ڕێڕەوی داتای مۆبایل (4G) بۆ ئەسیکۆدا..."), Toast.LENGTH_LONG).show();
-                    new Thread(() -> {
-                        sUserConsented4gBypass = true;
-                        evaluateMofRouteAndCellularBypass(activity.getApplicationContext(), activity.getFilesDir());
-                        refreshGlibcHostsCache(activity.getFilesDir());
-                        if (onRetry != null) {
-                            UI.post(onRetry);
-                        } else {
-                            UI.post(() -> restartAsycudaSession(activity));
-                        }
-                    }, "Asycuda-VerifiedFix-4G").start();
+                case "SWITCH_TO_MOBILE_DATA":
+                    showSwitchToMobileDataGuidance(activity, onRetry);
                     break;
 
                 case "LAUNCH_WITH_CACHED_JARS":
@@ -3104,10 +2799,6 @@ public class AsycudaStandaloneManager {
                 }
                 long portRmiMs = System.currentTimeMillis() - portRmiStart;
 
-                // 4. Check 4G Cellular Multipath Bypass status
-                boolean bypassActive = sUserConsented4gBypass && sCellularBypassNetwork != null
-                        && sCellularRmiRelaySocket != null && !sCellularRmiRelaySocket.isClosed();
-
                 String excText = caughtException != null
                         ? (caughtException.getClass().getName() + ": " + caughtException.getMessage()) : "";
                 String combinedUpper = ((rawContextLog != null ? rawContextLog : "") + "\n" + excText).toUpperCase(Locale.US);
@@ -3231,18 +2922,13 @@ public class AsycudaStandaloneManager {
                         .append(" (").append(port443Ms).append(" ms)\n");
                 tech.append("RMI Port (:").append(probeRmiPort).append(") : ").append(portRmiOk ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(portRmiErr) + ")")
                         .append(" (").append(portRmiMs).append(" ms)\n");
-                tech.append("4G User Relay    : ").append(bypassActive ? "USER_ENABLED on 127.0.0.1:" + sCellularRmiRelayPort : "OPT_IN_INACTIVE (Default)")
-                        .append("\n");
 
                 File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
                 if (hostsFile.exists()) {
                     String hostsTail = readTail(hostsFile, 256);
-                    boolean usesLoopbackRelay = hostsTail.contains("127.0.0.1 asy.mof.gov.iq");
                     boolean hasMofEntry = hostsTail.contains("asy.mof.gov.iq");
                     String safeHostsState;
-                    if (usesLoopbackRelay) {
-                        safeHostsState = "127.0.0.1 asy.mof.gov.iq (Local 4G Loopback Relay)";
-                    } else if (hasMofEntry) {
+                    if (hasMofEntry) {
                         safeHostsState = "[IP_REDACTED] asy.mof.gov.iq (Direct Host Mapping)";
                     } else {
                         safeHostsState = "localhost only";
@@ -3627,19 +3313,6 @@ public class AsycudaStandaloneManager {
                         Toast.LENGTH_LONG).show();
                 runUnifiedUpdateCheckModal(act, true);
             });
-        } else if (msg.startsWith("BIND_4G_RELAY_PORT|")) {
-            if (sUserConsented4gBypass && sCellularBypassNetwork != null) {
-                try {
-                    int dynamicPort = Integer.parseInt(msg.substring("BIND_4G_RELAY_PORT|".length()).trim());
-                    if (dynamicPort > 1024 && dynamicPort <= 65535 && dynamicPort != 47891
-                            && (dynamicPort < 6000 || dynamicPort > 6010)
-                            && dynamicPort != sCellularHttpsRelayPort) {
-                        ensureCellularRmiRelay(dynamicPort);
-                    }
-                } catch (NumberFormatException ignored) {
-                    // Ignore malformed port
-                }
-            }
         } else if (msg.startsWith("SECURITY_ERROR|")) {
             final String reason = msg.substring("SECURITY_ERROR|".length()).trim();
             UI.post(() -> AsycudaMaterialUi.showSecuritySandboxErrorModal(
@@ -3721,11 +3394,6 @@ public class AsycudaStandaloneManager {
                 if ("github.com".equals(host)) {
                     return path.startsWith("/mohammedalshimmary/asycuda-iraq-android");
                 }
-            }
-            if ("http".equalsIgnoreCase(scheme) || SCHEME_HTTPS.equalsIgnoreCase(scheme)) {
-                int port = u.getPort();
-                return ("127.0.0.1".equals(host) || "localhost".equals(host))
-                        && port > 1024 && port == sCellularHttpsRelayPort;
             }
             return false;
         } catch (Exception t) {

@@ -2060,6 +2060,76 @@ public class AsycudaMaterialUi {
         dialog.show();
     }
 
+    /**
+     * Simple guidance shown when the current Wi-Fi network blocks the ASYCUDA server.
+     * The app never changes or routes network traffic itself; it only asks the user to turn
+     * off Wi-Fi in Android settings and use Mobile Data (4G) if available, then retry.
+     */
+    public static void showSwitchToMobileDataModal(MainActivity activity,
+                                                   Runnable onOpenWifiSettings, Runnable onRetry) {
+        if (activity == null || activity.isFinishing()) return;
+        Dialog dialog = createModalDialog(activity, 0.74f, 460, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "Turn Off Wi-Fi & Use Mobile Data (4G)",
+                "أطفئ الواي فاي واستخدم بيانات الهاتف (4G)",
+                "وایفای بکوژێنەوە و داتای مۆبایل (4G) بەکاربهێنە"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
+        root.addView(title);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        scLp.topMargin = dp(activity, 7);
+        scLp.bottomMargin = dp(activity, 8);
+        scroll.setLayoutParams(scLp);
+
+        TextView body = new TextView(activity);
+        body.setText(tr(activity,
+                "The Wi-Fi network you are connected to appears to block the ASYCUDA server (asy.mof.gov.iq). Many office and home Wi-Fi networks block the ASYCUDA connection port even when the website opens normally in the browser.\n\nWhat to do:\n1. Tap 'Open Wi-Fi Settings' and turn Wi-Fi OFF.\n2. Make sure Mobile Data (4G) is ON, if available.\n3. Come back to the app and tap 'Retry Connection'.\n\nYou can turn Wi-Fi back on after you finish your ASYCUDA work.",
+                "يبدو أن شبكة الواي فاي المتصل بها تحجب خادم أسيكودا (asy.mof.gov.iq). العديد من شبكات الواي فاي في المكاتب والمنازل تحجب منفذ اتصال أسيكودا حتى لو كان الموقع يفتح بشكل طبيعي في المتصفح.\n\nالخطوات:\n١. اضغط على (فتح إعدادات الواي فاي) وأطفئ الواي فاي.\n٢. تأكد من تشغيل بيانات الهاتف (4G) إن كانت متوفرة.\n٣. ارجع إلى التطبيق واضغط على (إعادة محاولة الاتصال).\n\nيمكنك إعادة تشغيل الواي فاي بعد الانتهاء من عملك في أسيكودا.",
+                "وادیارە ئەو تۆڕی وایفایەی پێوەی پەیوەستیت ڕێگری لە ڕاژەی ئەسیکۆدا (asy.mof.gov.iq) دەکات. زۆربەی تۆڕەکانی وایفای نووسینگە و ماڵ دەروازەی پەیوەندی ئەسیکۆدا دادەخەن تەنانەت ئەگەر ماڵپەڕەکە لە وێبگەڕدا بە ئاسایی بکرێتەوە.\n\nهەنگاوەکان:\n١. (کردنەوەی ڕێکخستنەکانی وایفای) دابگرە و وایفای بکوژێنەوە.\n٢. دڵنیابە داتای مۆبایل (4G) هەڵکراوە، ئەگەر بەردەست بێت.\n٣. بگەڕێوە بۆ بەرنامەکە و (دووبارە هەوڵدانەوەی پەیوەندی) دابگرە.\n\nدوای تەواوبوونی کارەکەت دەتوانیت وایفای دووبارە هەڵبکەیتەوە."));
+        body.setTextColor(TEXT_PRIMARY);
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        int pad = dp(activity, 10);
+        body.setPadding(pad, pad, pad, pad);
+        body.setBackground(createCardDrawable(activity, SURFACE_GROUPED_CARD, 10, Color.parseColor("#33FFFFFF")));
+        scroll.addView(body);
+        root.addView(scroll);
+
+        LinearLayout actions = new LinearLayout(activity);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END);
+
+        TextView wifiBtn = createCupertinoButton(activity,
+                tr(activity, "Open Wi-Fi Settings", "فتح إعدادات الواي فاي", "کردنەوەی ڕێکخستنەکانی وایفای"),
+                true, false, v -> {
+                    if (onOpenWifiSettings != null) onOpenWifiSettings.run();
+                });
+        LinearLayout.LayoutParams wLp = (LinearLayout.LayoutParams) wifiBtn.getLayoutParams();
+        wLp.setMarginEnd(dp(activity, 8));
+        actions.addView(wifiBtn);
+
+        TextView retryBtn = createCupertinoButton(activity,
+                tr(activity, "Retry Connection", "إعادة محاولة الاتصال", "دووبارە هەوڵدانەوەی پەیوەندی"),
+                false, false, v -> {
+                    dialog.dismiss();
+                    if (onRetry != null) onRetry.run();
+                });
+        actions.addView(retryBtn);
+        root.addView(actions);
+
+        dialog.setContentView(root);
+        dialog.show();
+    }
+
     private static Dialog sActiveNetworkDiagDialog;
 
     /**
@@ -4488,13 +4558,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "5. Universal Network Diagnostics, Known-Issues Catalog & 4G Bypass",
-                        "5. نافذة التشخيص الذكي للأعطال وقاعدة البيانات وتمرير اتصال 4G",
-                        "٥. پەنجەرەی دەستنیشانکردنی زیرەکی کێشەکان و تێپەڕاندنی پەیوەندی 4G"),
+                        "5. Universal Network Diagnostics & Known-Issues Catalog",
+                        "5. نافذة التشخيص الذكي للأعطال وقاعدة البيانات الموثقة",
+                        "٥. پەنجەرەی دەستنیشانکردنی زیرەکی کێشەکان و بنکەی زانیاری"),
                 tr(activity,
-                        "Automatically diagnoses network, firewall, and runtime issues against a verified Known-Issues Catalog, lets you route your ASYCUDA session over 4G Mobile Data with one tap when Wi-Fi is blocked, and provides a 100% in-RAM redacted log preview.",
-                        "تشخيص تلقائي لأعطال الشبكة والجدار الناري ومطابقتها مع قاعدة بيانات الأعطال المعروفة، مع إمكانية تمرير جلسة أسيكودا عبر بيانات الهاتف (4G) بضغطة واحدة عند حجب شبكة Wi-Fi، ومعاينة آمنة للسجلات المنقاة داخل الذاكرة العشوائية (RAM).",
-                        "دەستنیشانکردنی خۆکاری کێشەکانی تۆڕ و بەراوردکردنی لەگەڵ بنکەی زانیاری هەڵە ناسراوەکان، لەگەڵ توانای تێپەڕاندنی دانیشتنی ئەسیکۆدا لە ڕێگەی داتای مۆبایل (4G) کاتێک وایفای بلۆک دەکرێت و پێداچوونەوەی پارێزراوی تۆمارەکان لەناو RAM."));
+                        "Automatically diagnoses network, firewall, and runtime issues against a verified Known-Issues Catalog, alerts you to turn off Wi-Fi and use 4G Mobile Data when your Wi-Fi provider is blocked by the Customs firewall, and provides a 100% in-RAM redacted log preview.",
+                        "تشخيص تلقائي لأعطال الشبكة والجدار الناري ومطابقتها مع قاعدة بيانات الأعطال المعروفة، مع تنبيه المستخدم لإيقاف شبكة الواي فاي واستخدام بيانات الهاتف (4G) عند حجب مزود خدمة الواي فاي من جدار حماية الكمارك، ومعاينة آمنة للسجلات المنقاة داخل الذاكرة العشوائية (RAM).",
+                        "دەستنیشانکردنی خۆکاری کێشەکانی تۆڕ و بەراوردکردنی لەگەڵ بنکەی زانیاری هەڵە ناسراوەکان، لەگەڵ ئاگادارکردنەوەی بەکارهێنەر بۆ کوژاندنەوەی وایفای و بەکارهێنانی داتای مۆبایل (4G) کاتێک وایفای بلۆک دەکرێت و پێداچوونەوەی پارێزراوی تۆمارەکان لەناو RAM."));
 
         scroll.addView(card);
         root.addView(scroll);

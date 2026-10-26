@@ -140,9 +140,9 @@ jobs:
           ### What's New in Major Release \`${TAG}\`
           1. **100% Dynamic Network, Port & IP Architecture (Zero Hardcoded IPs/Ports)**:
              - Dynamically discovers JNLP launch arguments, RMI transport ports (\`so.rmi.url.port\`), and virtualized RMI endpoints directly from \`AWIQWorld.jnlp\`, \`ClientTransportLayer\`, and live system DNS resolution without hardcoded server IPs or fallback ports.
-          2. **Universal Error & Network Diagnostics Window + User-Consented 4G Mobile Data Bypass**:
+          2. **Universal Error & Network Diagnostics Window + Known-Issues Catalog**:
              - Automatically probes active transport (\`Wi-Fi\`, \`4G/5G\`, \`VPN\`), DNS resolution, HTTPS (\`:443\`), and the dynamic RMI port from \`AWIQWorld.jnlp\`, matching failures against the validated Known-Issues Catalog (\`lorie-app/src/main/assets/known-errors-catalog.json\`).
-             - Provides a user-consented one-tap **"Apply Fix: Route Session via 4G Mobile Data"** button (bounded to \`MAX_CELLULAR_RELAY_PORTS = 8\`) and a composite TLS TrustManager (\`installMofHttpsTrustStore()\` with \`mof.crt\`) so \`Help -> Index\` loads cleanly over both Wi-Fi and 4G.
+             - Alerts the user to turn off Wi-Fi and switch to 4G Mobile Data when the current Wi-Fi ISP is blocked by the Ministry of Finance firewall, and installs a composite TLS TrustManager (\`installMofHttpsTrustStore()\` with \`mof.crt\`) so \`Help -> Index\` loads cleanly.
           3. **100% In-RAM Redacted Diagnostic Preview & Auto-Zeroing Memory Safety**:
              - Both the Universal Diagnostics Window and the Control Center *"Report a Technical Issue"* modal use the exact same strict PII/credential scrubber (\`redactSensitiveLogContent()\`), provide a **Full RAM Preview** dialog, never copy logs to the system clipboard, and overwrite/zero (\`\0\`) all diagnostic \`StringBuilder\` buffers on close.
           4. **One-Way Clipboard Paste (Android to ASYCUDA Only) with Zero Logging**:
@@ -181,7 +181,7 @@ jobs:
           sed -i 's/^          //' /tmp/release_notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics & 4G Bypass, Hardened JVM Sandbox)" --notes-file /tmp/release_notes.md --latest
+            gh release edit "$TAG" --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics, Hardened JVM Sandbox)" --notes-file /tmp/release_notes.md --latest
             gh release upload "$TAG" \
               "/tmp/${APK_NAME}" \
               lorie-app/src/main/assets/asycuda-iraq.tar.xz \
@@ -194,7 +194,7 @@ jobs:
               lorie-app/src/main/assets/asycuda-iraq.tar.xz \
               lorie-app/src/main/assets/runtime-arm64.tar.xz \
               sbom.cdx.json \
-              --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics & 4G Bypass, Hardened JVM Sandbox)" \
+              --title "${TAG} — Major Release (Dynamic Host/Port Discovery, Universal Network Diagnostics, Hardened JVM Sandbox)" \
               --notes-file /tmp/release_notes.md \
               --latest
           fi

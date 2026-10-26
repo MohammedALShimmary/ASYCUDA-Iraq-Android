@@ -140,10 +140,6 @@ public class AsycudaBoot {
                     return true;
                 }
             }
-            if ("http".equalsIgnoreCase(proto) || "https".equalsIgnoreCase(proto)) {
-                return ("127.0.0.1".equals(host) || "localhost".equals(host))
-                        && u.getPort() > 1024;
-            }
             return false;
         } catch (Throwable ignored) {
             return false;
@@ -219,33 +215,15 @@ public class AsycudaBoot {
     }
 
     private static boolean sendToAndroidApk(String msg) {
-        return sendToAndroidApkInternal(msg, false);
-    }
-
-    private static boolean sendToAndroidApkSync(String msg) {
-        return sendToAndroidApkInternal(msg, true);
-    }
-
-    private static boolean sendToAndroidApkInternal(String msg, boolean waitForCloseAck) {
         java.net.InetSocketAddress loopbackAddr = new java.net.InetSocketAddress(
                 java.net.InetAddress.getLoopbackAddress(), 47891);
         try (java.nio.channels.SocketChannel ch = java.nio.channels.SocketChannel.open(loopbackAddr)) {
-            if (waitForCloseAck) {
-                ch.socket().setSoTimeout(1500);
-            }
             String token = BRIDGE_SESSION_TOKEN;
             String wirePayload = token.isEmpty() ? msg : ("AUTH|" + token + "|" + msg);
             byte[] payloadBytes = (wirePayload + "\n").getBytes(StandardCharsets.UTF_8);
             java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(payloadBytes);
             while (buf.hasRemaining()) {
                 ch.write(buf);
-            }
-            if (waitForCloseAck) {
-                try {
-                    ch.socket().getInputStream().read();
-                } catch (Throwable ignoredAck) {
-                    // Timeout or EOF after bridge completes synchronous command
-                }
             }
             return true;
         } catch (Throwable t) {
@@ -1573,11 +1551,9 @@ public class AsycudaBoot {
         }
     }
 
-    private static final int MAX_CELLULAR_RELAY_PORTS = 8;
     private static final Set<String> ALLOWED_CUSTOMS_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final Set<String> ALLOWED_VIRTUAL_RMI_IPS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final Set<Integer> ALLOWED_MOF_PORTS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-    private static final Set<Integer> REQUESTED_RELAY_PORTS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
     static {
         // -1 is Java SecurityManager's standard sentinel for DNS resolution in checkConnect(host, -1)
         ALLOWED_MOF_PORTS.add(Integer.valueOf(-1));
@@ -1750,10 +1726,6 @@ public class AsycudaBoot {
                                                         int p = ((Number) portVal).intValue();
                                                         if (p > 1024 && p <= 65535 && p != 47891 && (p < 6000 || p > 6010)) {
                                                             ALLOWED_MOF_PORTS.add(Integer.valueOf(p));
-                                                            if (REQUESTED_RELAY_PORTS.size() < MAX_CELLULAR_RELAY_PORTS
-                                                                    && REQUESTED_RELAY_PORTS.add(Integer.valueOf(p))) {
-                                                                sendToAndroidApkSync("BIND_4G_RELAY_PORT|" + p);
-                                                            }
                                                         }
                                                     }
                                                 }
@@ -1804,11 +1776,6 @@ public class AsycudaBoot {
                 || "::1".equals(h)
                 || "0:0:0:0:0:0:0:1".equals(h)
                 || ("0.0.0.0".equals(h) && port == -1)) {
-            if (port > 1024 && port != 47891 && (port < 6000 || port > 6010)
-                    && REQUESTED_RELAY_PORTS.size() < MAX_CELLULAR_RELAY_PORTS
-                    && !ALLOWED_MOF_PORTS.contains(Integer.valueOf(port))) {
-                syncMofTransportState();
-            }
             return;
         }
         // Allow local single-label device hostname resolution during InetAddress.getLocalHost() (port == -1)

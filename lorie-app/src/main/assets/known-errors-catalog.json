@@ -1,12 +1,11 @@
 {
   "schemaVersion": 1,
-  "catalogUpdated": "2026-10-25T23:15:00Z",
+  "catalogUpdated": "2026-10-26T10:30:00Z",
   "description": "Official ASYCUDA Iraq Android Known-Issues & Verified Self-Healing Catalog. Data-only diagnostic signatures synced read-only from GitHub and bundled offline inside the APK.",
   "allowedVerifiedFixIds": [
     "NONE",
     "OPEN_NETWORK_SETTINGS",
-    "REFRESH_DNS_OR_4G",
-    "ROUTE_4G_CELLULAR",
+    "SWITCH_TO_MOBILE_DATA",
     "LAUNCH_WITH_CACHED_JARS",
     "CLEAN_LOCKS_AND_RECONNECT",
     "REFRESH_DNS_AND_RETRY",
@@ -37,28 +36,28 @@
       "category": "NETWORK",
       "badge": "SENTRY-NET-002 • DNS_RESOLUTION_FAILED (UNKNOWN_HOST)",
       "matchKeywords": ["UNKNOWNHOSTEXCEPTION", "UNABLE TO RESOLVE HOST", "EAI_NODATA", "NO ADDRESS ASSOCIATED WITH HOSTNAME"],
-      "verifiedFixId": "REFRESH_DNS_OR_4G",
+      "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
       "titleEn": "Cannot Resolve Customs Server Address (DNS Error)",
       "titleAr": "تعذر العثور على عنوان خادم الكمارك (خطأ DNS)",
       "titleKu": "ناونیشانی ڕاژەی گومرگ نەدۆزرایەوە (هەڵەی DNS)",
-      "explanationEn": "Your internet provider's DNS server could not look up the address for the Iraqi Customs server (asy.mof.gov.iq).\n\nHow to resolve:\n• Tap 'Apply Fix: Flush DNS & Route via 4G' below to refresh the DNS cache or resolve using your 4G SIM card.",
-      "explanationAr": "خادم الـ DNS الخاص بمزود الإنترنت لديك لم يتمكن من ترجمة عنوان خادم الكمارك الرسمي (asy.mof.gov.iq).\n\nالخطوات المقترحة:\n• اضغط على زر (تطبيق الحل: تحديث DNS والتمرير عبر 4G) بالأسفل لتحديث ذاكرة العناوين وإعادة الاتصال.",
-      "explanationKu": "ڕاژەی DNSی هێڵی ئینتەرنێتەکەت نەیتوانی ناونیشانی ڕاژەی گومرگ (asy.mof.gov.iq) بدۆزێتەوە.\n\nچارەسەر:\n• دوگمەی چارەسەر دابگرە بۆ نوێکردنەوەی DNS لە ڕێگەی داتای مۆبایل (4G)."
+      "explanationEn": "Your internet provider's DNS server could not look up the address for the Iraqi Customs server (asy.mof.gov.iq).\n\nHow to resolve:\n• Tap 'Fix: Turn Off Wi-Fi & Use Mobile Data (4G)' below, turn Wi-Fi off in Android settings, make sure Mobile Data (4G) is on if available, then tap Retry Connection.",
+      "explanationAr": "خادم الـ DNS الخاص بمزود الإنترنت لديك لم يتمكن من ترجمة عنوان خادم الكمارك الرسمي (asy.mof.gov.iq).\n\nالخطوات المقترحة:\n• اضغط على زر (الحل: أطفئ الواي فاي واستخدم بيانات الهاتف 4G) بالأسفل، ثم أطفئ الواي فاي من إعدادات الجهاز وتأكد من تشغيل بيانات الهاتف (4G) إن كانت متوفرة، ثم اضغط إعادة محاولة الاتصال.",
+      "explanationKu": "ڕاژەی DNSی هێڵی ئینتەرنێتەکەت نەیتوانی ناونیشانی ڕاژەی گومرگ (asy.mof.gov.iq) بدۆزێتەوە.\n\nچارەسەر:\n• وایفای بکوژێنەوە و داتای مۆبایل (4G) هەڵبکە ئەگەر بەردەست بێت، پاشان دوگمەی دووبارە هەوڵدانەوە دابگرە."
     },
     {
       "id": "SENTRY-NET-003",
       "category": "NETWORK",
       "badge": "SENTRY-NET-003 • WIFI_ISP_BLOCKED_BY_MOF_FIREWALL (EXIT_12)",
       "matchKeywords": ["EXIT CODE = 12", "SERVER NOT FOUND", "ESTABLISHSIGNALLINGCHANNEL"],
-      "verifiedFixId": "ROUTE_4G_CELLULAR",
+      "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
       "titleEn": "Your Wi-Fi Provider Is Blocked by the Customs Server Firewall",
       "titleAr": "مزود خدمة الواي فاي الحالي محجوب من جدار حماية خادم الكمارك",
       "titleKu": "هێڵی وایفایەکەت لەلایەن دیواری پاراستنی ڕاژەی گومرگەوە بلۆک کراوە",
-      "explanationEn": "Your Wi-Fi is connected to the internet and resolved asy.mof.gov.iq, but the Ministry of Finance firewall is dropping connections from your Wi-Fi provider (because your ISP routes traffic through international gateways outside Iraq, causing ASYCUDA's 'SERVER NOT FOUND / EXIT CODE 12').\n\nHow to solve this immediately:\n• Keep Mobile Data (4G) enabled on your phone and tap 'Apply Fix: Route Session via 4G Mobile Data' below to route ASYCUDA securely through your 4G SIM card without turning off Wi-Fi.\n• Or switch off Wi-Fi manually and use 4G directly.",
-      "explanationAr": "شبكة الواي فاي لديك متصلة بالإنترنت وتم العثور على عنوان الخادم (asy.mof.gov.iq)، ولكن جدار الحماية الخاص بوزارة المالية يرفض مرور البيانات من مزود خدمة الواي فاي الحالي (بسبب تمرير الاتصال عبر بوابات دولية خارج العراق، مما يؤدي لظهور خطأ SERVER NOT FOUND / EXIT CODE 12).\n\nالحل المعتمد:\n• تأكد من تفعيل بيانات الهاتف (4G) في جهازك ثم اضغط على زر (تطبيق الحل: تمرير الجلسة عبر بيانات الهاتف 4G) بالأسفل لتمرير اتصال أسيكودا عبر شريحة الـ 4G باختيارك دون الحاجة لإطفاء الواي فاي.",
-      "explanationKu": "وایفایەکەت پەیوەستە بە ئینتەرنێتەوە، بەڵام دیواری پاراستنی وەزارەتی دارایی ڕێگری لە کۆمپانیای وایفایەکەت دەکات (SERVER NOT FOUND / EXIT CODE 12).\n\nچارەسەری باوەڕپێکراو:\n• داتای مۆبایل (4G) کارا بکە و دوگمەی (تێپەڕاندنی دانیشتن لە ڕێگەی 4G) لە خوارەوە دابگرە."
+      "explanationEn": "Your Wi-Fi is connected to the internet and resolved asy.mof.gov.iq, but the Ministry of Finance firewall is dropping ASYCUDA connections from your Wi-Fi provider (because your ISP routes traffic through international gateways outside Iraq, causing ASYCUDA's 'SERVER NOT FOUND / EXIT CODE 12'). The website may still open in the browser, but the ASYCUDA connection port is blocked.\n\nHow to solve this:\n• Turn off Wi-Fi in Android settings.\n• Use Mobile Data (4G) if available.\n• Tap Retry Connection. You can turn Wi-Fi back on after finishing your ASYCUDA work.",
+      "explanationAr": "شبكة الواي فاي لديك متصلة بالإنترنت وتم العثور على عنوان الخادم (asy.mof.gov.iq)، ولكن جدار الحماية الخاص بوزارة المالية يرفض اتصال أسيكودا من مزود خدمة الواي فاي الحالي (بسبب تمرير الاتصال عبر بوابات دولية خارج العراق، مما يؤدي لظهور خطأ SERVER NOT FOUND / EXIT CODE 12). قد يفتح الموقع في المتصفح بشكل طبيعي لكن منفذ اتصال أسيكودا محجوب.\n\nالحل:\n• أطفئ الواي فاي من إعدادات الجهاز.\n• استخدم بيانات الهاتف (4G) إن كانت متوفرة.\n• اضغط إعادة محاولة الاتصال. يمكنك إعادة تشغيل الواي فاي بعد انتهاء عملك في أسيكودا.",
+      "explanationKu": "وایفایەکەت پەیوەستە بە ئینتەرنێتەوە، بەڵام دیواری پاراستنی وەزارەتی دارایی ڕێگری لە پەیوەندی ئەسیکۆدا لە کۆمپانیای وایفایەکەت دەکات (SERVER NOT FOUND / EXIT CODE 12).\n\nچارەسەر:\n• وایفای لە ڕێکخستنەکانی ئامێرەکەت بکوژێنەوە.\n• داتای مۆبایل (4G) بەکاربهێنە ئەگەر بەردەست بێت.\n• دوگمەی دووبارە هەوڵدانەوەی پەیوەندی دابگرە."
     },
     {
       "id": "SENTRY-NET-004",
@@ -79,14 +78,14 @@
       "category": "NETWORK",
       "badge": "SENTRY-NET-005 • TLS_SSL_HANDSHAKE_INTERCEPTED",
       "matchKeywords": ["SSLHANDSHAKEEXCEPTION", "CERTPATHVALIDATOREXCEPTION", "PKIX PATH", "CERTIFICATEEXPIREDEXCEPTION", "SSLEXCEPTION"],
-      "verifiedFixId": "ROUTE_4G_CELLULAR",
+      "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
       "titleEn": "Secure Connection Interrupted (SSL/TLS Certificate Error)",
       "titleAr": "تم اعتراض الاتصال الآمن (خطأ في شهادة الأمان SSL)",
       "titleKu": "پەیوەندی پارێزراو پچڕا (هەڵەی بڕوانامەی SSL)",
-      "explanationEn": "Your network intercepted or modified the encrypted HTTPS connection to asy.mof.gov.iq (often caused by a Wi-Fi login portal, router firewall, or incorrect device Date & Time).\n\nHow to resolve:\n• Ensure your device Date & Time are set to Automatic.\n• Tap 'Apply Fix: Route Session via 4G Mobile Data' below to bypass the Wi-Fi portal securely.",
-      "explanationAr": "قامت الشبكة الحالية باعتراض أو تغيير شهادة الأمان المشفرة الخاصة بخادم الكمارك (asy.mof.gov.iq). يحدث هذا غالباً في شبكات الواي فاي التي تتطلب تسجيل دخول أو عند عدم ضبط التاريخ والوقت في الجهاز.\n\nالحل المعتمد:\n• تأكد من ضبط التاريخ والوقت في جهازك تلقائياً، أو اضغط على زر (تمرير الجلسة عبر بيانات الهاتف 4G) بالأسفل.",
-      "explanationKu": "تۆڕی ئینتەرنێتەکەت ڕێگری لە بڕوانامەی پارێزراوی (SSL)ی ڕاژەی گومرگ کردووە.\n\nچارەسەر:\n• دڵنیابە لە ڕێکخستنی کات و بەرواری ئامێرەکەت یان دوگمەی پەیوەندی 4G دابگرە."
+      "explanationEn": "Your network intercepted or modified the encrypted HTTPS connection to asy.mof.gov.iq (often caused by a Wi-Fi login portal, router firewall, or incorrect device Date & Time).\n\nHow to resolve:\n• Ensure your device Date & Time are set to Automatic.\n• If you are on Wi-Fi, turn Wi-Fi off and use Mobile Data (4G) if available, then tap Retry Connection.",
+      "explanationAr": "قامت الشبكة الحالية باعتراض أو تغيير شهادة الأمان المشفرة الخاصة بخادم الكمارك (asy.mof.gov.iq). يحدث هذا غالباً في شبكات الواي فاي التي تتطلب تسجيل دخول أو عند عدم ضبط التاريخ والوقت في الجهاز.\n\nالحل المعتمد:\n• تأكد من ضبط التاريخ والوقت في جهازك تلقائياً.\n• إذا كنت متصلاً بالواي فاي، أطفئه واستخدم بيانات الهاتف (4G) إن كانت متوفرة، ثم اضغط إعادة محاولة الاتصال.",
+      "explanationKu": "تۆڕی ئینتەرنێتەکەت ڕێگری لە بڕوانامەی پارێزراوی (SSL)ی ڕاژەی گومرگ کردووە.\n\nچارەسەر:\n• دڵنیابە لە ڕێکخستنی خۆکاری کات و بەرواری ئامێرەکەت.\n• ئەگەر وایفای بەکاردەهێنیت، بیکوژێنەوە و داتای مۆبایل (4G) بەکاربهێنە ئەگەر بەردەست بێت."
     },
     {
       "id": "SENTRY-NET-006",
