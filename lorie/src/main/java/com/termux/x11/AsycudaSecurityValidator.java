@@ -86,8 +86,9 @@ public final class AsycudaSecurityValidator {
     }
 
     public static boolean verifyJarSignedByPinnedCertificate(File jarFile, String expectedCertSha256) {
-        if (jarFile == null || !jarFile.exists() || jarFile.length() < 22) return false;
-        if (expectedCertSha256 == null || expectedCertSha256.isEmpty()) return false;
+        if (!isValidCandidateJarFile(jarFile, expectedCertSha256)) {
+            return false;
+        }
         try (JarFile jf = new JarFile(jarFile, true)) {
             JarEntry rsaEntry = jf.getJarEntry("META-INF/SOCODE.RSA");
             JarEntry sfEntry = jf.getJarEntry("META-INF/SOCODE.SF");
@@ -99,31 +100,44 @@ public final class AsycudaSecurityValidator {
             if (!doesPkcs7ContainPinnedSigner(jf, rsaEntry, sha256, expectedCertSha256)) {
                 return false;
             }
-
-            Enumeration<JarEntry> entries = jf.entries();
-            int nonMetaFileCount = 0;
-            int nonMetaDirCount = 0;
-            byte[] buf = new byte[16384];
-            while (entries.hasMoreElements()) {
-                JarEntry je = entries.nextElement();
-                drainJarEntryStream(jf, je, buf);
-                if (isNonMetaInfFileEntry(je)) {
-                    nonMetaFileCount++;
-                    if (!isEntrySignedByPinnedCert(je, sha256, expectedCertSha256)) {
-                        return false;
-                    }
-                } else if (isNonMetaInfDirectoryEntry(je)) {
-                    nonMetaDirCount++;
-                }
-            }
-            if (nonMetaFileCount > 0) {
-                return true;
-            }
-            // Official UNCTAD stub JAR (e.g. lib/asytaxc.jar) with signed META-INF/MANIFEST.MF + SOCODE.SF + SOCODE.RSA and package directories
-            return nonMetaDirCount > 0 && verifySignedStubManifestDigest(jf, sfEntry, sha256);
+            return verifyAllArchiveEntries(jf, sfEntry, sha256, expectedCertSha256);
         } catch (Exception invalidJar) {
             return false;
         }
+    }
+
+    private static boolean isValidCandidateJarFile(File jarFile, String expectedCertSha256) {
+        return jarFile != null
+                && jarFile.exists()
+                && jarFile.length() >= 22
+                && expectedCertSha256 != null
+                && !expectedCertSha256.isEmpty();
+    }
+
+    private static boolean verifyAllArchiveEntries(
+            JarFile jf, JarEntry sfEntry, MessageDigest sha256, String expectedCertSha256)
+            throws java.io.IOException, java.security.cert.CertificateEncodingException {
+        Enumeration<JarEntry> entries = jf.entries();
+        int nonMetaFileCount = 0;
+        int nonMetaDirCount = 0;
+        byte[] buf = new byte[16384];
+        while (entries.hasMoreElements()) {
+            JarEntry je = entries.nextElement();
+            drainJarEntryStream(jf, je, buf);
+            if (isNonMetaInfFileEntry(je)) {
+                nonMetaFileCount++;
+                if (!isEntrySignedByPinnedCert(je, sha256, expectedCertSha256)) {
+                    return false;
+                }
+            } else if (isNonMetaInfDirectoryEntry(je)) {
+                nonMetaDirCount++;
+            }
+        }
+        if (nonMetaFileCount > 0) {
+            return true;
+        }
+        // Official UNCTAD stub JAR (e.g. lib/asytaxc.jar) with signed META-INF/MANIFEST.MF + SOCODE.SF + SOCODE.RSA and package directories
+        return nonMetaDirCount > 0 && verifySignedStubManifestDigest(jf, sfEntry, sha256);
     }
 
     private static boolean isNonMetaInfDirectoryEntry(JarEntry je) {
