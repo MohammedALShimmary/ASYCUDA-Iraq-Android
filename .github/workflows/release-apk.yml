@@ -178,7 +178,7 @@ jobs:
 
           # Publish or update the GitHub Release and upload all 4 assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 51\` — Major Release)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 52\` — Major Release)
 
           > [!CAUTION]
           > **MAJOR SECURITY & ARCHITECTURE RELEASE (\`${TAG}\`) — ALL PREVIOUS RELEASES (\`< v4.3.0\`) ARE UNSAFE & NOT RECOMMENDED**
@@ -186,7 +186,7 @@ jobs:
 
           ---
 
-          ### What's New in Major Release \`${TAG}\` (\`versionCode 51\`)
+          ### What's New in Major Release \`${TAG}\` (\`versionCode 52\`)
           1. **AsyLauncher Rebrand & Android 15 (\`targetSdkVersion 35\`) Compliance**:
              - New independent brand identity (**AsyLauncher**, package \`io.github.mohammedalshimmary.asylauncher\`) with dynamic localized App Drawer names (**Launcher for ASYCUDA** / **مشغل أسيكودا** / **کارپێکەری ئەسیکۆدا**), adaptive vector icon, and Android 15 (\`targetSdkVersion 35\`) Google Play compliance.
           2. **Customizable Multi-Finger Gestures & Modern On-Screen Mouse Bar**:
