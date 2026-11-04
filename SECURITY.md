@@ -27,8 +27,8 @@ Every asset published on the [official `v4.3.0` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.3.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 54`, `targetSdkVersion 36`) | `e2a4abe31ff2b6b5e8ededc033a1292a01f2f2e2306fc34e6c8f88017f4e7cb3` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`), pre-patched `libjli.so`, & config (`zero` government JARs bundled; all official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `7184187803929d5712788710c53099c4cd435354025095ec183dc7bad4e79138` |
+| [**`AsyLauncher_v4.3.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 54`, `targetSdkVersion 36`) | `3c1cfad48090e142fa85e399a6018ba8de4cbdcbe9611a87d9a18e2e618eefa1` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/asycuda-iraq.tar.xz) | Open-source `java-bridge/` JARs (`00_bootpatch.jar`, `00_boot.jar`, `00_jnlp.jar`), pre-patched `libjli.so`, & config (`zero` government JARs bundled; all official JARs are downloaded directly from `asy.mof.gov.iq` on first launch) | `8065757ae3d7362a64751d2a1f73ce4c8a772388c96bf4ad16643020d8c9c740` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/runtime-arm64.tar.xz) | Embedded ARM64 glibc 2.38 + Eclipse Temurin OpenJDK `8u504-b01` LTS (`1.8.0_504-b01`) runtime environment | `04cdd11f4fb4ceef01ca482d78ad8e8248b3a284edb1c9133518b68fe5af1e37` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Government JARs) | Tracked in repository root |
 
