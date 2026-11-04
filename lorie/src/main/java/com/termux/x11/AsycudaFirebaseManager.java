@@ -81,7 +81,6 @@ public final class AsycudaFirebaseManager {
 
     private static volatile boolean sStartupSyncTriggered = false;
     private static volatile Boolean sCachedOfficialBuildStatus = null;
-    private static volatile String sCachedCertSha1UpperHex = "";
 
     private AsycudaFirebaseManager() {}
 
@@ -140,7 +139,6 @@ public final class AsycudaFirebaseManager {
             }
 
             String sha256Lower = toHex(java.security.MessageDigest.getInstance("SHA-256").digest(certBytes), false);
-            sCachedCertSha1UpperHex = toHex(java.security.MessageDigest.getInstance("SHA-1").digest(certBytes), true);
 
             boolean certMatches = OFFICIAL_RELEASE_CERT_SHA256.equalsIgnoreCase(sha256Lower);
             sCachedOfficialBuildStatus = certMatches;
@@ -208,9 +206,6 @@ public final class AsycudaFirebaseManager {
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestProperty("X-Android-Package", OFFICIAL_PACKAGE_NAME);
-        if (sCachedCertSha1UpperHex != null && !sCachedCertSha1UpperHex.isEmpty()) {
-            conn.setRequestProperty("X-Android-Cert", sCachedCertSha1UpperHex);
-        }
         return conn;
     }
 
