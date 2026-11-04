@@ -643,8 +643,7 @@ public class AsycudaStandaloneManager {
         }
 
         // Gate 0.75: First-Launch Interactive Input Mode & Controls Tutorial
-        // Runs BEFORE bootstrapEnvironmentAndStart so no network or diagnostic popups can interrupt the tutorial;
-        // as soon as the user finishes (or skips) the tutorial, the ASYCUDA session starts immediately.
+        // Shown prior to environment bootstrap so the user completes gesture setup uninterrupted.
         if (!AsycudaTutorialOverlay.isTutorialCompleted(activity)) {
             updateStatus(AsycudaMaterialUi.tr(activity,
                     "Choose your input method & complete the quick guide to start...",
@@ -1968,7 +1967,7 @@ public class AsycudaStandaloneManager {
                     javaBin = new File(jreDir, "bin/java");
                 }
                 setExecutableOwnerOnly(javaBin);
-                patchLibJliForTargetSdk34(jreDir);
+                patchLibJliForTargetSdk34();
 
                 File ldLinux = new File(filesDir, "usr/glibc/lib/ld-linux-aarch64.so.1");
                 setExecutableOwnerOnly(ldLinux);
@@ -2785,8 +2784,16 @@ public class AsycudaStandaloneManager {
                         .append(" (").append(dnsMs).append(" ms)\n");
                 tech.append("HTTPS Endpoint   : ").append(httpsOk ? "ONLINE" : "FAILED (" + redactSensitiveLogContent(httpsErr) + ")")
                         .append(" (").append(httpsMs).append(" ms)\n");
+                String rmiStatusLabel;
+                if (rmiSessionOk) {
+                    rmiStatusLabel = "READY";
+                } else if (isDesktopMainExit12) {
+                    rmiStatusLabel = "BLOCKED_BY_ISP_OR_OFFLINE";
+                } else {
+                    rmiStatusLabel = "UNVERIFIED";
+                }
                 tech.append("RMI Session Port : ").append(rmiPortLabel).append(" (")
-                        .append(rmiSessionOk ? "READY" : (isDesktopMainExit12 ? "BLOCKED_BY_ISP_OR_OFFLINE" : "UNVERIFIED")).append(")\n");
+                        .append(rmiStatusLabel).append(")\n");
 
                 File hostsFile = new File(filesDir, "usr/glibc/etc/hosts");
                 if (hostsFile.exists()) {
@@ -2915,7 +2922,7 @@ public class AsycudaStandaloneManager {
         return "See developer technical log below for full trace.";
     }
 
-    private static void patchLibJliForTargetSdk34(File jreDir) {
+    private static void patchLibJliForTargetSdk34() {
         // Pre-patched at build time inside runtime-arm64.tar.xz
     }
 
@@ -3332,8 +3339,8 @@ public class AsycudaStandaloneManager {
                 sFloatingCalculatorBabyBtn.setBackground(bg);
 
                 if (sFloatingCalculatorBabyIcon != null) {
-                    int tint = isOpen ? Color.WHITE
-                            : (hasSavedMath ? AsycudaMaterialUi.SYSTEM_BLUE : Color.parseColor("#FFE2E8F0"));
+                    int idleTint = hasSavedMath ? AsycudaMaterialUi.SYSTEM_BLUE : Color.parseColor("#FFE2E8F0");
+                    int tint = isOpen ? Color.WHITE : idleTint;
                     sFloatingCalculatorBabyIcon.setImageTintList(android.content.res.ColorStateList.valueOf(tint));
                 }
                 if (sFloatingCalculatorSavedDot != null) {
@@ -3718,7 +3725,9 @@ public class AsycudaStandaloneManager {
                                                 Uri.parse("https://play.google.com/store/apps/details?id=" + activity.getPackageName()));
                                         web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                         activity.startActivity(web);
-                                    } catch (Exception ignored) {}
+                                    } catch (Exception ignored) {
+                                        // Ignore when no browser is installed
+                                    }
                                 }
                             }));
                 } else {
@@ -3961,21 +3970,6 @@ public class AsycudaStandaloneManager {
             }
         }
         return sb;
-    }
-
-    private static void purgeStaleDiagnosticFiles(File... dirs) {
-        if (dirs == null) return;
-        for (File dir : dirs) {
-            if (dir == null || !dir.exists()) continue;
-            File[] children = dir.listFiles();
-            if (children == null) continue;
-            for (File f : children) {
-                String name = f.getName();
-                if (name.startsWith("ASYCUDA_Diagnostics_") && name.endsWith(".zip")) {
-                    deleteQuietly(f);
-                }
-            }
-        }
     }
 
     /**

@@ -14,11 +14,11 @@ Independent, open-source Android compatibility launcher (**AsyLauncher**, packag
 
 ---
 
-## Latest Official Major Release: [`v4.3.0` (`versionCode 52`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0)
+## Latest Official Major Release: [`v4.3.0` (`versionCode 53`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0)
 
 > [!CAUTION]
 > **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.3.0`) ARE UNSAFE & NOT RECOMMENDED**
-> Release **`v4.3.0`** is the official **Major Security, Rebrand & Architecture Release (`AsyLauncher`)** introducing the `io.github.mohammedalshimmary.asylauncher` package identity, Android 15 (`targetSdkVersion 35`) Google Play compliance, Customizable Multi-Finger Gestures, Floating Mini Customs Calculator, Interactive 5-Step First-Run Tutorial, 3-Layer Hardened Google Cloud Firestore Integration (`firestore.rules`), Dynamic Host & Port Discovery (zero hardcoded IPs or ports), Universal Network Diagnostics & On-Demand Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof_cacerts.jks`), Hardened Fail-Closed JVM Sandboxing, and One-Way Clipboard Paste. **All earlier releases (`< v4.3.0`) are superseded and not recommended for production use.** Please upgrade to **`v4.3.0`**.
+> Release **`v4.3.0`** is the official **Major Security, Rebrand & Architecture Release (`AsyLauncher`)** introducing the `io.github.mohammedalshimmary.asylauncher` package identity, Android 16 (`targetSdkVersion 36`) Google Play compliance, Customizable Multi-Finger Gestures, Floating Mini Customs Calculator, Interactive 5-Step First-Run Tutorial, 3-Layer Hardened Google Cloud Firestore Integration (`firestore.rules`), Dynamic Host & Port Discovery (zero hardcoded IPs or ports), Universal Network Diagnostics & On-Demand Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof_cacerts.jks`), Hardened Fail-Closed JVM Sandboxing, and One-Way Clipboard Paste. **All earlier releases (`< v4.3.0`) are superseded and not recommended for production use.** Please upgrade to **`v4.3.0`**.
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
@@ -31,7 +31,7 @@ Independent, open-source Android compatibility launcher (**AsyLauncher**, packag
 ## Features
 
 - **Zero Pre-Bundled Government JARs & Direct First-Launch Sync**: Zero Ministry of Finance / UNCTAD `.jar` packages are bundled inside the APK. On initial launch, the app downloads all 131 official client JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` in parallel and cryptographically verifies every JAR entry against UNCTAD's pinned `META-INF/SOCODE.RSA` X.509 certificate.
-- **Android 15 (`targetSdkVersion 35`), Verified Developer Certificate & Zero Storage Permissions**: Installs as a standard Android APK/AAB on 64-bit ARM (`arm64-v8a`, 16 KB page-size aligned) phones and tablets running Android 8.0–15+ with a verified Android Developer Console signing certificate (`SHA-256: d3:02:d4:d0:...`) and **zero broad storage or accessibility permissions** (`MANAGE_EXTERNAL_STORAGE`, `READ/WRITE_EXTERNAL_STORAGE`, and `BIND_ACCESSIBILITY_SERVICE` removed).
+- **Android 16 (`targetSdkVersion 36`), Verified Developer Certificate & Zero Storage Permissions**: Installs as a standard Android APK/AAB on 64-bit ARM (`arm64-v8a`, 16 KB page-size aligned) phones and tablets running Android 8.0–16+ with a verified Android Developer Console signing certificate (`SHA-256: d3:02:d4:d0:...`) and **zero broad storage or accessibility permissions** (`MANAGE_EXTERNAL_STORAGE`, `READ/WRITE_EXTERNAL_STORAGE`, and `BIND_ACCESSIBILITY_SERVICE` removed).
 - **Unified Private App Vault (File Manager) & Automatic File Picker Bridge**:
   - Prints customs declarations, receipts, and assessment notices directly to PDF inside the app's **Private Vault** (`/data/data/io.github.mohammedalshimmary.asylauncher/files/prints` — protected by Android OS File-Based Encryption and kernel `0700` UID sandboxing) with full folder creation & navigation, **Rename**, **Copy**, **Move**, **Open**, **Share** (files only), and **Delete** controls via clean Apple-style icon toolbars.
   - Automatically detects when ASYCUDA opens its Java file chooser (`JFileChooser`)—with zero modification to government JARs—and prompts you on Android to either import a new file from your phone into the Vault (`Intent.ACTION_OPEN_DOCUMENT`) or select an existing file from your Vault.

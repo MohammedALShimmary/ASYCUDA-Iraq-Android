@@ -176,9 +176,9 @@ jobs:
             git push origin HEAD:main
           fi
 
-          # Publish or update the GitHub Release and upload all 4 assets
+          # Publish or update the GitHub Release and upload public assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 52\` — Major Release)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 53\` — Major Release)
 
           > [!CAUTION]
           > **MAJOR SECURITY & ARCHITECTURE RELEASE (\`${TAG}\`) — ALL PREVIOUS RELEASES (\`< v4.3.0\`) ARE UNSAFE & NOT RECOMMENDED**
@@ -186,9 +186,9 @@ jobs:
 
           ---
 
-          ### What's New in Major Release \`${TAG}\` (\`versionCode 52\`)
-          1. **AsyLauncher Rebrand & Android 15 (\`targetSdkVersion 35\`) Compliance**:
-             - New independent brand identity (**AsyLauncher**, package \`io.github.mohammedalshimmary.asylauncher\`) with dynamic localized App Drawer names (**Launcher for ASYCUDA** / **مشغل أسيكودا** / **کارپێکەری ئەسیکۆدا**), adaptive vector icon, and Android 15 (\`targetSdkVersion 35\`) Google Play compliance.
+          ### What's New in Major Release \`${TAG}\` (\`versionCode 53\`)
+          1. **AsyLauncher Rebrand & Android 16 (\`targetSdkVersion 36\`) Compliance**:
+             - New independent brand identity (**AsyLauncher**, package \`io.github.mohammedalshimmary.asylauncher\`) with dynamic localized App Drawer names (**Launcher for ASYCUDA** / **مشغل أسيكودا** / **کارپێکەری ئەسیکۆدا**), adaptive vector icon, and Android 16 (\`targetSdkVersion 36\`) Google Play compliance.
           2. **Customizable Multi-Finger Gestures & Modern On-Screen Mouse Bar**:
              - Dedicated Trackpad (Virtual Mouse) and Direct Touchscreen modes with independent 1/2/3/4-finger tap & hold gesture customization and a translucent pill-styled L / M / R / Scroll wheel bar.
           3. **Floating Mini Customs Calculator & Interactive 5-Step Tutorial**:
@@ -296,6 +296,13 @@ jobs:
               )
               urllib.request.urlopen(preq).read()
           PYEOF
+
+      - name: Upload Signed Google Play AAB as Private Workflow Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AsyLauncher-play-aab
+          path: lorie-app/build/outputs/bundle/release/lorie-app-release.aab
+          retention-days: 14
 
       - name: Generate Cryptographic SLSA Build Provenance Attestation
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2

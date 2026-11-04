@@ -317,9 +317,6 @@ public final class AsycudaMiniCalculator {
             int maxW,
             int maxH) {
 
-        boolean ar = AsycudaMaterialUi.isArabic(activity);
-        boolean ku = AsycudaMaterialUi.isKurdish(activity);
-
         FrameLayout windowContainer = new FrameLayout(activity);
         GradientDrawable winBg = new GradientDrawable();
         winBg.setColor(AsycudaMaterialUi.SURFACE_SHEET);
@@ -354,7 +351,10 @@ public final class AsycudaMiniCalculator {
         titleBar.addView(titleIcon, tiLp);
 
         TextView titleLabel = new TextView(activity);
-        titleLabel.setText(ar ? "حاسبة الجمارك" : (ku ? "ژمێرەری گومرگ" : "Customs Calculator"));
+        titleLabel.setText(AsycudaMaterialUi.tr(activity,
+                "Customs Calculator",
+                "حاسبة الجمارك",
+                "ژمێرەری گومرگ"));
         titleLabel.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
         titleLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         titleLabel.setTypeface(Typeface.DEFAULT_BOLD);
@@ -384,8 +384,10 @@ public final class AsycudaMiniCalculator {
 
         // Titlebar Drag Listener
         titleBar.setOnTouchListener(new View.OnTouchListener() {
-            float downRawX, downRawY;
-            int startLeft, startTop;
+            float downRawX;
+            float downRawY;
+            int startLeft;
+            int startTop;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -452,8 +454,10 @@ public final class AsycudaMiniCalculator {
                 cm.setPrimaryClip(ClipData.newPlainText("ASYCUDA Calculator", sCurrentInput));
                 vibrateTick(activity);
                 Toast.makeText(activity,
-                        ar ? "تم نسخ النتيجة: " + sCurrentInput :
-                                (ku ? "ئەنجام کۆپی کرا: " + sCurrentInput : "Copied: " + sCurrentInput),
+                        AsycudaMaterialUi.tr(activity,
+                                "Copied: " + sCurrentInput,
+                                "تم نسخ النتيجة: " + sCurrentInput,
+                                "ئەنجام کۆپی کرا: " + sCurrentInput),
                         Toast.LENGTH_SHORT).show();
             }
         });
@@ -549,10 +553,10 @@ public final class AsycudaMiniCalculator {
         resizeLp.gravity = Gravity.BOTTOM | Gravity.END;
         windowContainer.addView(resizeHandle, resizeLp);
 
-        View.OnTouchListener createResizeTouchListener = null;
         bottomEdgeHandle.setOnTouchListener(new View.OnTouchListener() {
             float downRawY;
-            int startH, startTop;
+            int startH;
+            int startTop;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) windowContainer.getLayoutParams();
@@ -583,7 +587,8 @@ public final class AsycudaMiniCalculator {
 
         rightEdgeHandle.setOnTouchListener(new View.OnTouchListener() {
             float downRawX;
-            int startW, startLeft;
+            int startW;
+            int startLeft;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) windowContainer.getLayoutParams();
@@ -612,8 +617,12 @@ public final class AsycudaMiniCalculator {
         });
 
         resizeHandle.setOnTouchListener(new View.OnTouchListener() {
-            float downRawX, downRawY;
-            int startW, startH, startLeft, startTop;
+            float downRawX;
+            float downRawY;
+            int startW;
+            int startH;
+            int startLeft;
+            int startTop;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -900,7 +909,9 @@ public final class AsycudaMiniCalculator {
                     vib.vibrate(12);
                 }
             }
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore haptic feedback restrictions on devices without vibrator support
+        }
     }
 
     private static int dp(Context ctx, int val) {

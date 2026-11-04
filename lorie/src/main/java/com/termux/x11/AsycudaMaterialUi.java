@@ -66,7 +66,7 @@ public class AsycudaMaterialUi {
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
     public static final String CURRENT_POLICY_VERSION = "2.1-2026.11";
-    public static final int CURRENT_CHANGELOG_VERSION = 52;
+    public static final int CURRENT_CHANGELOG_VERSION = 53;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
@@ -250,11 +250,11 @@ public class AsycudaMaterialUi {
     // PHASE 2: CUSTOMIZABLE X11 MOUSE, TOUCH & FINGER GESTURES ENGINE
     // =========================================================================
 
-    public static final String[] GESTURE_TRIGGER_KEYS = {
+    private static final String[] GESTURE_TRIGGER_KEYS = {
             "tap1", "hold1", "drag1", "tap2", "hold2", "glide2", "tap3", "swipe3_up", "swipe3_down"
     };
 
-    public static final String[] GESTURE_ACTION_KEYS = {
+    private static final String[] GESTURE_ACTION_KEYS = {
             "left_click",
             "right_click",
             "middle_click",
@@ -482,7 +482,9 @@ public class AsycudaMaterialUi {
         int currentActiveMode = 1;
         try {
             if (prefs != null) currentActiveMode = Integer.parseInt(prefs.touchMode.get()) >= 2 ? 2 : 1;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Default to mode 1 when preference is unset
+        }
         final int editingMode = (initialModeOverride >= 1 && initialModeOverride <= 2)
                 ? initialModeOverride : currentActiveMode;
 
@@ -553,7 +555,9 @@ public class AsycudaMaterialUi {
                 broadcast.setPackage(activity.getPackageName());
                 activity.sendBroadcast(broadcast, PERMISSION_INTERNAL_BROADCAST);
                 activity.onPreferencesChangedCallback();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                // Ignore broadcast dispatch error
+            }
         };
 
         // 1. Mode Selector Tabs (switches active mode & displays its gesture bindings)
@@ -602,14 +606,16 @@ public class AsycudaMaterialUi {
 
         boolean isTrackpadEditing = (editingMode == 1);
         boolean mouseHelperEnabled = prefs != null && prefs.showMouseHelper.get();
+        String mouseHelperStateLabel = mouseHelperEnabled ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String mouseHelperBadgeText = isTrackpadEditing
+                ? mouseHelperStateLabel
+                : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد");
         LinearLayout mouseButtonsTile = addMenuTileWithBadge(activity, modeOptionsGrid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "On-Screen Mouse Buttons (Trackpad)", "أزرار الماوس العائمة (لوحة اللمس)", "دوگمەکانی ماوس (تراکپاد)"),
                 isTrackpadEditing
                         ? tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأوسط والأيمن العائمة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست")
                         : tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە"),
-                isTrackpadEditing
-                        ? (mouseHelperEnabled ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                mouseHelperBadgeText,
                 isTrackpadEditing && mouseHelperEnabled, false, () -> {
                     if (!isTrackpadEditing) return;
                     if (prefs != null) prefs.showMouseHelper.put(!mouseHelperEnabled);
@@ -622,14 +628,16 @@ public class AsycudaMaterialUi {
         }
 
         boolean showCursorDirect = isShowCursorInDirectTouch(activity);
+        String cursorDirectStateLabel = showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String cursorDirectBadgeText = isTrackpadEditing
+                ? tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ")
+                : cursorDirectStateLabel;
         LinearLayout cursorDirectTile = addMenuTileWithBadge(activity, modeOptionsGrid, R.drawable.ic_menu_display,
                 tr(activity, "Show Cursor in Direct Touch", "إظهار المؤشر في اللمس المباشر", "پیشاندانی ماوس لە لمسی ڕاستەوخۆ"),
-                !isTrackpadEditing
-                        ? tr(activity, "Keep cursor hidden (OFF) for natural touch, or turn ON to show it", "إبقاء المؤشر مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی")
-                        : tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)"),
-                !isTrackpadEditing
-                        ? (showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ"),
+                isTrackpadEditing
+                        ? tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)")
+                        : tr(activity, "Keep cursor hidden (OFF) for natural touch, or turn ON to show it", "إبقاء المؤشر مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی"),
+                cursorDirectBadgeText,
                 !isTrackpadEditing && showCursorDirect, false, () -> {
                     if (isTrackpadEditing) return;
                     setShowCursorInDirectTouch(activity, !showCursorDirect);
@@ -798,9 +806,13 @@ public class AsycudaMaterialUi {
 
         String currentAction = getGestureAction(activity, editingMode, triggerKey);
         for (final String actionKey : GESTURE_ACTION_KEYS) {
-            // Only offer "scroll_wheel" on glide2, and only offer "drag_left" on hold1
-            if ("scroll_wheel".equals(actionKey) && !"glide2".equals(triggerKey)) continue;
-            if ("glide2".equals(triggerKey) && !("scroll_wheel".equals(actionKey) || "disabled".equals(actionKey))) continue;
+            // Only offer "scroll_wheel" on glide2
+            boolean invalidScrollChoice = "scroll_wheel".equals(actionKey) && !"glide2".equals(triggerKey);
+            boolean invalidGlideChoice = "glide2".equals(triggerKey)
+                    && !("scroll_wheel".equals(actionKey) || "disabled".equals(actionKey));
+            if (invalidScrollChoice || invalidGlideChoice) {
+                continue;
+            }
 
             boolean selected = actionKey.equals(currentAction);
             TextView opt = new TextView(activity);
@@ -1576,14 +1588,14 @@ public class AsycudaMaterialUi {
         inputModeGrid.setLayoutParams(imgLp);
 
         boolean mouseHelper = prefs != null && prefs.showMouseHelper.get();
+        String mhToggleLabel = mouseHelper ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String mhBadgeLabel = isTrackpadMode ? mhToggleLabel : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد");
         LinearLayout mouseHelperTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "On-Screen Mouse Buttons (Trackpad)", "أزرار الماوس العائمة (لوحة اللمس)", "دوگمە سەرئاوکەوتووەکانی ماوس (تراکپاد)"),
                 isTrackpadMode
                         ? tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأوسط والأيمن العائمة على الشاشة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست لەسەر شاشە")
                         : tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في وضع اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە"),
-                isTrackpadMode
-                        ? (mouseHelper ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                mhBadgeLabel,
                 isTrackpadMode && mouseHelper, false, () -> {
                     if (!isTrackpadMode) return;
                     if (prefs != null) prefs.showMouseHelper.put(!mouseHelper);
@@ -1594,14 +1606,14 @@ public class AsycudaMaterialUi {
         }
 
         boolean tapToMove = prefs != null && prefs.tapToMove.get();
+        String ttmToggleLabel = tapToMove ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String ttmBadgeLabel = isTrackpadMode ? ttmToggleLabel : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد");
         LinearLayout tapToMoveTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "Double-Tap & Glide to Drag (Trackpad)", "النقر المزدوج والسحب للتحريك (لوحة اللمس)", "دوو جار داگرتن و ڕاکێشان (تراکپاد)"),
                 isTrackpadMode
                         ? tr(activity, "Double-tap and slide 1 finger in Trackpad mode to drag windows", "انقر مرتين واسحب بإصبع واحد في وضع لوحة اللمس لتحريك النوافذ", "دوو جار پەنجە بنێ و ڕایبکێشە لە دۆخی تراكپاد بۆ جوڵاندنی پەنجەرە")
                         : tr(activity, "Available in Trackpad mode only (Direct Touch drags directly)", "متاح في وضع لوحة اللمس فقط (اللمس المباشر يسحب مباشرة)", "تەنها لە دۆخی تراكپاد بەردەستە (لمسی ڕاستەوخۆ ڕاستەوخۆ ڕادەکێشێت)"),
-                isTrackpadMode
-                        ? (tapToMove ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                ttmBadgeLabel,
                 isTrackpadMode && tapToMove, false, () -> {
                     if (!isTrackpadMode) return;
                     if (prefs != null) prefs.tapToMove.put(!tapToMove);
@@ -1613,16 +1625,17 @@ public class AsycudaMaterialUi {
 
         boolean scaleTouchpad = prefs != null && prefs.scaleTouchpad.get();
         boolean scaleTouchpadApplicable = isTrackpadMode && !"native".equals(curResMode);
+        String stFallbackDesc = isTrackpadMode
+                ? tr(activity, "Requires Scaled/Exact/Custom resolution in Trackpad mode", "يتطلب دقة عرض مقياسية أو ثابتة في وضع لوحة اللمس", "پێویستی بە وردی شاشەی پێوانەکراو هەیە لە دۆخی تراكپاد")
+                : tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە");
+        String stToggleLabel = scaleTouchpad ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String stBadgeLabel = scaleTouchpadApplicable ? stToggleLabel : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد");
         LinearLayout scaleTouchpadTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
                 tr(activity, "Scale Trackpad to Resolution", "موازنة سرعة لوحة اللمس مع الدقة", "هاوتاکردنی خێرایی تراكپاد لەگەڵ وردی شاشە"),
                 scaleTouchpadApplicable
                         ? tr(activity, "Match virtual mouse travel distance to scaled display resolution", "مواءمة مسافة حركة المؤشر مع نسبة تكبير الشاشة في وضع لوحة اللمس", "گونجاندنی جوڵەی نیشاندەری ماوس لەگەڵ قەبارەی شاشە")
-                        : (!isTrackpadMode
-                                ? tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە")
-                                : tr(activity, "Requires Scaled/Exact/Custom resolution in Trackpad mode", "يتطلب دقة عرض مقياسية أو ثابتة في وضع لوحة اللمس", "پێویستی بە وردی شاشەی پێوانەکراو هەیە لە دۆخی تراكپاد")),
-                scaleTouchpadApplicable
-                        ? (scaleTouchpad ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                        : stFallbackDesc,
+                stBadgeLabel,
                 scaleTouchpadApplicable && scaleTouchpad, false, () -> {
                     if (!scaleTouchpadApplicable) return;
                     if (prefs != null) prefs.scaleTouchpad.put(!scaleTouchpad);
@@ -1633,14 +1646,14 @@ public class AsycudaMaterialUi {
         }
 
         boolean showCursorDirect = isShowCursorInDirectTouch(activity);
+        String scdToggleLabel = showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF);
+        String scdBadgeLabel = isTrackpadMode ? tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ") : scdToggleLabel;
         LinearLayout showCursorDirectTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_display,
                 tr(activity, "Show Cursor in Direct Touch", "إظهار المؤشر في اللمس المباشر", "پیشاندانی ماوس لە لمسی ڕاستەوخۆ"),
-                !isTrackpadMode
-                        ? tr(activity, "Keep desktop arrow hidden (OFF) for natural touch, or turn ON to see it", "إبقاء سهم الماوس مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی")
-                        : tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)"),
-                !isTrackpadMode
-                        ? (showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
-                        : tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ"),
+                isTrackpadMode
+                        ? tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)")
+                        : tr(activity, "Keep desktop arrow hidden (OFF) for natural touch, or turn ON to see it", "إبقاء سهم الماوس مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی"),
+                scdBadgeLabel,
                 !isTrackpadMode && showCursorDirect, false, () -> {
                     if (isTrackpadMode) return;
                     setShowCursorInDirectTouch(activity, !showCursorDirect);
@@ -2074,7 +2087,9 @@ public class AsycudaMaterialUi {
                                     android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + activity.getPackageName()));
                             web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                             activity.startActivity(web);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                            // Ignore when no browser is installed
+                        }
                     }
                 });
         LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);

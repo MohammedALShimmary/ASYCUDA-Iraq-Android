@@ -138,8 +138,6 @@ public final class AsycudaTutorialOverlay {
         }
         sOverlayRoot.removeAllViews();
 
-        boolean ar = AsycudaMaterialUi.isArabic(activity);
-        boolean ku = AsycudaMaterialUi.isKurdish(activity);
         DisplayMetrics dm = activity.getResources().getDisplayMetrics();
 
         int cardW = Math.min(dp(activity, 530), (int) (dm.widthPixels * 0.90f));
@@ -172,16 +170,20 @@ public final class AsycudaTutorialOverlay {
         titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView badge = new TextView(activity);
-        badge.setText(ar ? "دليل البدء التفاعلي — الخطوة ١ من ٢" :
-                (ku ? "ڕێبەری دەستپێکردن — هەنگاوی ١ لە ٢" : "INTERACTIVE SETUP — STAGE 1 OF 2"));
+        badge.setText(AsycudaMaterialUi.tr(activity,
+                "INTERACTIVE SETUP — STAGE 1 OF 2",
+                "دليل البدء التفاعلي — الخطوة ١ من ٢",
+                "ڕێبەری دەستپێکردن — هەنگاوی ١ لە ٢"));
         badge.setTextColor(AsycudaMaterialUi.SYSTEM_BLUE);
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         badge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         titleCol.addView(badge);
 
         TextView title = new TextView(activity);
-        title.setText(ar ? "اختر طريقة التحكم المفضلة لديك" :
-                (ku ? "شێوازی کۆنترۆڵکردنی دڵخوازت هەڵبژێرە" : "Choose Your Preferred Input Method"));
+        title.setText(AsycudaMaterialUi.tr(activity,
+                "Choose Your Preferred Input Method",
+                "اختر طريقة التحكم المفضلة لديك",
+                "شێوازی کۆنترۆڵکردنی دڵخوازت هەڵبژێرە"));
         title.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -208,11 +210,10 @@ public final class AsycudaTutorialOverlay {
         contentCol.setOrientation(LinearLayout.VERTICAL);
 
         TextView subtitle = new TextView(activity);
-        subtitle.setText(ar
-                ? "بما أن نظام أسيكودا صُمم للحواسيب المكتبية، يوفر لك التطبيق طريقتي تحكم ذكيتين. اختر الطريقة التي تناسبك لنبدأ جولة سريعة:"
-                : (ku
-                ? "چونکە سیستەمی ئەسیکۆدا بۆ کۆمپیوتەر دروستکراوە، ئەم بەرنامەیە ٢ شێوازی کۆنترۆڵ دابین دەکات. یەکێکیان هەڵبژێرە بۆ فێربوون:"
-                : "Because ASYCUDA World uses dense desktop forms, choose how you want your fingers to control the cursor and clicks:"));
+        subtitle.setText(AsycudaMaterialUi.tr(activity,
+                "Because ASYCUDA World uses dense desktop forms, choose how you want your fingers to control the cursor and clicks:",
+                "بما أن نظام أسيكودا صُمم للحواسيب المكتبية، يوفر لك التطبيق طريقتي تحكم ذكيتين. اختر الطريقة التي تناسبك لنبدأ جولة سريعة:",
+                "چونکە سیستەمی ئەسیکۆدا بۆ کۆمپیوتەر دروستکراوە، ئەم بەرنامەیە ٢ شێوازی کۆنترۆڵ دابین دەکات. یەکێکیان هەڵبژێرە بۆ فێربوون:"));
         subtitle.setTextColor(AsycudaMaterialUi.TEXT_SECONDARY);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
@@ -228,11 +229,14 @@ public final class AsycudaTutorialOverlay {
                 1,
                 currentMode == 1,
                 R.drawable.ic_menu_gestures,
-                ar ? "١. لوحة اللمس (ماوس افتراضي — موصى به للهواتف)"
-                        : (ku ? "١. تراكپاد (ماوسی خەیاڵی — پێشنیارکراو)" : "1. Trackpad (Virtual Mouse — Recommended for Phones)"),
-                ar ? "حرك إصبعك في أي مكان لتحريك المؤشر بدقة عالية دون أن تحجب إصبعك الحقول الصغيرة. لمسة واحدة للنقر الأيسر، ولمستان للنقر الأيمن."
-                        : (ku ? "پەنجەت لە هەر شوێنێک بجوڵێنە بۆ جوڵاندنی ماوسەکە بە وردی. یەک لێدان کرتەی چەپ، دوو لێدان کرتەی ڕاست."
-                        : "Slide 1 finger anywhere like a laptop touchpad to glide the desktop cursor smoothly without your finger covering tiny fields. 1-finger tap = Left Click, 2-finger tap = Right Click.")
+                AsycudaMaterialUi.tr(activity,
+                        "1. Trackpad (Virtual Mouse — Recommended for Phones)",
+                        "١. لوحة اللمس (ماوس افتراضي — موصى به للهواتف)",
+                        "١. تراكپاد (ماوسی خەیاڵی — پێشنیارکراو)"),
+                AsycudaMaterialUi.tr(activity,
+                        "Slide 1 finger anywhere like a laptop touchpad to glide the desktop cursor smoothly without your finger covering tiny fields. 1-finger tap = Left Click, 2-finger tap = Right Click.",
+                        "حرك إصبعك في أي مكان لتحريك المؤشر بدقة عالية دون أن تحجب إصبعك الحقول الصغيرة. لمسة واحدة للنقر الأيسر، ولمستان للنقر الأيمن.",
+                        "پەنجەت لە هەر شوێنێک بجوڵێنە بۆ جوڵاندنی ماوسەکە بە وردی. یەک لێدان کرتەی چەپ، دوو لێدان کرتەی ڕاست.")
         ));
 
         // Option 2: Direct Touchscreen
@@ -241,11 +245,14 @@ public final class AsycudaTutorialOverlay {
                 2,
                 currentMode == 2,
                 R.drawable.ic_menu_display,
-                ar ? "٢. شاشة لمس مباشر (موصى به للأجهزة اللوحية واللمس الفوري)"
-                        : (ku ? "٢. شاشەی لەمسی ڕاستەوخۆ (کرتە و ڕاکێشانی ڕاستەوخۆ)" : "2. Direct Touchscreen (Tap & Drag Directly)"),
-                ar ? "المس أي زر أو حقل مباشرة للنقر الفوري عليه، واسحب إصبعك لتحريك النوافذ أو تحديد النصوص، واضغط مطولاً أو بإصبعين للنقرة اليمنى."
-                        : (ku ? "ڕاستەوخۆ پەنجە بنێ بە هەر دوگمەیەکدا بۆ کرتەکردن، یان ڕایبکێشە بۆ جوڵاندنی پەنجەرەکان. پەنجە ڕاگرتن یان دوو پەنجە کرتەی ڕاست دەکات."
-                        : "Tap directly on any button or field to click it right under your finger, drag 1 finger to move windows or select text, and Long-Press (or 2-Finger Tap) for Right Click.")
+                AsycudaMaterialUi.tr(activity,
+                        "2. Direct Touchscreen (Tap & Drag Directly)",
+                        "٢. شاشة لمس مباشر (موصى به للأجهزة اللوحية واللمس الفوري)",
+                        "٢. شاشەی لەمسی ڕاستەوخۆ (کرتە و ڕاکێشانی ڕاستەوخۆ)"),
+                AsycudaMaterialUi.tr(activity,
+                        "Tap directly on any button or field to click it right under your finger, drag 1 finger to move windows or select text, and Long-Press (or 2-Finger Tap) for Right Click.",
+                        "المس أي زر أو حقل مباشرة للنقر الفوري عليه، واسحب إصبعك لتحريك النوافذ أو تحديد النصوص، واضغط مطولاً أو بإصبعين للنقرة اليمنى.",
+                        "ڕاستەوخۆ پەنجە بنێ بە هەر دوگمەیەکدا بۆ کرتەکردن، یان ڕایبکێشە بۆ جوڵاندنی پەنجەرەکان. پەنجە ڕاگرتن یان دوو پەنجە کرتەی ڕاست دەکات.")
         ));
 
         scroll.addView(contentCol);
@@ -262,7 +269,7 @@ public final class AsycudaTutorialOverlay {
         footerRow.setLayoutParams(fLp);
 
         TextView skipBtn = createActionPill(activity,
-                ar ? "تخطي الدليل" : (ku ? "تێپەڕاندن" : "Skip Tutorial"),
+                AsycudaMaterialUi.tr(activity, "Skip Tutorial", "تخطي الدليل", "تێپەڕاندن"),
                 AsycudaMaterialUi.SURFACE_GROUPED_CARD, AsycudaMaterialUi.TEXT_SECONDARY, AsycudaMaterialUi.SEPARATOR_HAIRLINE);
         skipBtn.setOnClickListener(v -> {
             markTutorialCompleted(activity);
@@ -274,7 +281,7 @@ public final class AsycudaTutorialOverlay {
         footerRow.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
 
         TextView continueBtn = createActionPill(activity,
-                ar ? "متابعة بالوضع الحالي ←" : (ku ? "بەردەوامبوون ←" : "Continue with Selected →"),
+                AsycudaMaterialUi.tr(activity, "Continue with Selected →", "متابعة بالوضع الحالي ←", "بەردەوامبوون ←"),
                 "#FF0A84FF", "#FFFFFFFF", "#FF0A84FF");
         continueBtn.setOnClickListener(v -> renderStage2Walkthrough(activity, currentMode, 0));
         footerRow.addView(continueBtn);
@@ -351,8 +358,6 @@ public final class AsycudaTutorialOverlay {
         }
         sOverlayRoot.removeAllViews();
 
-        boolean ar = AsycudaMaterialUi.isArabic(activity);
-        boolean ku = AsycudaMaterialUi.isKurdish(activity);
         final int totalSteps = 5;
 
         String stepTitle;
@@ -360,83 +365,94 @@ public final class AsycudaTutorialOverlay {
         int demoType;
         int stepIconRes;
 
-        String modeName = chosenMode == 1
-                ? (ar ? "لوحة اللمس (الماوس الافتراضي)" : (ku ? "تراكپاد (ماوسی خەیاڵی)" : "Trackpad Mode"))
-                : (ar ? "شاشة اللمس المباشر" : (ku ? "شاشەی لەمسی ڕاستەوخۆ" : "Direct Touchscreen"));
+        String trackpadLabel = AsycudaMaterialUi.tr(activity,
+                "Trackpad Mode",
+                "لوحة اللمس (الماوس الافتراضي)",
+                "تراكپاد (ماوسی خەیاڵی)");
+        String touchLabel = AsycudaMaterialUi.tr(activity,
+                "Direct Touchscreen",
+                "شاشة اللمس المباشر",
+                "شاشەی لەمسی ڕاستەوخۆ");
+        String modeName = chosenMode == 1 ? trackpadLabel : touchLabel;
 
         switch (stepIndex) {
             case 0:
                 demoType = 0;
                 stepIconRes = R.drawable.ic_menu_gestures;
-                stepTitle = ar ? "١/٥ — تحريك المؤشر والنقر الأساسي (" + modeName + ")"
-                        : (ku ? "١/٥ — جوڵاندنی نیشاندەر و کرتەی سەرەکی (" + modeName + ")"
-                        : "1/5 — Cursor & Left Click (" + modeName + ")");
+                stepTitle = AsycudaMaterialUi.tr(activity,
+                        "1/5 — Cursor & Left Click (" + modeName + ")",
+                        "١/٥ — تحريك المؤشر والنقر الأساسي (" + modeName + ")",
+                        "١/٥ — جوڵاندنی نیشاندەر و کرتەی سەرەکی (" + modeName + ")");
                 if (chosenMode == 1) {
-                    stepBody = ar
-                            ? "• اسحب إصبعاً واحداً في أي مكان لتحريك مؤشر الماوس.\n• المس الشاشة بإصبع واحد لتنفيذ نقرة يسرى (Left Click).\n• اضغط مطولاً بإصبع واحد ثم اسحب لتحديد النصوص أو تحريك النوافذ."
-                            : (ku ? "• یەک پەنجە لە هەر شوێنێک ڕابکێشە بۆ جوڵاندنی ماوس.\n• یەک پەنجە لێبدە بۆ کرتەی چەپ (Left Click).\n• پەنجە ڕابگرە و ڕابکێشە بۆ دیاریکردنی دەق."
-                            : "• Slide 1 finger anywhere to move the mouse cursor.\n• Tap with 1 finger for Left Click.\n• Hold 1 finger & drag to select text or move windows.");
+                    stepBody = AsycudaMaterialUi.tr(activity,
+                            "• Slide 1 finger anywhere to move the mouse cursor.\n• Tap with 1 finger for Left Click.\n• Hold 1 finger & drag to select text or move windows.",
+                            "• اسحب إصبعاً واحداً في أي مكان لتحريك مؤشر الماوس.\n• المس الشاشة بإصبع واحد لتنفيذ نقرة يسرى (Left Click).\n• اضغط مطولاً بإصبع واحد ثم اسحب لتحديد النصوص أو تحريك النوافذ.",
+                            "• یەک پەنجە لە هەر شوێنێک ڕابکێشە بۆ جوڵاندنی ماوس.\n• یەک پەنجە لێبدە بۆ کرتەی چەپ (Left Click).\n• پەنجە ڕابگرە و ڕابکێشە بۆ دیاریکردنی دەق.");
                 } else {
-                    stepBody = ar
-                            ? "• المس أي عنصر مباشرة بإصبع واحد للنقر الفوري في موقع إصبعك (Left Click أو حسب تخصيصك).\n• اسحب إصبعك مباشرة لتحريك النوافذ أو أشرطة التمرير أو تحديد النصوص."
-                            : (ku ? "• ڕاستەوخۆ پەنجە بنێ بە هەر دوگمەیەکدا بۆ کرتەی چەپ.\n• پەنجەت ڕابکێشە بۆ دیاریکردنی دەق یان جوڵاندنی پەنجەرەکان."
-                            : "• Tap anywhere with 1 finger for an instant Left Click (or your customized 1-Finger Tap action) right under your finger.\n• Drag 1 finger immediately to move windows, scrollbars, or select text.");
+                    stepBody = AsycudaMaterialUi.tr(activity,
+                            "• Tap anywhere with 1 finger for an instant Left Click (or your customized 1-Finger Tap action) right under your finger.\n• Drag 1 finger immediately to move windows, scrollbars, or select text.",
+                            "• المس أي عنصر مباشرة بإصبع واحد للنقر الفوري في موقع إصبعك (Left Click أو حسب تخصيصك).\n• اسحب إصبعك مباشرة لتحريك النوافذ أو أشرطة التمرير أو تحديد النصوص.",
+                            "• ڕاستەوخۆ پەنجە بنێ بە هەر دوگمەیەکدا بۆ کرتەی چەپ.\n• پەنجەت ڕابکێشە بۆ دیاریکردنی دەق یان جوڵاندنی پەنجەرەکان.");
                 }
                 break;
 
             case 1:
                 demoType = 1;
                 stepIconRes = R.drawable.ic_menu_gestures;
-                stepTitle = ar ? "٢/٥ — النقرة اليمنى لفتح قوائم أسيكودا (Right Click)"
-                        : (ku ? "٢/٥ — کرتەی ڕاست بۆ لیستەکانی ئەسیکۆدا (Right Click)"
-                        : "2/5 — Right Click for ASYCUDA Context Menus");
+                stepTitle = AsycudaMaterialUi.tr(activity,
+                        "2/5 — Right Click for ASYCUDA Context Menus",
+                        "٢/٥ — النقرة اليمنى لفتح قوائم أسيكودا (Right Click)",
+                        "٢/٥ — کرتەی ڕاست بۆ لیستەکانی ئەسیکۆدا (Right Click)");
                 if (chosenMode >= 2) {
-                    stepBody = ar
-                            ? "• في وضع شاشة اللمس المباشر: اضغط مطولاً بإصبع واحد في مكانه (Long Press) أو المس الشاشة بإصبعين معاً لفتح القائمة الفرعية (Right Click) مباشرة تحت إصبعك."
-                            : (ku ? "• لە شێوازی لەمسی ڕاستەوخۆ: پەنجە ڕابگرە (Long Press) یان بە دوو پەنجە لێبدە بۆ کرتەی ڕاست."
-                            : "• In Direct Touchscreen mode: Hold 1 finger still (Long-Press) OR Tap with 2 fingers together to trigger a Right Click directly under your finger.");
+                    stepBody = AsycudaMaterialUi.tr(activity,
+                            "• In Direct Touchscreen mode: Hold 1 finger still (Long-Press) OR Tap with 2 fingers together to trigger a Right Click directly under your finger.",
+                            "• في وضع شاشة اللمس المباشر: اضغط مطولاً بإصبع واحد في مكانه (Long Press) أو المس الشاشة بإصبعين معاً لفتح القائمة الفرعية (Right Click) مباشرة تحت إصبعك.",
+                            "• لە شێوازی لەمسی ڕاستەوخۆ: پەنجە ڕابگرە (Long Press) یان بە دوو پەنجە لێبدە بۆ کرتەی ڕاست.");
                 } else {
-                    stepBody = ar
-                            ? "• المس الشاشة بإصبعين معاً (2-Finger Tap) في نفس الوقت لتنفيذ نقرة يمنى (Right Click) وفتح قوائم المستندات في أسيكودا."
-                            : (ku ? "• بە دوو پەنجە پێکەوە لێبدە (2-Finger Tap) بۆ کردنەوەی لیستی کرتەی ڕاست (Right Click) لە ئەسیکۆدا."
-                            : "• Tap with 2 fingers simultaneously (2-Finger Tap) to perform a Right Click and open ASYCUDA document context menus.");
+                    stepBody = AsycudaMaterialUi.tr(activity,
+                            "• Tap with 2 fingers simultaneously (2-Finger Tap) to perform a Right Click and open ASYCUDA document context menus.",
+                            "• المس الشاشة بإصبعين معاً (2-Finger Tap) في نفس الوقت لتنفيذ نقرة يمنى (Right Click) وفتح قوائم المستندات في أسيكودا.",
+                            "• بە دوو پەنجە پێکەوە لێبدە (2-Finger Tap) بۆ کردنەوەی لیستی کرتەی ڕاست (Right Click) لە ئەسیکۆدا.");
                 }
                 break;
 
             case 2:
                 demoType = 2;
                 stepIconRes = R.drawable.ic_menu_assist_keys;
-                stepTitle = ar ? "٣/٥ — التمرير بإصبعين وإيماءات ٣ أصابع"
-                        : (ku ? "٣/٥ — جوڵاندن بە دوو پەنجە و جوڵەی ٣ پەنجە"
-                        : "3/5 — Two-Finger Scroll & Three-Finger Swipes");
-                stepBody = ar
-                        ? "• اسحب بإصبعين للأعلى أو الأسفل للتمرير داخل الجداول الطويلة (Scroll Wheel).\n• اسحب بـ ٣ أصابع للأعلى لإظهار/إخفاء لوحة المفاتيح.\n• اسحب بـ ٣ أصابع للأسفل لإظهار/إخفاء شريط الاختصارات العلوي."
-                        : (ku ? "• بە دوو پەنجە بەرەو سەرەوە یان خوارەوە ڕابکێشە بۆ گەڕان لە خشتەکاندا.\n• بە ٣ پەنجە بەرەو سەرەوە ڕابکێشە بۆ کردنەوەی تەختەکلیل.\n• بە ٣ پەنجە بەرەو خوارەوە ڕابکێشە بۆ شاردنەوەی شریتی سەرەوە."
-                        : "• Glide 2 fingers up/down to scroll tables (Mouse Wheel).\n• Swipe 3 fingers UP to toggle the Soft Keyboard.\n• Swipe 3 fingers DOWN to show/hide the top Shortcut Bar.");
+                stepTitle = AsycudaMaterialUi.tr(activity,
+                        "3/5 — Two-Finger Scroll & Three-Finger Swipes",
+                        "٣/٥ — التمرير بإصبعين وإيماءات ٣ أصابع",
+                        "٣/٥ — جوڵاندن بە دوو پەنجە و جوڵەی ٣ پەنجە");
+                stepBody = AsycudaMaterialUi.tr(activity,
+                        "• Glide 2 fingers up/down to scroll tables (Mouse Wheel).\n• Swipe 3 fingers UP to toggle the Soft Keyboard.\n• Swipe 3 fingers DOWN to show/hide the top Shortcut Bar.",
+                        "• اسحب بإصبعين للأعلى أو الأسفل للتمرير داخل الجداول الطويلة (Scroll Wheel).\n• اسحب بـ ٣ أصابع للأعلى لإظهار/إخفاء لوحة المفاتيح.\n• اسحب بـ ٣ أصابع للأسفل لإظهار/إخفاء شريط الاختصارات العلوي.",
+                        "• بە دوو پەنجە بەرەو سەرەوە یان خوارەوە ڕابکێشە بۆ گەڕان لە خشتەکاندا.\n• بە ٣ پەنجە بەرەو سەرەوە ڕابکێشە بۆ کردنەوەی تەختەکلیل.\n• بە ٣ پەنجە بەرەو خوارەوە ڕابکێشە بۆ شاردنەوەی شریتی سەرەوە.");
                 break;
 
             case 3:
                 demoType = 3;
                 stepIconRes = R.drawable.ic_menu_calculator;
-                stepTitle = ar ? "٤/٥ — الزر العائم والحاسبة المدمجة وشريط الاختصارات"
-                        : (ku ? "٤/٥ — دوگمەی سەرئاوکەوتوو و ژمێرەری بچووک و شریتی کورتکراوە"
-                        : "4/5 — Control Center Pill, Calculator & Shortcut Bar");
-                stepBody = ar
-                        ? "• الزر العائم (AsyLauncher): يفتح مركز التحكم، ويلتصق به زر الحاسبة المصغرة الذي يفتح نافذة حاسبة حرة الحركة وتغيير الحجم.\n• زر الإخفاء (—) في الحاسبة يطويها داخل الزر العائم مع حفظ حساباتك (تظهر نقطة خضراء)، بينما زر الإغلاق (✕) يصفرها.\n• زر الكيبورد في الشريط العلوي يفتح ويغلق لوحة المفاتيح بضغطة واحدة."
-                        : (ku ? "• دوگمەی سەرئاوکەوتوو (AsyLauncher): ناوەندی کۆنترۆڵ دەکاتەوە، و دوگمەی ژمێرەری پێوە نووساوە.\n• دوگمەی (—) ژمێرەرەکە دەشارێتەوە بە پاراستنی ژمارەکان، و (✕) دایئەخات.\n• دوگمەی تەختەکلیل لە شریتی سەرەوە تەختەکلیل دەکاتەوە و دایدەخات."
-                        : "• Floating Pill (AsyLauncher): Opens Control Center and hosts the attached Mini Calculator icon.\n• Calculator Hide (—) collapses it back into the pill keeping your math (green indicator dot); Close (✕) resets it.\n• Top Shortcut Bar Keyboard button toggles the Android keyboard both open and closed.");
+                stepTitle = AsycudaMaterialUi.tr(activity,
+                        "4/5 — Control Center Pill, Calculator & Shortcut Bar",
+                        "٤/٥ — الزر العائم والحاسبة المدمجة وشريط الاختصارات",
+                        "٤/٥ — دوگمەی سەرئاوکەوتوو و ژمێرەری بچووک و شریتی کورتکراوە");
+                stepBody = AsycudaMaterialUi.tr(activity,
+                        "• Floating Pill (AsyLauncher): Opens Control Center and hosts the attached Mini Calculator icon.\n• Calculator Hide (—) collapses it back into the pill keeping your math (green indicator dot); Close (✕) resets it.\n• Top Shortcut Bar Keyboard button toggles the Android keyboard both open and closed.",
+                        "• الزر العائم (AsyLauncher): يفتح مركز التحكم، ويلتصق به زر الحاسبة المصغرة الذي يفتح نافذة حاسبة حرة الحركة وتغيير الحجم.\n• زر الإخفاء (—) في الحاسبة يطويها داخل الزر العائم مع حفظ حساباتك (تظهر نقطة خضراء)، بينما زر الإغلاق (✕) يصفرها.\n• زر الكيبورد في الشريط العلوي يفتح ويغلق لوحة المفاتيح بضغطة واحدة.",
+                        "• دوگمەی سەرئاوکەوتوو (AsyLauncher): ناوەندی کۆنترۆڵ دەکاتەوە، و دوگمەی ژمێرەری پێوە نووساوە.\n• دوگمەی (—) ژمێرەرەکە دەشارێتەوە بە پاراستنی ژمارەکان، و (✕) دایئەخات.\n• دوگمەی تەختەکلیل لە شریتی سەرەوە تەختەکلیل دەکاتەوە و دایدەخات.");
                 break;
 
             default:
                 demoType = 4;
                 stepIconRes = R.drawable.ic_menu_display;
-                stepTitle = ar ? "٥/٥ — خصّص جميع النقرات والإيماءات كما تحب"
-                        : (ku ? "٥/٥ — هەموو کرتە و جوڵەکان بە دڵی خۆت ڕێکبخە"
-                        : "5/5 — Customize Every Click & Gesture Anytime");
-                stepBody = ar
-                        ? "• لا شيء مقيد! يمكنك تغيير وظيفة أي لمسة أو ضغطة مطولة أو إيماءة لكل طريقة تحكم على حدة.\n• افتح مركز التحكم ← إعدادات العرض ← «إعدادات الماوس واللمس وإيماءات الأصابع» لتخصيص كل إصبع وسرعة المؤشر."
-                        : (ku ? "• هیچ شتێک جێگیر نەکراوە! دەتوانیت کاری هەر لێدانێک یان جوڵەیەکی پەنجە بگۆڕیت.\n• بڕۆ بۆ ناوەندی کۆنترۆڵ ← ڕێکخستنەکانی پیشاندان ← «ڕێکخستنی ماوس و جوڵەی پەنجەکان»."
-                        : "• Nothing is hard-fixed! You can customize every 1-finger, 2-finger, and 3-finger tap, hold, or swipe for each Input Mode.\n• Open Control Center → Display Settings → \"Mouse, Touch & Finger Gestures\" anytime.");
+                stepTitle = AsycudaMaterialUi.tr(activity,
+                        "5/5 — Customize Every Click & Gesture Anytime",
+                        "٥/٥ — خصّص جميع النقرات والإيماءات كما تحب",
+                        "٥/٥ — هەموو کرتە و جوڵەکان بە دڵی خۆت ڕێکبخە");
+                stepBody = AsycudaMaterialUi.tr(activity,
+                        "• Nothing is hard-fixed! You can customize every 1-finger, 2-finger, and 3-finger tap, hold, or swipe for each Input Mode.\n• Open Control Center → Display Settings → \"Mouse, Touch & Finger Gestures\" anytime.",
+                        "• لا شيء مقيد! يمكنك تغيير وظيفة أي لمسة أو ضغطة مطولة أو إيماءة لكل طريقة تحكم على حدة.\n• افتح مركز التحكم ← إعدادات العرض ← «إعدادات الماوس واللمس وإيماءات الأصابع» لتخصيص كل إصبع وسرعة المؤشر.",
+                        "• هیچ شتێک جێگیر نەکراوە! دەتوانیت کاری هەر لێدانێک یان جوڵەیەکی پەنجە بگۆڕیت.\n• بڕۆ بۆ ناوەندی کۆنترۆڵ ← ڕێکخستنەکانی پیشاندان ← «ڕێکخستنی ماوس و جوڵەی پەنجەکان».");
                 break;
         }
 
@@ -526,7 +542,7 @@ public final class AsycudaTutorialOverlay {
         navLp.topMargin = dp(activity, 8);
 
         TextView changeModeBtn = createActionPill(activity,
-                ar ? "⇄ تغيير الطريقة" : (ku ? "⇄ گۆڕینی شێواز" : "⇄ Input Mode"),
+                AsycudaMaterialUi.tr(activity, "⇄ Input Mode", "⇄ تغيير الطريقة", "⇄ گۆڕینی شێواز"),
                 AsycudaMaterialUi.SURFACE_GROUPED_CARD, AsycudaMaterialUi.TEXT_SECONDARY, AsycudaMaterialUi.SEPARATOR_HAIRLINE);
         changeModeBtn.setOnClickListener(v -> renderStage1InputMethodPicker(activity));
         navRow.addView(changeModeBtn);
@@ -536,7 +552,7 @@ public final class AsycudaTutorialOverlay {
 
         if (stepIndex > 0) {
             TextView prevBtn = createActionPill(activity,
-                    ar ? "السابق" : (ku ? "پێشوو" : "← Back"),
+                    AsycudaMaterialUi.tr(activity, "← Back", "السابق", "پێشوو"),
                     AsycudaMaterialUi.SURFACE_GROUPED_CARD, AsycudaMaterialUi.TEXT_PRIMARY, AsycudaMaterialUi.SEPARATOR_HAIRLINE);
             prevBtn.setOnClickListener(v -> renderStage2Walkthrough(activity, chosenMode, stepIndex - 1));
             LinearLayout.LayoutParams prevLp = new LinearLayout.LayoutParams(
@@ -547,7 +563,7 @@ public final class AsycudaTutorialOverlay {
 
         if (stepIndex == totalSteps - 1) {
             TextView openGesturesBtn = createActionPill(activity,
-                    ar ? "تخصيص الإيماءات" : (ku ? "ڕێکخستنی جوڵەکان" : "Customize Gestures"),
+                    AsycudaMaterialUi.tr(activity, "Customize Gestures", "تخصيص الإيماءات", "ڕێکخستنی جوڵەکان"),
                     "#240A84FF", "#FF0A84FF", "#FF0A84FF");
             openGesturesBtn.setOnClickListener(v -> {
                 markTutorialCompleted(activity);
@@ -561,9 +577,10 @@ public final class AsycudaTutorialOverlay {
         }
 
         boolean isLast = (stepIndex == totalSteps - 1);
+        String finishLabel = AsycudaMaterialUi.tr(activity, "✓ Finish & Start", "✓ ابدأ العمل", "✓ دەستپێکردن");
+        String nextLabel = AsycudaMaterialUi.tr(activity, "Next →", "التالي ←", "دواتر ←");
         TextView nextBtn = createActionPill(activity,
-                isLast ? (ar ? "✓ ابدأ العمل" : (ku ? "✓ دەستپێکردن" : "✓ Finish & Start"))
-                        : (ar ? "التالي ←" : (ku ? "دواتر ←" : "Next →")),
+                isLast ? finishLabel : nextLabel,
                 isLast ? "#FF30D158" : "#FF0A84FF", "#FFFFFFFF",
                 isLast ? "#FF248A3D" : "#FF0A84FF");
         nextBtn.setOnClickListener(v -> {
@@ -633,7 +650,9 @@ public final class AsycudaTutorialOverlay {
             if (ctx instanceof MainActivity && ((MainActivity) ctx).prefs != null) {
                 return Integer.parseInt(((MainActivity) ctx).prefs.touchMode.get());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Default to trackpad mode when preference is unset or unparsable
+        }
         return 1;
     }
 
@@ -648,7 +667,9 @@ public final class AsycudaTutorialOverlay {
             }
             SharedPreferences sp = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
             sp.edit().putInt("selected_input_mode", mode).apply();
-        } catch (Throwable ignored) {}
+        } catch (Exception ignored) {
+            // Ignore preference persistence errors
+        }
     }
 
     private static int dp(Context ctx, int val) {

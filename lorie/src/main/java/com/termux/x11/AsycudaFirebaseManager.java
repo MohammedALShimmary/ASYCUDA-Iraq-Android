@@ -438,8 +438,6 @@ public final class AsycudaFirebaseManager {
         container.removeAllViews();
 
         SharedPreferences prefs = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        boolean ar = AsycudaMaterialUi.isArabic(activity);
-        boolean ku = AsycudaMaterialUi.isKurdish(activity);
 
         // 1. Cloud Broadcast Card (Seeded with welcome-v4-3-0 if not yet fetched)
         String severity = prefs.getString(KEY_CACHED_SEVERITY, "info");
@@ -465,8 +463,8 @@ public final class AsycudaFirebaseManager {
         String githubUrl = prefs.getString(KEY_CACHED_GITHUB_URL,
                 "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases");
 
-        String cloudTitle = ar ? titleAr : (ku ? titleKu : titleEn);
-        String cloudBody = ar ? bodyAr : (ku ? bodyKu : bodyEn);
+        String cloudTitle = AsycudaMaterialUi.tr(activity, titleEn, titleAr, titleKu);
+        String cloudBody = AsycudaMaterialUi.tr(activity, bodyEn, bodyAr, bodyKu);
         String cloudCategory = AsycudaMaterialUi.tr(activity,
                 "LIVE CLOUD BROADCAST  •  " + versionTag + (publishedUtc != null && !publishedUtc.isEmpty() ? "  •  " + publishedUtc : ""),
                 "بث سحابي مباشر  •  " + versionTag + (publishedUtc != null && !publishedUtc.isEmpty() ? "  •  " + publishedUtc : ""),
@@ -536,9 +534,7 @@ public final class AsycudaFirebaseManager {
         int pad = dp(activity, 13);
         card.setPadding(pad, dp(activity, 11), pad, dp(activity, 12));
 
-        int accentColor = "critical".equalsIgnoreCase(severity) ? AsycudaMaterialUi.SYSTEM_RED
-                : ("warning".equalsIgnoreCase(severity) ? AsycudaMaterialUi.SYSTEM_ORANGE
-                : ("release".equalsIgnoreCase(severity) ? AsycudaMaterialUi.SYSTEM_GREEN : AsycudaMaterialUi.SYSTEM_BLUE));
+        int accentColor = resolveAlertAccentColor(severity);
 
         int strokeColor = isNew ? accentColor : AsycudaMaterialUi.SEPARATOR_HAIRLINE;
         card.setBackground(AsycudaMaterialUi.createCardDrawable(activity, AsycudaMaterialUi.SURFACE_GROUPED_CARD, 13, strokeColor));
@@ -617,13 +613,38 @@ public final class AsycudaFirebaseManager {
                     true, false, v -> {
                         try {
                             activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(safePlayUrl)));
-                        } catch (Throwable ignored) {}
+                        } catch (Exception ignored) {
+                            // Ignore when no external browser or Play Store app is available
+                        }
                     });
             btnRow.addView(playBtn);
             card.addView(btnRow);
         }
 
         return card;
+    }
+
+    private static int resolveAlertAccentColor(String severity) {
+        if ("critical".equalsIgnoreCase(severity)) {
+            return AsycudaMaterialUi.SYSTEM_RED;
+        }
+        if ("warning".equalsIgnoreCase(severity)) {
+            return AsycudaMaterialUi.SYSTEM_ORANGE;
+        }
+        if ("release".equalsIgnoreCase(severity)) {
+            return AsycudaMaterialUi.SYSTEM_GREEN;
+        }
+        return AsycudaMaterialUi.SYSTEM_BLUE;
+    }
+
+    private static String resolveAlertBorderHex(String severity) {
+        if ("critical".equalsIgnoreCase(severity)) {
+            return "#FFFF453A";
+        }
+        if ("warning".equalsIgnoreCase(severity)) {
+            return "#FFFF9F0A";
+        }
+        return "#FF0A84FF";
     }
 
     private interface SyncResultCallback {
@@ -708,13 +729,16 @@ public final class AsycudaFirebaseManager {
                 if (activity.isFinishing() || activity.isDestroyed()) return;
                 showAnnouncementModal(activity, id, severity, titleEn, titleAr, titleKu, bodyEn, bodyAr, bodyKu, playUrl, actionUrl);
             });
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
+            // Best-effort announcement fetch when offline
         } finally {
             if (conn != null) conn.disconnect();
             if (callback != null) {
                 try {
                     callback.onComplete(syncedSuccess);
-                } catch (Throwable ignored) {}
+                } catch (Exception ignored) {
+                    // Ignore callback error
+                }
             }
         }
     }
@@ -883,8 +907,7 @@ public final class AsycudaFirebaseManager {
                 return;
             }
 
-            // Upsert via POST + X-HTTP-Method-Override: PATCH on /app_metrics/{anonId}
-            // (Android HttpURLConnection rejects raw "PATCH" in setRequestMethod)
+            // Upsert document via POST with X-HTTP-Method-Override header
             conn = openAuthorizedFirestoreConnection(ctx, "/app_metrics/" + anonId, "POST", 7000, 7000);
             conn.setRequestProperty("X-HTTP-Method-Override", "PATCH");
             conn.setDoOutput(true);
@@ -917,7 +940,8 @@ public final class AsycudaFirebaseManager {
                         .putString("last_heartbeat_ver", curVer)
                         .apply();
             }
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
+            // Best-effort anonymous daily metric ping
         } finally {
             if (conn != null) conn.disconnect();
         }
@@ -936,11 +960,8 @@ public final class AsycudaFirebaseManager {
             String playUrl,
             String actionUrl) {
 
-        boolean ar = AsycudaMaterialUi.isArabic(activity);
-        boolean ku = AsycudaMaterialUi.isKurdish(activity);
-
-        String title = ar ? titleAr : (ku ? titleKu : titleEn);
-        String body = ar ? bodyAr : (ku ? bodyKu : bodyEn);
+        String title = AsycudaMaterialUi.tr(activity, titleEn, titleAr, titleKu);
+        String body = AsycudaMaterialUi.tr(activity, bodyEn, bodyAr, bodyKu);
 
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -954,8 +975,7 @@ public final class AsycudaFirebaseManager {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(AsycudaMaterialUi.SURFACE_SHEET);
         bg.setCornerRadius(dp(activity, 16));
-        String borderHex = "critical".equalsIgnoreCase(severity) ? "#FFFF453A"
-                : ("warning".equalsIgnoreCase(severity) ? "#FFFF9F0A" : "#FF0A84FF");
+        String borderHex = resolveAlertBorderHex(severity);
         bg.setStroke(dp(activity, 1), Color.parseColor(borderHex));
         card.setBackground(bg);
 
@@ -971,7 +991,10 @@ public final class AsycudaFirebaseManager {
         headerRow.addView(headerIcon, hiLp);
 
         TextView badge = new TextView(activity);
-        badge.setText(ar ? "إشعار وأخبار التطبيق" : (ku ? "ئاگاداری و هەواڵی بەرنامە" : "APP NEWS & ANNOUNCEMENT"));
+        badge.setText(AsycudaMaterialUi.tr(activity,
+                "APP NEWS & ANNOUNCEMENT",
+                "إشعار وأخبار التطبيق",
+                "ئاگاداری و هەواڵی بەرنامە"));
         badge.setTextColor(Color.parseColor(borderHex));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1012,7 +1035,9 @@ public final class AsycudaFirebaseManager {
             playBtn.setOnClickListener(v -> {
                 try {
                     activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(safePlayUrl)));
-                } catch (Throwable ignored) {}
+                } catch (Exception ignored) {
+                    // Ignore when no browser or Play Store handler is available
+                }
             });
             LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1021,7 +1046,7 @@ public final class AsycudaFirebaseManager {
         }
 
         TextView dismissBtn = createButton(activity,
-                ar ? "حسناً، فهمت" : (ku ? "باشە، تێگەیشتم" : "Got It"),
+                AsycudaMaterialUi.tr(activity, "Got It", "حسناً، فهمت", "باشە، تێگەیشتم"),
                 "#0284C7", "#FFFFFF");
         dismissBtn.setOnClickListener(v -> {
             if (id != null && !id.isEmpty()) {
@@ -1077,13 +1102,13 @@ public final class AsycudaFirebaseManager {
         }
     }
 
-    private static void putStringField(JSONObject fields, String key, String val) throws Exception {
+    private static void putStringField(JSONObject fields, String key, String val) throws org.json.JSONException {
         JSONObject wrapper = new JSONObject();
         wrapper.put("stringValue", val != null ? val : "");
         fields.put(key, wrapper);
     }
 
-    private static void putIntField(JSONObject fields, String key, long val) throws Exception {
+    private static void putIntField(JSONObject fields, String key, long val) throws org.json.JSONException {
         JSONObject wrapper = new JSONObject();
         wrapper.put("integerValue", String.valueOf(val));
         fields.put(key, wrapper);
@@ -1094,7 +1119,7 @@ public final class AsycudaFirebaseManager {
         return s.length() <= maxLen ? s : s.substring(0, maxLen);
     }
 
-    private static String readStream(InputStream is) throws Exception {
+    private static String readStream(InputStream is) throws java.io.IOException {
         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
         byte[] buf = new byte[4096];
         int total = 0;
