@@ -86,7 +86,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-@Keep @SuppressLint("ApplySharedPref")
+@SuppressLint("ApplySharedPref")
 @SuppressWarnings({"deprecation", "unused"})
 public class MainActivity extends AppCompatActivity {
     public static final String ACTION_STOP = "com.termux.x11.ACTION_STOP";
@@ -1247,6 +1247,7 @@ public class MainActivity extends AppCompatActivity {
             view.setKeyboardVisible(false);
     }
 
+    @Keep
     @SuppressWarnings("SameParameterValue")
     void clientConnectedStateChanged() {
         runOnUiThread(()-> {

@@ -1,13 +1,31 @@
 -keepattributes SourceFile,LineNumberTable
 
-# Keep classes/members referenced from JNI (FindClass/GetMethodID/RegisterNatives) + main entrypoint
+# Keep classes/members referenced from JNI (FindClass/GetMethodID/GetFieldID/RegisterNatives) + main entrypoint
+-keep class com.termux.x11.MainActivity {
+    public <init>();
+    void clientConnectedStateChanged();
+    static native void nativeSetLaunchWindowingModeFreeform(java.lang.Object);
+}
+
 -keep class com.termux.x11.LorieView {
+    public <init>(android.content.Context);
+    public <init>(android.content.Context, android.util.AttributeSet);
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+    private com.termux.x11.MainActivity activity;
     native <methods>;
     void resetIme();
+    void requestClipboard();
+    void onSyncReply(int);
+    void setRendererViewport(int, int, int, int, float, float, float, float);
 }
 
 -keep class com.termux.x11.CmdEntryPoint {
+    <init>(java.lang.String[]);
     public static void main(java.lang.String[]);
+    native <methods>;
+    void sendBroadcast();
+    void sendBroadcastDelayed();
+    void setDocumentTag(java.lang.String);
 }
 
 # CmdEntryPoint reaches these hidden framework classes via reflection; they

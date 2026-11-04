@@ -50,7 +50,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import dalvik.annotation.optimization.CriticalNative;
 import dalvik.annotation.optimization.FastNative;
 
-@Keep @SuppressLint("WrongConstant")
+@SuppressLint("WrongConstant")
 @SuppressWarnings("deprecation")
 public class LorieView extends SurfaceView implements InputStub {
     private float rendererZoom = 100f;
