@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "catalogUpdated": "2026-10-26T10:30:00Z",
-  "description": "Official ASYCUDA Iraq Android Known-Issues & Verified Self-Healing Catalog. Data-only diagnostic signatures synced read-only from GitHub and bundled offline inside the APK.",
+  "catalogUpdated": "2026-11-04T14:25:00Z",
+  "description": "AsyLauncher (Launcher for ASYCUDA) Known-Issues & Verified Self-Healing Catalog. Data-only diagnostic signatures synced read-only from Cloud Firestore and bundled offline inside the APK.",
   "allowedVerifiedFixIds": [
     "NONE",
     "OPEN_NETWORK_SETTINGS",
@@ -18,9 +18,9 @@
   ],
   "entries": [
     {
-      "id": "SENTRY-NET-001",
+      "id": "ASY-NET-001",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-001 • DEVICE_OFFLINE (NO_ACTIVE_TRANSPORT)",
+      "badge": "ASY-NET-001 • DEVICE_OFFLINE (NO_ACTIVE_TRANSPORT)",
       "matchKeywords": ["NO_ACTIVE_TRANSPORT", "NETWORK IS UNREACHABLE", "ENETUNREACH"],
       "verifiedFixId": "OPEN_NETWORK_SETTINGS",
       "fixedInVersion": "",
@@ -32,9 +32,9 @@
       "explanationKu": "ئامێرەکەت لە ئێستادا پەیوەندی بە وایفای یان داتای مۆبایل (4G/5G) نییە.\n\nچارەسەر:\n• داتای مۆبایل (4G) یان وایفای کارا بکە و پاشان دوگمەی هەوڵدانەوە دابگرە."
     },
     {
-      "id": "SENTRY-NET-002",
+      "id": "ASY-NET-002",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-002 • DNS_RESOLUTION_FAILED (UNKNOWN_HOST)",
+      "badge": "ASY-NET-002 • DNS_RESOLUTION_FAILED (UNKNOWN_HOST)",
       "matchKeywords": ["UNKNOWNHOSTEXCEPTION", "UNABLE TO RESOLVE HOST", "EAI_NODATA", "NO ADDRESS ASSOCIATED WITH HOSTNAME"],
       "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
@@ -46,9 +46,9 @@
       "explanationKu": "ڕاژەی DNSی هێڵی ئینتەرنێتەکەت نەیتوانی ناونیشانی ڕاژەی گومرگ (asy.mof.gov.iq) بدۆزێتەوە.\n\nچارەسەر:\n• وایفای بکوژێنەوە و داتای مۆبایل (4G) هەڵبکە ئەگەر بەردەست بێت، پاشان دوگمەی دووبارە هەوڵدانەوە دابگرە."
     },
     {
-      "id": "SENTRY-NET-003",
+      "id": "ASY-NET-003",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-003 • WIFI_ISP_BLOCKED_BY_MOF_FIREWALL (EXIT_12)",
+      "badge": "ASY-NET-003 • WIFI_ISP_BLOCKED_BY_MOF_FIREWALL (EXIT_12)",
       "matchKeywords": ["EXIT CODE = 12", "SERVER NOT FOUND", "ESTABLISHSIGNALLINGCHANNEL"],
       "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
@@ -60,9 +60,9 @@
       "explanationKu": "وایفایەکەت پەیوەستە بە ئینتەرنێتەوە، بەڵام دیواری پاراستنی وەزارەتی دارایی ڕێگری لە پەیوەندی ئەسیکۆدا لە کۆمپانیای وایفایەکەت دەکات (SERVER NOT FOUND / EXIT CODE 12).\n\nچارەسەر:\n• وایفای لە ڕێکخستنەکانی ئامێرەکەت بکوژێنەوە.\n• داتای مۆبایل (4G) بەکاربهێنە ئەگەر بەردەست بێت.\n• دوگمەی دووبارە هەوڵدانەوەی پەیوەندی دابگرە."
     },
     {
-      "id": "SENTRY-NET-004",
+      "id": "ASY-NET-004",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-004 • MOF_WEB_443_DOWN_RMI_ONLINE",
+      "badge": "ASY-NET-004 • MOF_WEB_443_DOWN_RMI_ONLINE",
       "matchKeywords": ["MOF_WEB_443_DOWN"],
       "verifiedFixId": "LAUNCH_WITH_CACHED_JARS",
       "fixedInVersion": "",
@@ -74,9 +74,9 @@
       "explanationKu": "ڕاژەی چوونەژوورەوەی ئەسیکۆدا کار دەکات، بەڵام ڕاژەی داگرتنی وێب (دەرچەی :443) بە شێوەیەکی کاتی وەستاوە."
     },
     {
-      "id": "SENTRY-NET-005",
+      "id": "ASY-NET-005",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-005 • TLS_SSL_HANDSHAKE_INTERCEPTED",
+      "badge": "ASY-NET-005 • TLS_SSL_HANDSHAKE_INTERCEPTED",
       "matchKeywords": ["SSLHANDSHAKEEXCEPTION", "CERTPATHVALIDATOREXCEPTION", "PKIX PATH", "CERTIFICATEEXPIREDEXCEPTION", "SSLEXCEPTION"],
       "verifiedFixId": "SWITCH_TO_MOBILE_DATA",
       "fixedInVersion": "",
@@ -88,9 +88,9 @@
       "explanationKu": "تۆڕی ئینتەرنێتەکەت ڕێگری لە بڕوانامەی پارێزراوی (SSL)ی ڕاژەی گومرگ کردووە.\n\nچارەسەر:\n• دڵنیابە لە ڕێکخستنی خۆکاری کات و بەرواری ئامێرەکەت.\n• ئەگەر وایفای بەکاردەهێنیت، بیکوژێنەوە و داتای مۆبایل (4G) بەکاربهێنە ئەگەر بەردەست بێت."
     },
     {
-      "id": "SENTRY-NET-006",
+      "id": "ASY-NET-006",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-006 • RMI_SESSION_SOCKET_RESET",
+      "badge": "ASY-NET-006 • RMI_SESSION_SOCKET_RESET",
       "matchKeywords": ["CONNECTION RESET", "BROKEN PIPE", "SOFTWARE CAUSED CONNECTION ABORT", "CONNECTIOEXCEPTION", "CLIENTSIGNALLINGCHANNEL"],
       "verifiedFixId": "CLEAN_LOCKS_AND_RECONNECT",
       "fixedInVersion": "",
@@ -102,9 +102,9 @@
       "explanationKu": "پەیوەندی چالاکت لەگەڵ ڕاژەی ئەسیکۆدا بەهۆی لاوازی هێڵەوە پچڕا. دوگمەی چارەسەر دابگرە بۆ دەستپێکردنەوە."
     },
     {
-      "id": "SENTRY-NET-007",
+      "id": "ASY-NET-007",
       "category": "NETWORK",
-      "badge": "SENTRY-NET-007 • MOF_SERVER_UNREACHABLE_TIMEOUT",
+      "badge": "ASY-NET-007 • MOF_SERVER_UNREACHABLE_TIMEOUT",
       "matchKeywords": ["SOCKETTIMEOUTEXCEPTION", "CONNECTION TIMED OUT", "CONNECTION REFUSED", "ECONNREFUSED", "ETIMEDOUT"],
       "verifiedFixId": "REFRESH_DNS_AND_RETRY",
       "fixedInVersion": "",
@@ -112,13 +112,13 @@
       "titleAr": "خادم الكمارك الرسمي (asy.mof.gov.iq) لا يستجيب حالياً",
       "titleKu": "ڕاژەی فەرمی گومرگ (asy.mof.gov.iq) لە ئێستادا وەڵام ناداتەوە",
       "explanationEn": "Your internet connection is active and DNS is working, but the Iraqi Ministry of Finance server (asy.mof.gov.iq) did not respond within the timeout period (possible server maintenance or heavy load).\n\nHow to resolve:\n• Tap 'Apply Fix: Refresh Route & Reconnect' below to test the server again.",
-      "explanationAr": "اتصال الإنترنت لديك يعمل بشكل سليم، ولكن خادم وزارة المالية (asy.mof.gov.iq) لم يستجب خلال المهلة المحددة (قد يكون الخادم قيد الصيانة المؤقتة أو يواجه ضغطاً عالياً).\n\nالحل المعتمد:\n• اضغط على زر (تحديث المسار وإعادة المحاولة) بالأسفل.",
+      "explanationAr": "اتصال الإنترنت لديك يعمل بشكل سليم، ولكن خادم أسيكودا (asy.mof.gov.iq) لم يستجب خلال المهلة المحددة (قد يكون الخادم قيد الصيانة المؤقتة أو يواجه ضغطاً عالياً).\n\nالحل المعتمد:\n• اضغط على زر (تحديث المسار وإعادة المحاولة) بالأسفل.",
       "explanationKu": "ئینتەرنێتەکەت کارایە، بەڵام ڕاژەی وەزارەتی دارایی (asy.mof.gov.iq) لە ئێستادا وەڵام ناداتەوە. تکایە دوگمەی هەوڵدانەوە دابگرە."
     },
     {
-      "id": "SENTRY-SYS-001",
+      "id": "ASY-SYS-001",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-001 • SOCLASS_CACHE_CORRUPTED",
+      "badge": "ASY-SYS-001 • SOCLASS_CACHE_CORRUPTED",
       "matchKeywords": ["STREAMCORRUPTEDEXCEPTION", "INVALIDCLASSEXCEPTION", "SOCLASSCACHE", "OPTIONALDATAEXCEPTION", "SO.KERNEL.CORE.CACHE"],
       "verifiedFixId": "PURGE_SOCLASS_CACHE",
       "fixedInVersion": "",
@@ -130,9 +130,9 @@
       "explanationKu": "پەڕگەکانی بیرگەی کاتی (.SOClassCache) تێکچوون. دوگمەی چارەسەر لە خوارەوە دابگرە بۆ دروستکردنەوەی بیرگەی پاک."
     },
     {
-      "id": "SENTRY-SYS-002",
+      "id": "ASY-SYS-002",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-002 • GOVERNMENT_JAR_INTEGRITY_OR_MISSING_CLASS",
+      "badge": "ASY-SYS-002 • GOVERNMENT_JAR_INTEGRITY_OR_MISSING_CLASS",
       "matchKeywords": ["CLASSNOTFOUNDEXCEPTION", "NOCLASSDEFFOUNDERROR", "ZIPEXCEPTION", "JAREXCEPTION", "UNSUPPORTEDCLASSVERSIONERROR", "SHA-256 DIGEST ERROR"],
       "verifiedFixId": "VERIFY_AND_RESYNC_JARS",
       "fixedInVersion": "",
@@ -144,9 +144,9 @@
       "explanationKu": "یەکێک لە پەڕگە فەرمییەکانی ئەسیکۆدا (.jar) بە تەواوی دانەبەزیوە. دوگمەی چارەسەر دابگرە بۆ پشکنین و داگرتنەوەی گورزەکان."
     },
     {
-      "id": "SENTRY-SYS-003",
+      "id": "ASY-SYS-003",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-003 • MANDATORY_SOCLASS_SERVER_UPDATE",
+      "badge": "ASY-SYS-003 • MANDATORY_SOCLASS_SERVER_UPDATE",
       "matchKeywords": ["SOCLASS CLIENT HAVE TO BE UPDATED", "CLIENT HAVE TO BE UPDATED"],
       "verifiedFixId": "VERIFY_AND_RESYNC_JARS",
       "fixedInVersion": "",
@@ -154,13 +154,13 @@
       "titleAr": "خادم الوزارة يطلب تحديث حزم النظام (SOClass Update)",
       "titleKu": "ڕاژەی وەزارەت داوای نوێکردنەوەی گورزەکانی سیستەم دەکات (SOClass)",
       "explanationEn": "The Ministry of Finance server updated its customs packages and requires your client to sync the latest AWIQWorld.jnlp files.\n\nHow to resolve:\n• Tap 'Apply Fix: Sync Latest Ministry Packages' below.",
-      "explanationAr": "قام خادم وزارة المالية بتحديث حزم النظام ويطلب مزامنة أحدث ملفات (AWIQWorld.jnlp) قبل تسجيل الدخول.\n\nالحل المعتمد:\n• اضغط على زر (مزامنة أحدث حزم الوزارة الآن) بالأسفل.",
+      "explanationAr": "قام خادم أسيكودا بتحديث حزم النظام ويطلب مزامنة أحدث ملفات (AWIQWorld.jnlp) قبل تسجيل الدخول.\n\nالحل المعتمد:\n• اضغط على زر (مزامنة أحدث حزم النظام الآن) بالأسفل.",
       "explanationKu": "ڕاژەی وەزارەتی دارایی گورزەکانی نوێ کردووەتەوە. دوگمەی چارەسەر دابگرە بۆ هاوکاتکردنی پەڕگەکان."
     },
     {
-      "id": "SENTRY-SYS-004",
+      "id": "ASY-SYS-004",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-004 • NATIVE_RUNTIME_LINKER_ERROR",
+      "badge": "ASY-SYS-004 • NATIVE_RUNTIME_LINKER_ERROR",
       "matchKeywords": ["UNSATISFIEDLINKERROR", "LIBJLI.SO", "LIBAWT_XAWT.SO", "LD-LINUX-AARCH64", "EXIT CODE 126", "EXIT CODE 127", "MANDATORY BOOT BRIDGE"],
       "verifiedFixId": "REPAIR_JAVA_RUNTIME",
       "fixedInVersion": "",
@@ -172,9 +172,9 @@
       "explanationKu": "پەڕگەکانی ژینگەی کارپێکردنی جاڤا پێویستیان بە چاککردنەوەیە. دوگمەی چارەسەر لە خوارەوە دابگرە."
     },
     {
-      "id": "SENTRY-SYS-005",
+      "id": "ASY-SYS-005",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-005 • X11_DISPLAY_SOCKET_DISCONNECTED",
+      "badge": "ASY-SYS-005 • X11_DISPLAY_SOCKET_DISCONNECTED",
       "matchKeywords": ["X11 WINDOW SERVER", "AWTERROR", "HEADLESSEXCEPTION", "XLORIE", "X11 INIT ERROR", "DISPLAY :0"],
       "verifiedFixId": "REINIT_X11_DISPLAY",
       "fixedInVersion": "",
@@ -186,9 +186,9 @@
       "explanationKu": "پەنجەرەی پیشاندانی گرافیکی (:0) پێویستی بە دەستپێکردنەوەیە. دوگمەی چارەسەر دابگرە."
     },
     {
-      "id": "SENTRY-SYS-006",
+      "id": "ASY-SYS-006",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-006 • JVM_OUT_OF_MEMORY_EXHAUSTION",
+      "badge": "ASY-SYS-006 • JVM_OUT_OF_MEMORY_EXHAUSTION",
       "matchKeywords": ["OUTOFMEMORYERROR", "JAVA HEAP SPACE", "GC OVERHEAD LIMIT", "CANNOT ALLOCATE MEMORY", "EXIT CODE 137"],
       "verifiedFixId": "CLEAR_TEMP_AND_LOCKS",
       "fixedInVersion": "",
@@ -200,9 +200,9 @@
       "explanationKu": "بیرگەی کاتی (RAM) پڕ بووە. بەرنامەکانی پاشبنەما دابخە و دوگمەی پاککردنەوەی بیرگە و دەستپێکردنەوە دابگرە."
     },
     {
-      "id": "SENTRY-SYS-007",
+      "id": "ASY-SYS-007",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-007 • DEVICE_STORAGE_FULL_ENOSPC",
+      "badge": "ASY-SYS-007 • DEVICE_STORAGE_FULL_ENOSPC",
       "matchKeywords": ["NO SPACE LEFT ON DEVICE", "ENOSPC", "DISK QUOTA EXCEEDED", "READ-ONLY FILE SYSTEM", "EROFS"],
       "verifiedFixId": "CLEAR_TEMP_AND_LOCKS",
       "fixedInVersion": "",
@@ -214,9 +214,9 @@
       "explanationKu": "بیرگەی ناوخۆیی ئامێرەکەت پڕ بووە. دوگمەی سڕینەوەی پەڕگە کاتییەکان دابگرە."
     },
     {
-      "id": "SENTRY-SYS-008",
+      "id": "ASY-SYS-008",
       "category": "SYSTEM",
-      "badge": "SENTRY-SYS-008 • STALE_SESSION_LOCK_FILE",
+      "badge": "ASY-SYS-008 • STALE_SESSION_LOCK_FILE",
       "matchKeywords": ["OVERLAPPINGFILELOCKEXCEPTION", "FILELOCKINTERRUPTIONEXCEPTION", ".LCK"],
       "verifiedFixId": "CLEAR_TEMP_AND_LOCKS",
       "fixedInVersion": "",
@@ -228,9 +228,9 @@
       "explanationKu": "دانیشتنی پێشوو بە تەواوی دانەخراوە. دوگمەی لابردنی قفڵە کاتییەکان و دەستپێکردنەوە دابگرە."
     },
     {
-      "id": "SENTRY-SEC-001",
+      "id": "ASY-SEC-001",
       "category": "SECURITY",
-      "badge": "SENTRY-SEC-001 • SANDBOX_SECURITY_POLICY_ENFORCED",
+      "badge": "ASY-SEC-001 • SANDBOX_SECURITY_POLICY_ENFORCED",
       "matchKeywords": ["SECURITYEXCEPTION", "BLOCKED OUTBOUND", "BLOCKED UNAUTHORIZED", "SUBPROCESS EXECUTION IS BLOCKED", "BLOCKED HOST PATH"],
       "verifiedFixId": "CLEAN_LOCKS_AND_RECONNECT",
       "fixedInVersion": "",
@@ -238,7 +238,7 @@
       "titleAr": "الحماية الأمنية حظرت إجراءً غير مصرح به",
       "titleKu": "سیستەمی پاراستن ڕێگری لە کردارێکی ڕێگەپێنەدراو کرد",
       "explanationEn": "The built-in security guard blocked an unexpected network connection, file path access, or OS command outside the official Ministry of Finance sandbox.\n\nHow to resolve:\n• Tap 'Apply Fix: Start Fresh Verified Session' below.",
-      "explanationAr": "قام نظام الحماية المدمج بحظر محاولة اتصال أو وصول خارج النطاق الآمن المعتمد لخادم وزارة المالية.\n\nالحل المعتمد:\n• اضغط على زر (بدء جلسة جديدة موثقة) بالأسفل.",
+      "explanationAr": "قام نظام الحماية المدمج بحظر محاولة اتصال أو وصول خارج النطاق الآمن المعتمد لخادم أسيكودا (asy.mof.gov.iq).\n\nالحل المعتمد:\n• اضغط على زر (بدء جلسة جديدة موثقة) بالأسفل.",
       "explanationKu": "سیستەمی پاراستنی ناوخۆیی ڕێگری لە کردارێکی دەرەوەی سنووری فەرمی کرد. دوگمەی دەستپێکردنی دانیشتنی نوێ دابگرە."
     }
   ]

@@ -33,7 +33,7 @@ public class AsycudaKeepAliveService extends Service {
         acquireLocks();
     }
 
-    public static final String ACTION_EXIT_APP = "iq.asycuda.ACTION_EXIT_APP";
+    public static final String ACTION_EXIT_APP = "io.github.mohammedalshimmary.asylauncher.ACTION_EXIT_APP";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -59,7 +59,7 @@ public class AsycudaKeepAliveService extends Service {
             if (mWakeLock == null) {
                 PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
                 if (pm != null) {
-                    mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iq.asycuda::SessionWakeLock");
+                    mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "io.github.mohammedalshimmary.asylauncher::SessionWakeLock");
                     mWakeLock.setReferenceCounted(false);
                 }
             }
@@ -77,7 +77,7 @@ public class AsycudaKeepAliveService extends Service {
                     int lockMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                             ? WifiManager.WIFI_MODE_FULL_LOW_LATENCY
                             : WifiManager.WIFI_MODE_FULL_HIGH_PERF;
-                    mWifiLock = wm.createWifiLock(lockMode, "iq.asycuda::SessionWifiLock");
+                    mWifiLock = wm.createWifiLock(lockMode, "io.github.mohammedalshimmary.asylauncher::SessionWifiLock");
                     mWifiLock.setReferenceCounted(false);
                 }
             }
@@ -94,9 +94,9 @@ public class AsycudaKeepAliveService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
             NotificationChannel ch = new NotificationChannel(
                     CHANNEL_ID,
-                    "ASYCUDA Active Session",
+                    "AsyLauncher Active Session",
                     NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("Keeps the ASYCUDA World network connection active in the background");
+            ch.setDescription("Keeps the active ASYCUDA network session alive in the background");
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }
@@ -113,7 +113,10 @@ public class AsycudaKeepAliveService extends Service {
         String exitLabel = AsycudaMaterialUi.tr(this, "Exit", "خروج", "دەرچوون");
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("ASYCUDA World Iraq")
+                .setContentTitle(AsycudaMaterialUi.tr(this,
+                        "AsyLauncher — Launcher for ASYCUDA",
+                        "AsyLauncher — مشغل أسيكودا",
+                        "AsyLauncher — کارپێکەری ئەسیکۆدا"))
                 .setContentText(AsycudaMaterialUi.tr(this,
                         "Session active • Network protected in background",
                         "الجلسة نشطة • الاتصال محمي في الخلفية",

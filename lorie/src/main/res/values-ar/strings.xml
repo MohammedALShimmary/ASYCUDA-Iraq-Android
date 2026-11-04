@@ -1,19 +1,19 @@
 <!DOCTYPE resources [
-    <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
-    <!ENTITY TERMUX_APP_NAME "Termux">
-    <!ENTITY TERMUX_X11_APP_NAME "أسيكودا العراق">
+    <!ENTITY TERMUX_PACKAGE_NAME "io.github.mohammedalshimmary.asylauncher">
+    <!ENTITY TERMUX_APP_NAME "AsyLauncher">
+    <!ENTITY TERMUX_X11_APP_NAME "مشغل أسيكودا">
     ]>
 <resources>
     <string name="lorie_app_name">&TERMUX_X11_APP_NAME;</string>
 
-    <string name="not_connected">غير متصل</string>
-    <string name="preferences_button_text">الإعدادات</string>
+    <string name="not_connected">جاري بدء العرض...</string>
+    <string name="preferences_button_text">مركز التحكم</string>
     <string name="help_button_text">مساعدة</string>
     <string name="exit_button_text">خروج</string>
     <string name="displays_button_text">الشاشات</string>
     <string name="displays_dialog_title">الشاشات</string>
     <string name="displays_dialog_empty">لا توجد شاشات أخرى مفتوحة</string>
-    <string name="lorie_notification_content_text">اسحب للأسفل لعرض الخيارات</string>
+    <string name="lorie_notification_content_text">الجلسة نشطة • الاتصال محمي في الخلفية</string>
     <string name="lorie_notification_open_preferences">الإعدادات</string>
     <string name="lorie_notification_exit">خروج</string>
     <string name="lorie_notification_restart_activity">إعادة تشغيل</string>

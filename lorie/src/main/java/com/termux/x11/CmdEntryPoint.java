@@ -61,7 +61,7 @@ public class CmdEntryPoint extends ICmdEntryInterface.Stub {
     static void sendBroadcast(Intent intent) {
         try {
             if (ctx != null) {
-                ctx.sendBroadcast(intent, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
+                ctx.sendBroadcast(intent, "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST");
             }
         } catch (Exception e) {
             Log.e("Broadcast", "Failed to broadcast intent through Context:", e);

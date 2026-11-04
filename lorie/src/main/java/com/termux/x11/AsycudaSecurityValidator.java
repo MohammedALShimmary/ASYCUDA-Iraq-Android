@@ -17,7 +17,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Pure-Java production security validator for ASYCUDA World Iraq Android.
+ * Pure-Java production security validator for AsyLauncher (Launcher for ASYCUDA).
  * Contains zero {@code android.*} framework imports so that both the Android runtime
  * ({@link AsycudaStandaloneManager}) and the automated CI/CD adversarial test suite
  * ({@code scripts/SecurityVerificationTest.java}) compile and execute the exact same

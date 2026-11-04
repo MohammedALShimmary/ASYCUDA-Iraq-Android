@@ -16,9 +16,16 @@ build/
 # Large runtime archives (published as GitHub Release assets)
 lorie-app/src/main/assets/*.tar.xz
 
-# Private signing keystores (keep fallback debug keystore only)
+# Private signing keystores & Google Cloud / Firebase configs (keep out of public git)
 lorie-app/asycuda_release.jks
 .signing/
+google-services.json
+**/google-services.json
+*service-account*.json
+firestore.rules
+**/firestore.rules
+firebase.json
+.firebaserc
 
 # Local configuration & Gradle cache
 local.properties

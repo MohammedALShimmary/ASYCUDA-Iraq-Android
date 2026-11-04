@@ -1,4 +1,4 @@
-# ASYCUDA World — Republic of Iraq (Android)
+# AsyLauncher — Launcher for ASYCUDA (Android)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=MohammedALShimmary_ASYCUDA-Iraq-Android&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=MohammedALShimmary_ASYCUDA-Iraq-Android)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=MohammedALShimmary_ASYCUDA-Iraq-Android&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=MohammedALShimmary_ASYCUDA-Iraq-Android)
@@ -8,35 +8,36 @@
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=MohammedALShimmary_ASYCUDA-Iraq-Android&metric=bugs)](https://sonarcloud.io/summary/new_code?id=MohammedALShimmary_ASYCUDA-Iraq-Android)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Android client for the Iraqi General Commission of Customs (**ASYCUDA World** — `https://asy.mof.gov.iq`), built for customs brokers, clearing agents, and logistics operators in Iraq.
+Independent, open-source Android compatibility launcher (**AsyLauncher**, package `io.github.mohammedalshimmary.asylauncher`) designed to run the **ASYCUDA World** Java/JNLP desktop system (`https://asy.mof.gov.iq`) natively on Android phones and tablets for customs brokers, clearing agents, and logistics operators. Not affiliated with or endorsed by the Iraqi Ministry of Finance, the General Commission of Customs, or UNCTAD.
 
-[**Download Major Release `v4.2.0` (`ASYCUDA_Iraq_v4.2.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Major Release `v4.3.0` (`AsyLauncher_v4.3.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) • [**Security & Privacy Policy (`SECURITY.md`)**](SECURITY.md) • [**Java Bridge Source (`java-bridge/`)**](java-bridge/) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Latest Official Major Release: [`v4.2.0` (`versionCode 50`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0)
+## Latest Official Major Release: [`v4.3.0` (`versionCode 51`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0)
 
 > [!CAUTION]
-> **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.2.0`) ARE UNSAFE & NOT RECOMMENDED**
-> Release **`v4.2.0`** is the official **Major Security & Architecture Release** introducing Dynamic Host & Port Discovery (zero hardcoded IPs or ports), Universal Network Diagnostics & On-Demand Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof_cacerts.jks`), Hardened Fail-Closed JVM Sandboxing, One-Way Clipboard Paste, Google Play Protect Stripped APK Bundle (`SAB`) Hardening (zero package-installer or battery-exemption permissions), and Startup Cryptographic Stub-JAR Verification. **All earlier releases (`v4.1.0` experimental, `v4.0.5`, `v4.0.0`, `v3.9.5`, `v3.9.0`, `v3.8.0`, `v3.7.0`, and `v3.6.0`) are now unsafe, deprecated, and strictly not recommended for production use.** Please upgrade immediately to **`v4.2.0`**.
+> **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.3.0`) ARE UNSAFE & NOT RECOMMENDED**
+> Release **`v4.3.0`** is the official **Major Security, Rebrand & Architecture Release (`AsyLauncher`)** introducing the `io.github.mohammedalshimmary.asylauncher` package identity, Android 15 (`targetSdkVersion 35`) Google Play compliance, Customizable Multi-Finger Gestures, Floating Mini Customs Calculator, Interactive 5-Step First-Run Tutorial, 3-Layer Hardened Google Cloud Firestore Integration (`firestore.rules`), Dynamic Host & Port Discovery (zero hardcoded IPs or ports), Universal Network Diagnostics & On-Demand Known-Issues Catalog, Composite MOF TLS Certificate Trust (`mof_cacerts.jks`), Hardened Fail-Closed JVM Sandboxing, and One-Way Clipboard Paste. **All earlier releases (`< v4.3.0`) are superseded and not recommended for production use.** Please upgrade to **`v4.3.0`**.
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`ASYCUDA_Iraq_v4.2.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) | `4cb3f5308e4657280a3ab61f9d696838dbe7797a91e379ba7643e14a93ed1497` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/asycuda-iraq.tar.xz) | `b6eeecab3a0c153d937db0454894216e7e90fd938ab73de8dcf29fa2a3bbb056` |
-| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/runtime-arm64.tar.xz) | `f3dc78325792ea764e82d108b54dfc6fe4d6d9fd752bafc83bb780403286b9c1` |
+| [**`AsyLauncher_v4.3.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) | `c2d88ac3b2830b1308bad96663913ce099e814ca235c4a6f51b2700683c2c111` |
+| [**`AsyLauncher_v4.3.0.aab`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.aab) | `d644a82a1633410764b3aa76623fd8dcb4311f236db03542f12a974f6452f856` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/asycuda-iraq.tar.xz) | `36a3cc0fcd0e444cdc1dfae70093ff3d6707d76c48fe46fa09ae8b7d3ba05515` |
+| [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/runtime-arm64.tar.xz) | `04cdd11f4fb4ceef01ca482d78ad8e8248b3a284edb1c9133518b68fe5af1e37` |
 
 ---
 
 ## Features
 
 - **Zero Pre-Bundled Government JARs & Direct First-Launch Sync**: Zero Ministry of Finance / UNCTAD `.jar` packages are bundled inside the APK. On initial launch, the app downloads all 131 official client JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` in parallel and cryptographically verifies every JAR entry against UNCTAD's pinned `META-INF/SOCODE.RSA` X.509 certificate.
-- **Android 14 (`targetSdkVersion 34`), Verified Developer Certificate & Zero Storage Permissions**: Installs as a standard Android APK on 64-bit ARM (`arm64-v8a`) phones and tablets running Android 8.0–14+ with a verified Android Developer Console signing certificate (`SHA-256: d3:02:d4:d0:...`) and **zero broad storage or accessibility permissions** (`MANAGE_EXTERNAL_STORAGE`, `READ/WRITE_EXTERNAL_STORAGE`, and `BIND_ACCESSIBILITY_SERVICE` removed).
+- **Android 15 (`targetSdkVersion 35`), Verified Developer Certificate & Zero Storage Permissions**: Installs as a standard Android APK/AAB on 64-bit ARM (`arm64-v8a`, 16 KB page-size aligned) phones and tablets running Android 8.0–15+ with a verified Android Developer Console signing certificate (`SHA-256: d3:02:d4:d0:...`) and **zero broad storage or accessibility permissions** (`MANAGE_EXTERNAL_STORAGE`, `READ/WRITE_EXTERNAL_STORAGE`, and `BIND_ACCESSIBILITY_SERVICE` removed).
 - **Unified Private App Vault (File Manager) & Automatic File Picker Bridge**:
-  - Prints customs declarations, receipts, and assessment notices directly to PDF inside the app's **Private Vault** (`/data/data/iq.asycuda/files/prints` — protected by Android OS File-Based Encryption and kernel `0700` UID sandboxing) with full folder creation & navigation, **Rename**, **Copy**, **Move**, **Open**, **Share** (files only), and **Delete** controls via clean Apple-style icon toolbars.
+  - Prints customs declarations, receipts, and assessment notices directly to PDF inside the app's **Private Vault** (`/data/data/io.github.mohammedalshimmary.asylauncher/files/prints` — protected by Android OS File-Based Encryption and kernel `0700` UID sandboxing) with full folder creation & navigation, **Rename**, **Copy**, **Move**, **Open**, **Share** (files only), and **Delete** controls via clean Apple-style icon toolbars.
   - Automatically detects when ASYCUDA opens its Java file chooser (`JFileChooser`)—with zero modification to government JARs—and prompts you on Android to either import a new file from your phone into the Vault (`Intent.ACTION_OPEN_DOCUMENT`) or select an existing file from your Vault.
-- **Unified Update Center, Auto-Cleaned Update Cache & `SOClass` Alert Listener**:
-  - Checks both GitHub for new app releases (with SHA-256 and APK signature verification, downloading into private `cache/updates/` and automatically deleting the `.apk` after installation) and `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` on startup and on demand.
+- **Unified Update Center, Google Play Store Handoff & `SOClass` Alert Listener**:
+  - Checks Cloud Firestore for new app releases (opening Google Play Store for verified updates with zero `REQUEST_INSTALL_PACKAGES` permission) and `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` on startup and on demand.
   - Dynamically syncs the full `<jar href="..."/>` list from `AWIQWorld.jnlp`, enforcing an explicit `https://asy.mof.gov.iq/aw/*.jar` allowlist and verifying that every downloaded JAR entry is cryptographically signed by UNCTAD/SOClass (`META-INF/SOCODE.RSA`, SHA-256 `5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d`).
   - Automatically detects ASYCUDA server `SOClass` update alerts (`"SOClass Client have to be updated"`) and opens the Update Center immediately.
 - **Zero-PII Iraqi Law Click-Wrap Liability Waiver & In-App Changelog ("What's New")**:
@@ -46,9 +47,9 @@ Android client for the Iraqi General Commission of Customs (**ASYCUDA World** �
 - **Display & Input Controls**: Includes touchpad cursor control, two-finger scrolling, pinch-to-zoom, live-preview sliders for window scaling and shortcut bar opacity, configurable auto-keyboard popup, and an on-screen shortcut bar (`TAB`, `CTRL`, `ESC`, arrow keys).
 - **Stable Background Connection**: Keeps the network session active when switching to other apps (such as WhatsApp, Authenticator, or PDF viewers).
 - **In-App Issue Reporting, Universal Error & Network Diagnostics Window & Remote Known-Issues Catalog**:
-  - **Universal Error & Network Diagnostics Window (`Proposal B + Sentry Catalog`)**: Automatically diagnoses network, TLS, X11, and runtime errors (probing active transport, DNS resolution, `:443` HTTPS, and the dynamic RMI port from `AWIQWorld.jnlp`), explains the cause in plain English/Arabic/Kurdish with a collapsible 100% in-RAM redacted developer trace (with `"Full RAM Preview"` and automatic zero-fill on close), and offers user-consented one-tap **Verified Fixes** (such as alerting you to turn off Wi-Fi and switch to **4G Mobile Data** when a Wi-Fi ISP is blocked by the Ministry of Finance firewall).
-  - **Data-Only Known-Issues Catalog (`java-bridge/known-errors-catalog.json`)**: Pre-bundled inside `asycuda-iraq.tar.xz` and synced on demand via the GitHub Contents API (`api.github.com`, `ETag` cached, `<= 256 KB`) when requested by the user inside the Universal Error & Network Diagnostics modal, strictly validated against a hardcoded allowlist of `verifiedFixId` constants (`ALLOWED_VERIFIED_FIX_IDS`) with zero dynamic code execution, and isolated from the JVM by `AsycudaBoot.checkBlockedHostPath()`.
-  - **Voluntary Issue Reports (Optional Screenshot & Private Developer-Only Attachments)**: Submit voluntary issue reports with redacted in-memory runtime logs (assembled strictly in RAM and never written to disk) and an **optional** screenshot (with an explicit orange/yellow UI privacy warning). When mirrored to GitHub Issues via `.github/workflows/sentry-to-github-issues.yml`, **attachments and screenshots are never uploaded publicly** — GitHub Issues contain only the scrubbed text summary and a private developer-only Sentry dashboard link.
+  - **Universal Error & Network Diagnostics Window (`Proposal B + Known-Issues Catalog`)**: Automatically diagnoses network, TLS, X11, and runtime errors (probing active transport, DNS resolution, `:443` HTTPS, and the dynamic RMI port from `AWIQWorld.jnlp`), explains the cause in plain English/Arabic/Kurdish with a collapsible 100% in-RAM redacted developer trace (with `"Full RAM Preview"` and automatic zero-fill on close), and offers user-consented one-tap **Verified Fixes** (such as alerting you to turn off Wi-Fi and switch to **4G Mobile Data** when a Wi-Fi ISP is blocked by the Ministry of Finance firewall).
+  - **Data-Only Known-Issues Catalog (`java-bridge/known-errors-catalog.json`)**: Pre-bundled inside `asycuda-iraq.tar.xz` and synced read-only from Google Cloud Firestore (`app_config/known_errors_catalog`), strictly validated against a hardcoded allowlist of `verifiedFixId` constants (`ALLOWED_VERIFIED_FIX_IDS`) with zero dynamic code execution, and isolated from the JVM by `AsycudaBoot.checkBlockedHostPath()`.
+  - **Voluntary Issue Reports & News/Release Alerts (`Cloud Firestore`)**: Receive instant Cloud Broadcasts & Release Alerts with unread badge counters (`announcements/latest`), and submit voluntary issue reports with redacted in-memory runtime logs (assembled strictly in RAM and never written to disk) to the write-only `diagnostic_reports` collection in Google Cloud Firestore.
 
 ---
 
@@ -66,27 +67,28 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 ## Installation
 
-1. Download [`ASYCUDA_Iraq_v4.2.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.2.0/ASYCUDA_Iraq_v4.2.0.apk) from the [v4.2.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) (or use **Check for Updates** inside the app if you are upgrading from an earlier version).
+1. Download [`AsyLauncher_v4.3.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) from the [v4.3.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0) or install from **Google Play Store**.
 2. Open the APK on your Android phone or tablet to install it. If Google Play Protect prompts to scan the newly published APK binary, tap **Scan app** — the registered Android Developer Console signing certificate and hardened Stripped APK Bundle (`SAB`) verify as **"This app looks safe" ✓**.
-3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (governed by Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1 — zero personal data collected), and view the **What's New** summary. Zero storage permissions are required!
-4. On initial run, the client automatically downloads the 131 official ASYCUDA World JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` and launches the customs desktop.
+3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (governed by Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1 — zero personal data collected), and complete the interactive 5-step gesture walkthrough. Zero storage permissions are required!
+4. On initial run, the launcher automatically downloads the 131 official ASYCUDA World client JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` and launches the session.
 
 ---
 
 <div dir="rtl">
 
-## 🇮🇶 العربية — نظام أسيكودا العالمي (جمهورية العراق) — الإصدار الرئيسي `v4.2.0`
+## 🇮🇶 العربية — AsyLauncher (مشغل أسيكودا) — الإصدار الرئيسي `v4.3.0`
 
-تطبيق أندرويد مفتوح المصدر لتشغيل نظام **أسيكودا العالمي** التابع للهيئة العامة للكمارك العراقية (`asy.mof.gov.iq`) مباشرة على الهواتف والأجهزة اللوحية، وموجه للمخلصين الكمركيين وشركات الشحن والتجارة.
+أداة توافقية مستقلة ومفتوحة المصدر (**AsyLauncher** — الحزمة `io.github.mohammedalshimmary.asylauncher`) مصممة لتشغيل عميل سطح المكتب الجافا لنظام **أسيكودا العالمي** (`asy.mof.gov.iq`) مباشرة على هواتف وأجهزة الأندرويد اللوحية للمخلصين الكمركيين وشركات الشحن والتجارة. هذا المشروع مستقل تماماً ولا يتبع لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة UNCTAD.
 
-> **⚠️ تنبيه أمني هام (تحديث رئيسي شامل `v4.2.0`)**: يُعد الإصدار **`v4.2.0`** إصداراً رئيسياً للأمان والبنية البرمجية. **جميع الإصدارات السابقة (`< v4.2.0` بما فيها `v4.1.0` التجريبي و`v4.0.5` وما قبله) أصبحت غير آمنة وملغاة ولا يُنصح باستخدامها نهائياً** — يُرجى التحديث فوراً إلى الإصدار **`v4.2.0`**.
+> **⚠️ تنبيه أمني هام (تحديث رئيسي شامل `v4.3.0`)**: يُعد الإصدار **`v4.3.0`** إصداراً رئيسياً للأمان والهوية البرمجية. يُرجى التحديث إلى الإصدار **`v4.3.0`**.
 
 ### المميزات:
-- **تثبيت مباشر وبدون صلاحيات تخزين واسعة**: يعمل مباشرة بعد تثبيت ملف `APK` دون طلب صلاحية الوصول الشامل للملفات (`MANAGE_EXTERNAL_STORAGE`).
-- **الخزنة المشفرة للتطبيق وجسر استيراد الملفات الآمن**: طباعة التصاريح والوصلات الكمركية مباشرة بصيغة `PDF` وحفظها حصرياً داخل المساحة المشفرة المعزولة للتطبيق مع إمكانية فتحها أو مشاركتها أو حذفها، ووجود زر **«استيراد ملف من الهاتف»** داخل نافذة اختيار ملفات الجافا لفتح مستعرض ملفات الأندرويد الآمن مباشرة.
-- **مركز التحديثات الذكي ومستمع تنبيهات `SOClass`**: يفحص ويحدث كلاً من إصدار التطبيق وملفات النظام (`AWIQWorld.jnlp`) من خادم وزارة المالية تلقائياً عند التشغيل مع التحقق من التوقيع الرقمي (`SOCODE.RSA`) لكل ملف، وحذف ملف تحديث التطبيق تلقائياً فور تثبيته.
-- **أمان وخصوصية موثقة وحصر اتصالات الجافا**: اتصال مباشر ومشفر بخادم `asy.mof.gov.iq` مع فرض جدار حماية برمجي (`SecurityManager.checkConnect`) يحصر جميع اتصالات الجافا بالخادم الحكومي حصرياً، ونافذة تشخيص ذكية تنبه المستخدم لإيقاف الواي فاي واستخدام بيانات الهاتف (`4G`) عند حجب شبكة `Wi-Fi` من جدار حماية الكمارك، وإخلاء مسؤولية إلكتروني محلي وفق القانون المدني العراقي (م 259/2) وقانون التوقيع الإلكتروني (رقم 78 لسنة 2012) دون جمع أو إرسال أي أسماء شخصية أو أسماء شركات، ونشر كامل الكود المصدري لملفات الربط في مجلد [`java-bridge/`](java-bridge/).
-- **إعدادات العرض والإدخال ودعم اللغات**: واجهة تحكم وإعدادات تدعم **العربية** و**الكردية** و**الإنجليزية** مع التحكم بحجم الشاشة وشفافية شريط الاختصارات.
+- **تثبيت مباشر وبدون صلاحيات تخزين واسعة**: يعمل مباشرة بعد التثبيت دون طلب صلاحية الوصول الشامل للملفات (`MANAGE_EXTERNAL_STORAGE`).
+- **إيماءات اللمس المخصصة والحاسبة الكمركية المصغرة العائمة**: تخصيص نقرات الأصابع لكل من وضع لوحة اللمس ووضع اللمس المباشر، مع نافذة حاسبة كمركية عائمة قابلة لتغيير الحجم مدمجة بجانب زر `AsyLauncher` العائم، ودليل تفاعلي من ٥ خطوات عند التشغيل لأول مرة.
+- **الخزنة الخاصة للمستندات وجسر استيراد الملفات الآمن**: طباعة التصاريح والوصلات مباشرة بصيغة `PDF` وحفظها حصرياً داخل المساحة المعزولة للتطبيق مع إمكانية فتحها أو مشاركتها أو حذفها.
+- **مركز التحديثات الذكي وتنبيهات Cloud Firestore**: يفحص حالة إصدار التطبيق والتنبيهات الفورية عبر `Google Cloud Firestore` (في النسخ الرسمية الموقعة فقط)، ويحدث ملفات عميل الجافا (`AWIQWorld.jnlp`) من الخادم (`asy.mof.gov.iq`) تلقائياً عند التشغيل مع التحقق من التوقيع الرقمي (`SOCODE.RSA`) لكل ملف.
+- **أمان وخصوصية موثقة وحصر اتصالات الجافا**: اتصال مباشر ومشفر بخادم `asy.mof.gov.iq` مع فرض جدار حماية برمجي (`SecurityManager.checkConnect`) يحصر جميع اتصالات جلسة الجافا بالخادم حصرياً، ونشر كامل الكود المصدري لملفات الربط في مجلد [`java-bridge/`](java-bridge/).
+- **إعدادات العرض والإدخال ودعم اللغات**: واجهة تحكم واسم تطبيق ديناميكي يدعم **العربية (`مشغل أسيكودا`)** و**الكردية (`کارپێکەری ئەسیکۆدا`)** و**الإنجليزية (`Launcher for ASYCUDA`)** تلقائياً حسب لغة الجهاز.
 
 </div>
 
@@ -94,17 +96,18 @@ This project is open-source so that customs brokers, trade companies, and securi
 
 <div dir="rtl">
 
-## کوردی — سیستەمی ئەسیکۆدای جیهانی (کۆماری عێراق) — وەشانی سەرەکی `v4.2.0`
+## کوردی — AsyLauncher (کارپێکەری ئەسیکۆدا) — وەشانی سەرەکی `v4.3.0`
 
-بەرنامەی ئەندرۆیدی سەرچاوە کراوە بۆ کارپێکردنی سیستەمی **ئەسیکۆدای جیهانی** سەر بە دەستەی گشتیی گومرگی عێراق (`asy.mof.gov.iq`) لەسەر مۆبایل و تابلێت، تایبەت بە بریکارانی گومرگی و کۆمپانیا بازرگانییەکان.
+ئامرازێکی تەکنیکی سەربەخۆ و سەرچاوە کراوە (**AsyLauncher** — پاکێجی `io.github.mohammedalshimmary.asylauncher`) بۆ کارپێکردنی سیستەمی **ئەسیکۆدای جیهانی** (`asy.mof.gov.iq`) لەسەر مۆبایل و تابلێتی ئەندرۆید، تایبەت بە بریکارانی گومرگی و کۆمپانیا بازرگانییەکان. ئەم پڕۆژەیە سەربەخۆیە و سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە.
 
-> **⚠️ ئاگاداری ئەمنی گرنگ (وەشانی سەرەکی `v4.2.0`)**: وەشانی **`v4.2.0`** وەشانێکی سەرەکی ئاسایش و پێکهاتەی بەرنامەکەیە. **گشت وەشانەکانی پێشتر (`< v4.2.0` بە `v4.0.5` و کۆنترەوە) چیتر سەلامەت نین و پێشنیار ناکرێن** — تکایە دەستبەجێ نوێی بکەرەوە بۆ **`v4.2.0`**.
+> **⚠️ ئاگاداری ئەمنی گرنگ (وەشانی سەرەکی `v4.3.0`)**: وەشانی **`v4.3.0`** وەشانێکی سەرەکی ئاسایش و پێکهاتەی بەرنامەکەیە — تکایە نوێی بکەرەوە بۆ **`v4.3.0`**.
 
 ### تایبەتمەندییەکان:
-- **دامەزراندنی ڕاستەوخۆ و بەبێ مۆڵەتی گشتیی پەڕگەکان**: بە یەک پەڕگەی `APK` دادەمەزرێت بەبێ داواکردنی مۆڵەتی گشتیی پەڕگەکان (`MANAGE_EXTERNAL_STORAGE`).
-- **قاسەی نهێنی بەرنامە و پردی هاوردەکردنی پەڕگە**: چاپکردنی بەڵگەنامە و پسوولە گومرگییەکان بە شێوەی `PDF` لەناو بیرگەی تایبەت و پارێزراوی بەرنامەکەدا لەگەڵ توانای کردنەوە، هاوبەشکردن و سڕینەوە.
-- **ناوەندی نوێکردنەوەی زیرەک و گوێگری `SOClass`**: پشکنین و نوێکردنەوەی بەرنامەکە و پەڕگەکانی سیستەم (`AWIQWorld.jnlp`) ڕاستەوخۆ لە سێرڤەری وەزارەتی دارایی بە پشتڕاستکردنەوەی واژۆی ئەلیکترۆنی (`SOCODE.RSA`).
-- **پاڵپشتی زمانەکان**: ڕووکاری بەرنامە و ڕێکخستنەکان پاڵپشتی زمانی **کوردی**، **عەرەبی** و **ئینگلیزی** دەکات.
+- **دامەزراندنی ڕاستەوخۆ و بەبێ مۆڵەتی گشتیی پەڕگەکان**: بەبێ داواکردنی مۆڵەتی گشتیی پەڕگەکان (`MANAGE_EXTERNAL_STORAGE`).
+- **ڕێکخستنی جوڵەی پەنجەکان و ژمێرەری گومرگی بچووک**: دیاریکردنی فرمانەکانی پەنجەکان بۆ تراکپاد و شاشەی لەمس، لەگەڵ ژمێرەری سەرئاوکەوتوو و فێرکاری کارلێککاری ٥ هەنگاوی.
+- **قاسەی نهێنی بەرنامە و پردی هاوردەکردنی پەڕگە**: چاپکردنی بەڵگەنامەکان بە شێوەی `PDF` لەناو بیرگەی تایبەت و پارێزراوی بەرنامەکەدا.
+- **ناوەندی نوێکردنەوەی زیرەک و Cloud Firestore**: پشکنینی نوێکردنەوەی بەرنامەکە لە ڕێگەی `Google Cloud Firestore` و پەڕگەکانی سیستەم (`AWIQWorld.jnlp`) لە ڕاژەی (`asy.mof.gov.iq`) بە پشتڕاستکردنەوەی واژۆی ئەلیکترۆنی (`SOCODE.RSA`).
+- **پاڵپشتی زمانەکان**: ناوی بەرنامە و ڕووکاری ڕێکخستنەکان خۆکارانە دەگۆڕێت بەپێی زمانی ئامێرەکە بۆ **کوردی (`کارپێکەری ئەسیکۆدا`)**، **عەرەبی (`مشغل أسيكودا`)** و **ئینگلیزی (`Launcher for ASYCUDA`)**.
 
 </div>
 
@@ -122,8 +125,8 @@ This application is an independent technical utility built to help customs broke
    ```bash
    ./java-bridge/build-bridge.sh
    ```
-2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v4.2.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.2.0) page) into `lorie-app/src/main/assets/`.
-3. Build the APK with JDK 17 and Android SDK 34:
+2. Place `runtime-arm64.tar.xz` and `asycuda-iraq.tar.xz` (available on the [v4.3.0 Release](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0) page) into `lorie-app/src/main/assets/`.
+3. Build the APK with JDK 17 and Android SDK 35:
    ```bash
    ./gradlew :lorie-app:assembleDebug
    ```

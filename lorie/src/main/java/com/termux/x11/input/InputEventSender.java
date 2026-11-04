@@ -49,6 +49,14 @@ public final class InputEventSender {
     public boolean pauseKeyInterceptingWithEsc = false;
     public boolean stylusIsMouse = false;
     public boolean stylusButtonContactModifierMode = false;
+    public boolean hideCursor = false;
+
+    public void setCursorHidden(boolean hidden) {
+        hideCursor = hidden;
+        // Touch type=0 with x=0 (hidden) or x=1 (visible) sets state->cursor.visible in libXlorie.so
+        // without injecting any touch event into X11.
+        mInjector.sendTouchEvent(0, 31, hidden ? 0 : 1, 0);
+    }
 
     /** Set of pressed keys for which we've sent TextEvent. */
     private final TreeSet<Integer> mPressedTextKeys;
@@ -116,6 +124,8 @@ public final class InputEventSender {
         if (!buttons.contains(button))
             return;
         mInjector.sendMouseEvent(pos != null ? (int) pos.x : 0, pos != null ? (int) pos.y : 0, button, down, relative);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     public void sendStylusEvent(float x, float y, int pressure, int tiltX, int tiltY, int orientation, int buttons, boolean eraser, boolean mouse) {
@@ -126,12 +136,16 @@ public final class InputEventSender {
         if (!buttons.contains(button)) 
             return;
         mInjector.sendMouseEvent(0, 0, button, true, relative);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     public void sendMouseUp(int button, boolean relative) {
         if (!buttons.contains(button))
             return;
         mInjector.sendMouseEvent(0, 0, button, false, relative);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     public void sendMouseClick(int button, boolean relative) {
@@ -139,14 +153,20 @@ public final class InputEventSender {
             return;
         mInjector.sendMouseEvent(0, 0, button, true, relative);
         mInjector.sendMouseEvent(0, 0, button, false, relative);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     public void sendCursorMove(float x, float y, boolean relative) {
         mInjector.sendMouseEvent(x, y, BUTTON_UNDEFINED, false, relative);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     public void sendMouseWheelEvent(float distanceX, float distanceY) {
         mInjector.sendMouseWheelEvent(distanceX, distanceY);
+        if (hideCursor)
+            mInjector.sendTouchEvent(0, 31, 0, 0);
     }
 
     private final boolean[] pointers = new boolean[32];

@@ -2,9 +2,9 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:icon="@drawable/ic_asycuda_logo"
+        android:icon="@mipmap/lorie_ic_launcher"
         android:label="@string/lorie_app_name"
-        android:roundIcon="@drawable/ic_asycuda_logo"
+        android:roundIcon="@mipmap/lorie_ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/LorieAppTheme"
         android:hardwareAccelerated="true">

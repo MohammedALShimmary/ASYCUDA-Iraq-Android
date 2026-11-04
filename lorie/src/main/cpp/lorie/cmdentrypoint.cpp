@@ -133,8 +133,8 @@ static jboolean start(JNIEnv *env, jobject self, jobjectArray args) {
         unsetenv("TMPDIR");
 
     if (!getenv("TMPDIR")) {
-        if (access("/data/data/iq.asycuda/cache", F_OK) == 0)
-            setenv("TMPDIR", "/data/data/iq.asycuda/cache", 1);
+        if (access("/data/data/io.github.mohammedalshimmary.asylauncher/cache", F_OK) == 0)
+            setenv("TMPDIR", "/data/data/io.github.mohammedalshimmary.asylauncher/cache", 1);
     }
 
     if (!getenv("TMPDIR")) {
@@ -254,7 +254,7 @@ static Bool handleTouchEvent(__unused ClientPtr pClient, void *closure) {
     valuator_mask_set_double(&mask, 0, x * 0xFFFF / (float) pScreenPtr->width);
     valuator_mask_set_double(&mask, 1, y * 0xFFFF / (float) pScreenPtr->height);
     QueueTouchEvents(lorieTouch, e->touch.type, e->touch.id, 0, &mask);
-    lorieSetCursorVisible(FALSE);
+    lorieSetCursorVisible(e->touch.x != 0);
 
     end:
     free(e);
@@ -371,7 +371,6 @@ void handleLorieEvents(int fd, __unused int ready, __unused void *ignored) {
             }
             case EVENT_MOUSE: {
                 int flags;
-                lorieSetCursorVisible(TRUE);
                 switch(e.mouse.detail) {
                     case 0: // BUTTON_UNDEFINED
                         flags = (e.mouse.relative) ? POINTER_RELATIVE | POINTER_ACCELERATE : POINTER_ABSOLUTE | POINTER_SCREEN | POINTER_NORAW;

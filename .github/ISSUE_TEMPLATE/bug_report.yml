@@ -1,36 +1,19 @@
 name: "Bug report"
-description: "Create a report to help us improve"
+description: "Report a bug or technical issue in AsyLauncher"
 title: "[Bug]: "
 labels: [untriaged, "bug report"]
 body:
   - type: markdown
     attributes:
       value: |
-        This is a bug tracker of the official Termux:X11. 
-        Please do not report issues of third-party software there, but ask in [Termux Packages GitHub Discussions](https://github.com/termux/termux-packages/discussions) or [Community Social Media](https://wiki.termux.com/wiki/Community) instead. 
-        Also you can ask questions in [Discord](https://discord.gg/termux-641256914684084234).
-        Use search to check whether your issue has been already reported and perhaps solved.
-
-        Android versions below 8.x are not supported.
-
-        To submit a bug report, fill the form below. 
-        Provide as much as possible information about the encountered issue. 
-        We may request extended information such as logs if considered necessary. 
-        This will help package maintainers to understand the problem correctly and provide a solution. 
-        Be patient, do not expect that issue could get resolved immediately.
-        
-        ### Logs
-        If you need to obtain logs from the `com.termux.x11` application,
-        set the `TERMUX_X11_DEBUG` environment variable to 1, like this:
-        `TERMUX_X11_DEBUG=1 termux-x11 :0`
+        This is the issue tracker for **AsyLauncher (`io.github.mohammedalshimmary.asylauncher`)** — the independent open-source Android compatibility launcher for ASYCUDA World.
+        Please ensure you never attach any personal credentials, passwords, or confidential customs declaration documents in public bug reports.
 
   - type: textarea
     attributes:
       label: Problem description
       description: |
-        A clear and concise description of what the problem is. You may attach the logs, screenshots, screen video recording and whatever else that will help to understand the issue.
-
-        Issues without proper description will be closed without solution.
+        A clear and concise description of the issue encountered in AsyLauncher.
     validations:
       required: true
   - type: textarea

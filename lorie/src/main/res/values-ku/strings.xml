@@ -1,19 +1,19 @@
 <!DOCTYPE resources [
-    <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
-    <!ENTITY TERMUX_APP_NAME "Termux">
-    <!ENTITY TERMUX_X11_APP_NAME "ئەسیکۆدا عێراق">
+    <!ENTITY TERMUX_PACKAGE_NAME "io.github.mohammedalshimmary.asylauncher">
+    <!ENTITY TERMUX_APP_NAME "AsyLauncher">
+    <!ENTITY TERMUX_X11_APP_NAME "کارپێکەری ئەسیکۆدا">
     ]>
 <resources>
     <string name="lorie_app_name">&TERMUX_X11_APP_NAME;</string>
 
-    <string name="not_connected">پەیوەندی نییە</string>
-    <string name="preferences_button_text">ڕێکخستنەکان</string>
+    <string name="not_connected">دەستپێکردنی پیشاندان...</string>
+    <string name="preferences_button_text">ناوەندی کۆنترۆڵ</string>
     <string name="help_button_text">یارمەتی</string>
     <string name="exit_button_text">دەرچوون</string>
     <string name="displays_button_text">شاشەکان</string>
     <string name="displays_dialog_title">شاشەکان</string>
     <string name="displays_dialog_empty">هیچ شاشەیەکی تر کراوە نییە</string>
-    <string name="lorie_notification_content_text">ڕابکێشە خوارەوە بۆ بینینی هەڵبژاردنەکان</string>
+    <string name="lorie_notification_content_text">دانیشتن چالاکە • هێڵی ئینتەرنێت پارێزراوە</string>
     <string name="lorie_notification_open_preferences">ڕێکخستنەکان</string>
     <string name="lorie_notification_exit">دەرچوون</string>
     <string name="lorie_notification_restart_activity">دووبارە پێکردنەوە</string>

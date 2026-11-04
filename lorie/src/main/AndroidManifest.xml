@@ -11,9 +11,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <permission
-        android:name="iq.asycuda.PERMISSION_INTERNAL_BROADCAST"
+        android:name="io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST"
         android:protectionLevel="signature" />
-    <uses-permission android:name="iq.asycuda.PERMISSION_INTERNAL_BROADCAST" />
+    <uses-permission android:name="io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST" />
 
     <application
         android:name=".LorieApp"
@@ -25,8 +25,8 @@
             android:name=".MainActivity"
             android:screenOrientation="sensorLandscape"
             android:taskAffinity=".MainActivity"
-            android:icon="@drawable/ic_asycuda_logo"
-            android:roundIcon="@drawable/ic_asycuda_logo"
+            android:icon="@mipmap/lorie_ic_launcher"
+            android:roundIcon="@mipmap/lorie_ic_launcher_round"
             android:label="@string/lorie_app_name"
             android:theme="@style/LorieAppTheme"
             android:launchMode="singleInstance"
@@ -39,10 +39,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <category android:name="android.intent.category.SECONDARY_HOME" />
-            </intent-filter>
-            <meta-data android:name="android.app.shortcuts" android:resource="@xml/lorie_shortcuts" />
         </activity>
         <activity
             android:name=".MainActivity$MainActivityTagged"
@@ -63,11 +59,7 @@
             android:taskAffinity=".LoriePreferences"
             android:supportsPictureInPicture="false"
             android:resizeableActivity="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-            </intent-filter>
-        </activity>
+            android:exported="false" />
         <meta-data android:name="android.allow_multiple_resumed_activities" android:value="true" />
 
         <service
@@ -97,7 +89,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="iq.asycuda.fileprovider"
+            android:authorities="io.github.mohammedalshimmary.asylauncher.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

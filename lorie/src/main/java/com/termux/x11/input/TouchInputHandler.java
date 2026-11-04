@@ -380,6 +380,7 @@ public class TouchInputHandler {
                     mSuppressCursorMovement = false;
                     mSwipeCompleted = false;
                     mIsDragging = false;
+                    mPendingTrackpadHold1 = false;
                     break;
 
                 case MotionEvent.ACTION_SCROLL:
@@ -391,6 +392,18 @@ public class TouchInputHandler {
 
                 case MotionEvent.ACTION_POINTER_DOWN:
                     mTotalMotionY = 0;
+                    mPendingTrackpadHold1 = false;
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                    if (mPendingTrackpadHold1) {
+                        mPendingTrackpadHold1 = false;
+                        executeHoldActionNow(1, event.getX(), event.getY());
+                    }
+                    break;
+
+                case MotionEvent.ACTION_CANCEL:
+                    mPendingTrackpadHold1 = false;
                     break;
 
                 default:
@@ -414,15 +427,22 @@ public class TouchInputHandler {
             mTouchpadHandler.handleInputTransformChanged(screenWidth, screenHeight, inputTransform);
     }
 
+    private int mCurrentInputMode = InputMode.TRACKPAD;
+    private boolean mPendingTrackpadHold1 = false;
+
     public void setInputMode(@InputMode int inputMode) {
-        if (mTouchpadHandler == null)
+        // Normalize mode: 1 = Trackpad (Virtual Mouse), 2 (or legacy 3) = Direct Touchscreen
+        mCurrentInputMode = (inputMode == InputMode.TRACKPAD) ? InputMode.TRACKPAD : InputMode.SIMULATED_TOUCH;
+        if (mTouchpadHandler == null || inputMode == InputMode.TRACKPAD) {
             mInputStrategy = new InputStrategyInterface.TrackpadInputStrategy(mInjector);
-        else if (inputMode == InputMode.TOUCH)
-            mInputStrategy = new InputStrategyInterface.NullInputStrategy();
-        else if (inputMode == InputMode.SIMULATED_TOUCH)
-            mInputStrategy = new InputStrategyInterface.SimulatedTouchInputStrategy(mRenderData, mInjector, mActivity);
-        else
-            mInputStrategy = new InputStrategyInterface.TrackpadInputStrategy(mInjector);
+            if (mTouchpadHandler != null) {
+                mInjector.setCursorHidden(false);
+            }
+        } else {
+            mInputStrategy = new InputStrategyInterface.DirectTouchInputStrategy(mRenderData, mInjector, mActivity);
+            boolean showCursor = com.termux.x11.AsycudaMaterialUi.isShowCursorInDirectTouch(mActivity);
+            mInjector.setCursorHidden(!showCursor);
+        }
     }
 
     private static boolean hasPointerCapture(View view) {
@@ -532,6 +552,8 @@ public class TouchInputHandler {
             case "toggle soft keyboard": return (key, down) -> { if (down) mActivity.toggleKeyboardVisibility(); };
             case "toggle additional key bar": return (key, down) -> { if (down) mActivity.toggleExtraKeys(); };
             case "open preferences": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.openDisplaySettings(mActivity); };
+            case "toggle mini calculator": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.toggleMiniCalculatorFromGesture(mActivity); };
+            case "open control center": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.openControlCenterFromGesture(mActivity); };
             case "release pointer and keyboard capture": return (key, down) -> { if (down) setCapturingEnabled(false); };
             case "toggle fullscreen": return (key, down) -> { if (down) mActivity.prefs.fullscreen.put(!mActivity.prefs.fullscreen.get()); };
             case "exit": return (key, down) -> { if (down) com.termux.x11.AsycudaStandaloneManager.shutdownApp(mActivity); };
@@ -603,7 +625,8 @@ public class TouchInputHandler {
     private void moveCursorByOffset(float deltaX, float deltaY) {
         if (mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy)
             mInjector.sendCursorMove(-deltaX, -deltaY, true);
-        else if (mInputStrategy instanceof InputStrategyInterface.SimulatedTouchInputStrategy) {
+        else if (mInputStrategy instanceof InputStrategyInterface.SimulatedTouchInputStrategy
+                || mInputStrategy instanceof InputStrategyInterface.DirectTouchInputStrategy) {
             PointF cursorPos = mRenderData.getCursorPosition();
             cursorPos.offset(-deltaX, -deltaY);
             cursorPos.set(MathUtils.clamp(cursorPos.x, 0, mRenderData.screenWidth), MathUtils.clamp(cursorPos.y, 0, mRenderData.screenHeight));
@@ -614,21 +637,140 @@ public class TouchInputHandler {
 
     /** Moves the cursor to the specified position on the screen. */
     private void moveCursorToScreenPoint(float screenX, float screenY) {
-        if (mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy || mInputStrategy instanceof InputStrategyInterface.SimulatedTouchInputStrategy) {
+        if (mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy
+                || mInputStrategy instanceof InputStrategyInterface.SimulatedTouchInputStrategy
+                || mInputStrategy instanceof InputStrategyInterface.DirectTouchInputStrategy) {
             mRenderData.mapScreenPoint(screenX, screenY, mappedPoint);
             if (mRenderData.setCursorPosition(mappedPoint[0], mappedPoint[1]))
                 mInjector.sendCursorMove((int) mappedPoint[0], (int) mappedPoint[1], false);
         }
     }
 
+    private void executeHoldActionNow(int pointerCount, float x, float y) {
+        String holdKey = pointerCount >= 1 && pointerCount <= 2 ? ("hold" + pointerCount) : null;
+        String action = holdKey != null
+                ? com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, holdKey)
+                : null;
+        if ("disabled".equals(action) || "no action".equals(action)) {
+            return;
+        }
+        if (executeConfiguredUiAction(action)) {
+            return;
+        }
+        int button = mapActionToMouseButton(action, pointerCount);
+        if (button == InputStub.BUTTON_UNDEFINED) {
+            return;
+        }
+
+        if (!(mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy)) {
+            mRenderData.mapScreenPoint(x, y, mappedPoint);
+            if (mappedPoint[0] < -EPSILON || mappedPoint[0] > mRenderData.screenWidth + EPSILON
+                    || mappedPoint[1] < -EPSILON || mappedPoint[1] > mRenderData.screenHeight + EPSILON) {
+                return;
+            }
+            moveCursorToScreenPoint(x, y);
+        }
+
+        if ("double_click".equals(action)) {
+            mInputStrategy.onTap(InputStub.BUTTON_LEFT);
+            mInputStrategy.onTap(InputStub.BUTTON_LEFT);
+            return;
+        }
+        if ("left_click".equals(action) || "right_click".equals(action) || "middle_click".equals(action)) {
+            mInputStrategy.onTap(button);
+            return;
+        }
+
+        if (mInputStrategy.onPressAndHold(button, "drag_left".equals(action)))
+            mIsDragging = true;
+    }
+
+    /** Executes a mapped UI or mouse action if configured for a finger gesture. */
+    private boolean executeConfiguredUiAction(String action) {
+        if (action == null) return false;
+        switch (action) {
+            case "toggle_keyboard":
+            case "toggle soft keyboard":
+                mActivity.toggleKeyboardVisibility();
+                return true;
+            case "toggle_shortcut_bar":
+            case "toggle additional key bar":
+                mActivity.toggleExtraKeys();
+                return true;
+            case "toggle_calculator":
+            case "toggle mini calculator":
+                com.termux.x11.AsycudaStandaloneManager.toggleMiniCalculatorFromGesture(mActivity);
+                return true;
+            case "open_control_center":
+            case "open control center":
+                com.termux.x11.AsycudaStandaloneManager.openControlCenterFromGesture(mActivity);
+                return true;
+            case "open_display_settings":
+            case "open preferences":
+                com.termux.x11.AsycudaStandaloneManager.openDisplaySettings(mActivity);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private int mapActionToMouseButton(String action, int fallbackPointerCount) {
+        if (action != null) {
+            switch (action) {
+                case "left_click":
+                case "double_click":
+                case "drag_left":
+                    return InputStub.BUTTON_LEFT;
+                case "right_click":
+                    return InputStub.BUTTON_RIGHT;
+                case "middle_click":
+                    return InputStub.BUTTON_MIDDLE;
+                case "disabled":
+                case "no action":
+                    return InputStub.BUTTON_UNDEFINED;
+                default:
+                    break;
+            }
+        }
+        switch (fallbackPointerCount) {
+            case 1: return InputStub.BUTTON_LEFT;
+            case 2: return InputStub.BUTTON_RIGHT;
+            case 3: return InputStub.BUTTON_MIDDLE;
+            default: return InputStub.BUTTON_UNDEFINED;
+        }
+    }
+
     /** Processes a (multi-finger) swipe gesture. */
     private boolean onSwipe() {
-        if (mTotalMotionY > mSwipeThreshold)
-            swipeDownAction.accept(0, true);
-        else if (mTotalMotionY < -mSwipeThreshold)
-            swipeUpAction.accept(0, true);
-        else
+        if (mTotalMotionY > mSwipeThreshold) {
+            String act = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "swipe3_down");
+            if ("disabled".equals(act) || "no action".equals(act)) {
+                return false;
+            }
+            if (!executeConfiguredUiAction(act)) {
+                int btn = mapActionToMouseButton(act, 0);
+                if (btn != InputStub.BUTTON_UNDEFINED) {
+                    mInputStrategy.onTap(btn);
+                } else {
+                    swipeDownAction.accept(0, true);
+                }
+            }
+        } else if (mTotalMotionY < -mSwipeThreshold) {
+            String act = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "swipe3_up");
+            if ("disabled".equals(act) || "no action".equals(act)) {
+                return false;
+            }
+            if (!executeConfiguredUiAction(act)) {
+                int btn = mapActionToMouseButton(act, 0);
+                if (btn != InputStub.BUTTON_UNDEFINED) {
+                    mInputStrategy.onTap(btn);
+                } else {
+                    swipeUpAction.accept(0, true);
+                }
+            }
+        } else {
             return false;
+        }
 
         mSuppressCursorMovement = true;
         mSwipeCompleted = true;
@@ -709,7 +851,14 @@ public class TouchInputHandler {
             }
 
             if (pointerCount == 2 && mSwipePinchDetector.isSwiping()) {
-                mInputStrategy.onScroll(distanceX, distanceY);
+                String glideAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "glide2");
+                if (!"disabled".equals(glideAct) && !"no action".equals(glideAct)) {
+                    if (!(mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy)) {
+                        moveCursorToScreenPoint(e2.getX(), e2.getY());
+                    }
+                    float scrollMult = com.termux.x11.AsycudaMaterialUi.getScrollSpeedMultiplier(mActivity);
+                    mInputStrategy.onScroll(distanceX * scrollMult, distanceY * scrollMult);
+                }
 
                 // Prevent the cursor being moved or flung by the gesture.
                 mSuppressCursorMovement = true;
@@ -720,6 +869,17 @@ public class TouchInputHandler {
                 return false;
 
             if (mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy) {
+                if (mPendingTrackpadHold1) {
+                    mPendingTrackpadHold1 = false;
+                    String dragAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "drag1");
+                    int dragBtn = mapActionToMouseButton(dragAct, 1);
+                    if (dragBtn != InputStub.BUTTON_UNDEFINED && mInputStrategy.onPressAndHold(dragBtn, true)) {
+                        mIsDragging = true;
+                    }
+                }
+                float speedMult = com.termux.x11.AsycudaMaterialUi.getTrackpadSpeedMultiplier(mActivity);
+                distanceX *= speedMult;
+                distanceY *= speedMult;
                 if (mInjector.scaleTouchpad) {
                     distanceX *= mRenderData.scale.x;
                     distanceY *= mRenderData.scale.y;
@@ -839,7 +999,17 @@ public class TouchInputHandler {
          */
         @Override
         public void onTap(int pointerCount, float x, float y) {
-            int button = mouseButtonFromPointerCount(pointerCount);
+            String tapKey = pointerCount >= 1 && pointerCount <= 3 ? ("tap" + pointerCount) : null;
+            String action = tapKey != null
+                    ? com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, tapKey)
+                    : null;
+            if ("disabled".equals(action) || "no action".equals(action)) {
+                return;
+            }
+            if (executeConfiguredUiAction(action)) {
+                return;
+            }
+            int button = mapActionToMouseButton(action, pointerCount);
             if (button == InputStub.BUTTON_UNDEFINED)
                 return;
 
@@ -848,6 +1018,12 @@ public class TouchInputHandler {
                     return;
 
                 moveCursorToScreenPoint(x, y);
+            }
+
+            if ("double_click".equals(action)) {
+                mInputStrategy.onTap(InputStub.BUTTON_LEFT);
+                mInputStrategy.onTap(InputStub.BUTTON_LEFT);
+                return;
             }
 
             if (button != InputStub.BUTTON_LEFT || !(mInjector.tapToMove && mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy))
@@ -884,22 +1060,21 @@ public class TouchInputHandler {
         /** Called when a long-press is triggered for one or more fingers. */
         @Override
         public void onLongPress(int pointerCount, float x, float y) {
-            int button = mouseButtonFromPointerCount(pointerCount);
-            if (button == InputStub.BUTTON_UNDEFINED) {
-                return;
-            }
-
-            if (!(mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy)) {
-                if (screenPointLiesOutsideImageBoundary(x, y))
+            if (pointerCount == 1 && mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy) {
+                String dragAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "drag1");
+                String holdAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mActivity, mCurrentInputMode, "hold1");
+                if (!"disabled".equals(dragAct) && !"no action".equals(dragAct)
+                        && !"drag_left".equals(holdAct)) {
+                    // Wait to see if the user moves their finger (Hold & Drag = drag1)
+                    // or lifts their finger in place (Long-Press = hold1)
+                    mPendingTrackpadHold1 = true;
                     return;
-                moveCursorToScreenPoint(x, y);
+                }
             }
-
-            if (mInputStrategy.onPressAndHold(button, false))
-                mIsDragging = true;
+            executeHoldActionNow(pointerCount, x, y);
         }
 
-        /** Maps the number of fingers in a tap or long-press gesture to a mouse-button. */
+        /**Maps the number of fingers in a tap or long-press gesture to a mouse-button.*/
         private int mouseButtonFromPointerCount(int pointerCount) {
             switch (pointerCount) {
                 case 1:

@@ -182,13 +182,11 @@ public interface InputStrategyInterface {
                     if (!mSingleFinger || event.getPointerCount() != 1)
                         break;
 
-                    // Presses the left button once the finger leaves the touch slop and moves the cursor along with it.
+                    // In Simulated Touchscreen mode (Mode 2), sliding 1 finger moves the cursor
+                    // smoothly (unless a button is already held via Long-Press Hold & Drag).
                     if (mHeldButton == InputStub.BUTTON_UNDEFINED) {
                         if (Math.hypot(event.getX() - mDownX, event.getY() - mDownY) <= mTouchSlop)
                             break;
-
-                        moveCursorToScreenPoint(mDownX, mDownY);
-                        onPressAndHold(InputStub.BUTTON_LEFT, false);
                     }
                     moveCursorToScreenPoint(event.getX(), event.getY());
                     break;
@@ -196,6 +194,7 @@ public interface InputStrategyInterface {
                 case MotionEvent.ACTION_POINTER_DOWN:
                     mSingleFinger = false;
                     // fall through
+                case MotionEvent.ACTION_CANCEL:
                 case MotionEvent.ACTION_UP:
                     if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
                         mInjector.sendMouseUp(mHeldButton, false);
@@ -277,6 +276,155 @@ public interface InputStrategyInterface {
                 mInjector.sendMouseUp(mHeldButton, true);
                 mHeldButton = InputStub.BUTTON_UNDEFINED;
             }
+        }
+    }
+
+    /**
+     * Direct Touch strategy (Mode 3) for Java Swing / X11 desktop windows:
+     * - 1-finger tap / 2-finger tap / 3-finger tap warps the cursor 1:1 under the finger and
+     *   executes the user's configured click action (Left Click, Right Click, Double Click, etc.).
+     * - 1-finger hold (Long-Press) executes the user's configured hold1 action (default: Right Click)
+     *   without being swallowed by a premature raw touch grab.
+     * - Immediate 1-finger drag beyond touch slop presses and drags Left Mouse Button 1:1 under the
+     *   finger (for moving windows, dragging scrollbars, or selecting text) and cleanly releases if
+     *   a second finger touches down for 2-finger scroll or 2-finger tap.
+     */
+    class DirectTouchInputStrategy implements InputStrategyInterface {
+        private static final float DOUBLE_TAP_SLOP_SCALE_FACTOR = 0.25f;
+
+        private final RenderData mRenderData;
+        private final InputEventSender mInjector;
+        private final Context mContext;
+        private long mLastTapTimeInMs;
+        private PointF mLastTapPoint;
+        private final int mDoubleTapSlopSquareInPx;
+        private final long mDoubleTapDurationInMs;
+        private int mHeldButton = InputStub.BUTTON_UNDEFINED;
+        private final int mTouchSlop;
+        private float mDownX, mDownY;
+        private boolean mSingleFinger;
+
+        public DirectTouchInputStrategy(
+                RenderData renderData, InputEventSender injector, Context context) {
+            if (injector == null)
+                throw new NullPointerException();
+            mRenderData = renderData;
+            mInjector = injector;
+            mContext = context;
+            mDoubleTapDurationInMs = ViewConfiguration.getDoubleTapTimeout();
+            ViewConfiguration config = ViewConfiguration.get(context);
+            int scaledDoubleTapSlopInPx = (int) (config.getScaledDoubleTapSlop() * DOUBLE_TAP_SLOP_SCALE_FACTOR);
+            mDoubleTapSlopSquareInPx = scaledDoubleTapSlopInPx * scaledDoubleTapSlopInPx;
+            mTouchSlop = config.getScaledTouchSlop();
+        }
+
+        @Override
+        public void onTap(int button) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                mInjector.sendMouseUp(mHeldButton, false);
+                mHeldButton = InputStub.BUTTON_UNDEFINED;
+            }
+            PointF currentTapPoint = mRenderData.getCursorPosition();
+            if (button == InputStub.BUTTON_LEFT) {
+                long tapInterval = SystemClock.uptimeMillis() - mLastTapTimeInMs;
+                if (isDoubleTap(currentTapPoint.x, currentTapPoint.y, tapInterval)) {
+                    moveCursor(mLastTapPoint.x, mLastTapPoint.y);
+                    mLastTapPoint = null;
+                    mLastTapTimeInMs = 0;
+                } else {
+                    mLastTapPoint = currentTapPoint;
+                    mLastTapTimeInMs = SystemClock.uptimeMillis();
+                }
+            } else {
+                mLastTapPoint = null;
+                mLastTapTimeInMs = 0;
+            }
+            mInjector.sendMouseClick(button, false);
+        }
+
+        @Override
+        public boolean onPressAndHold(int button, boolean force) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED && mHeldButton != button) {
+                mInjector.sendMouseUp(mHeldButton, false);
+            }
+            mInjector.sendMouseDown(button, false);
+            mHeldButton = button;
+            return true;
+        }
+
+        @Override
+        public void onScroll(float distanceX, float distanceY) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                mInjector.sendMouseUp(mHeldButton, false);
+                mHeldButton = InputStub.BUTTON_UNDEFINED;
+            }
+            mInjector.sendMouseWheelEvent(distanceX, distanceY);
+        }
+
+        @Override
+        public void onMotionEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    mDownX = event.getX();
+                    mDownY = event.getY();
+                    mSingleFinger = true;
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (!mSingleFinger || event.getPointerCount() != 1)
+                        break;
+
+                    if (mHeldButton == InputStub.BUTTON_UNDEFINED) {
+                        if (Math.hypot(event.getX() - mDownX, event.getY() - mDownY) <= mTouchSlop)
+                            break;
+
+                        String dragAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mContext, 2, "drag1");
+                        if ("disabled".equals(dragAct) || "no action".equals(dragAct)) {
+                            break;
+                        }
+                        int dragBtn = "right_click".equals(dragAct) ? InputStub.BUTTON_RIGHT
+                                : ("middle_click".equals(dragAct) ? InputStub.BUTTON_MIDDLE : InputStub.BUTTON_LEFT);
+                        moveCursorToScreenPoint(mDownX, mDownY);
+                        onPressAndHold(dragBtn, true);
+                    }
+                    moveCursorToScreenPoint(event.getX(), event.getY());
+                    break;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    mSingleFinger = false;
+                    // fall through
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP:
+                    if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                        mInjector.sendMouseUp(mHeldButton, false);
+                        mHeldButton = InputStub.BUTTON_UNDEFINED;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private void moveCursorToScreenPoint(float screenX, float screenY) {
+            PointF point = mRenderData.mapScreenPoint(screenX, screenY);
+            moveCursor(point.x, point.y);
+        }
+
+        private void moveCursor(float x, float y) {
+            if (mRenderData.setCursorPosition(x, y))
+                mInjector.sendCursorMove((int) x, (int) y, false);
+        }
+
+        private boolean isDoubleTap(float currentX, float currentY, long tapInterval) {
+            if (tapInterval > mDoubleTapDurationInMs || mLastTapPoint == null) {
+                return false;
+            }
+            float[] currentValues = {currentX * mRenderData.scale.x, currentY * mRenderData.scale.y};
+            float[] previousValues = {mLastTapPoint.x * mRenderData.scale.x, mLastTapPoint.y * mRenderData.scale.y};
+            int deltaX = (int) (currentValues[0] - previousValues[0]);
+            int deltaY = (int) (currentValues[1] - previousValues[1]);
+            return ((deltaX * deltaX + deltaY * deltaY) <= mDoubleTapSlopSquareInPx);
         }
     }
 }

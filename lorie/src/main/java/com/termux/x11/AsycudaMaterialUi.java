@@ -51,7 +51,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,26 +59,27 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.TimeZone;
 
-@SuppressWarnings({"java:S3776", "java:S107", "java:S1141", "java:S1192", "java:S9439"})
+@SuppressWarnings({"java:S3776", "java:S107", "java:S1141", "java:S1192", "java:S1172", "java:S1068", "java:S9439"})
 public class AsycudaMaterialUi {
 
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
-    public static final String CURRENT_POLICY_VERSION = "2.0-2026.10";
-    public static final int CURRENT_CHANGELOG_VERSION = 50;
+    public static final String CURRENT_POLICY_VERSION = "2.1-2026.11";
+    public static final int CURRENT_CHANGELOG_VERSION = 51;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
     private static final String KEY_ASSIST_KEYS = "assist_keys_enabled";
+    private static final String KEY_TRACKPAD_SPEED_PCT = "gesture_trackpad_speed_pct";
+    private static final String KEY_SCROLL_SPEED_PCT = "gesture_scroll_speed_pct";
 
-    private static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
+    public static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
     private static final String KU_DONE = "تەواو";
     private static final String EN_BACK_CONTROL_CENTER = "← Back";
     private static final String AR_BACK_CONTROL_CENTER = "← رجوع";
     private static final String KU_BACK_CONTROL_CENTER = "← گەڕانەوە";
-    private static final String PERMISSION_INTERNAL_BROADCAST = "iq.asycuda.PERMISSION_INTERNAL_BROADCAST";
+    private static final String PERMISSION_INTERNAL_BROADCAST = "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST";
     private static final String SONAR_DASHBOARD_URL = "https://sonarcloud.io/summary/new_code?id=MohammedALShimmary_ASYCUDA-Iraq-Android";
     private static final String SONAR_MEASURES_API_URL = "https://sonarcloud.io/api/measures/component?component=MohammedALShimmary_ASYCUDA-Iraq-Android&metricKeys=alert_status,bugs,vulnerabilities,code_smells,security_rating,reliability_rating,sqale_rating";
     private static final String AR_ON = "مفعّل";
@@ -118,7 +118,9 @@ public class AsycudaMaterialUi {
     public static final int SYSTEM_GREEN_TINT     = Color.parseColor("#2430D158");
     public static final int SYSTEM_RED            = Color.parseColor("#FFFF453A");
     public static final int SYSTEM_RED_TINT       = Color.parseColor("#24FF453A");
+    public static final int SYSTEM_ORANGE         = Color.parseColor("#FFFF9F0A");
     public static final int SYSTEM_GRAY_FILL      = Color.parseColor("#FF3A3A3C");
+    public static final int SURFACE_ELEVATED      = Color.parseColor("#FF242426");
 
     public static final int TEXT_PRIMARY          = Color.parseColor("#FFFFFFFF");
     public static final int TEXT_SECONDARY        = Color.parseColor("#FF8E8E93");
@@ -160,7 +162,7 @@ public class AsycudaMaterialUi {
     public interface FeedbackSubmitHandler {
         void onCaptureScreenRequested(FeedbackModalController controller, Dialog feedbackDialog);
         void onPickImageRequested(FeedbackModalController controller);
-        void onSubmitToSentry(String description, File attachedImage, FeedbackModalController controller, Dialog feedbackDialog);
+        void onSubmitDiagnosticReport(String description, File attachedImage, FeedbackModalController controller, Dialog feedbackDialog);
         default StringBuilder buildRedactedDiagnosticPreviewInRam(String description) {
             return new StringBuilder();
         }
@@ -236,6 +238,599 @@ public class AsycudaMaterialUi {
         return "ar".equals(lang) || "ku".equals(lang);
     }
 
+    public static boolean isArabic(Context ctx) {
+        return "ar".equals(getAppLanguage(ctx));
+    }
+
+    public static boolean isKurdish(Context ctx) {
+        return "ku".equals(getAppLanguage(ctx));
+    }
+
+    // =========================================================================
+    // PHASE 2: CUSTOMIZABLE X11 MOUSE, TOUCH & FINGER GESTURES ENGINE
+    // =========================================================================
+
+    public static final String[] GESTURE_TRIGGER_KEYS = {
+            "tap1", "hold1", "drag1", "tap2", "hold2", "glide2", "tap3", "swipe3_up", "swipe3_down"
+    };
+
+    public static final String[] GESTURE_ACTION_KEYS = {
+            "left_click",
+            "right_click",
+            "middle_click",
+            "double_click",
+            "drag_left",
+            "scroll_wheel",
+            "toggle_keyboard",
+            "toggle_shortcut_bar",
+            "toggle_calculator",
+            "open_control_center",
+            "open_display_settings",
+            "disabled"
+    };
+
+    public static String getDefaultGestureAction(int mode, String triggerKey) {
+        if (triggerKey == null) return "disabled";
+        switch (triggerKey) {
+            case "tap1":
+                return "left_click";
+            case "hold1":
+                return "right_click";
+            case "drag1":
+                return "drag_left";
+            case "tap2":
+                return "right_click";
+            case "hold2":
+                return "right_click";
+            case "glide2":
+                return "scroll_wheel";
+            case "tap3":
+                return "middle_click";
+            case "swipe3_up":
+                return "toggle_keyboard";
+            case "swipe3_down":
+                return "toggle_shortcut_bar";
+            default:
+                return "disabled";
+        }
+    }
+
+    public static String getGestureAction(Context ctx, int mode, String triggerKey) {
+        int safeMode = (mode >= 2) ? 2 : 1;
+        String def = getDefaultGestureAction(safeMode, triggerKey);
+        if (ctx == null || triggerKey == null) return def;
+        SharedPreferences sp = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sp.getString("gesture_m" + safeMode + "_" + triggerKey, def);
+    }
+
+    public static void setGestureAction(Context ctx, int mode, String triggerKey, String actionKey) {
+        if (ctx == null || triggerKey == null || actionKey == null) return;
+        int safeMode = (mode >= 2) ? 2 : 1;
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString("gesture_m" + safeMode + "_" + triggerKey, actionKey)
+                .apply();
+    }
+
+    private static final String KEY_SHOW_CURSOR_DIRECT_TOUCH = "show_cursor_direct_touch";
+
+    public static boolean isShowCursorInDirectTouch(Context ctx) {
+        if (ctx == null) return false;
+        return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_SHOW_CURSOR_DIRECT_TOUCH, false);
+    }
+
+    public static void setShowCursorInDirectTouch(Context ctx, boolean show) {
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_SHOW_CURSOR_DIRECT_TOUCH, show)
+                .apply();
+    }
+
+    private static void disableOptionCard(View v) {
+        if (v == null) return;
+        v.setAlpha(0.38f);
+        v.setEnabled(false);
+        v.setClickable(false);
+        v.setFocusable(false);
+        v.setOnClickListener(null);
+        v.setOnTouchListener((view, ev) -> true);
+        if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                View ch = vg.getChildAt(i);
+                ch.setEnabled(false);
+                ch.setClickable(false);
+                ch.setFocusable(false);
+                ch.setOnTouchListener((view, ev) -> true);
+                if (ch instanceof ViewGroup) {
+                    ViewGroup sub = (ViewGroup) ch;
+                    for (int j = 0; j < sub.getChildCount(); j++) {
+                        View subCh = sub.getChildAt(j);
+                        subCh.setEnabled(false);
+                        subCh.setClickable(false);
+                        subCh.setFocusable(false);
+                        subCh.setOnTouchListener((view, ev) -> true);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void resetGestureActionsForMode(Context ctx, int mode) {
+        if (ctx == null) return;
+        int safeMode = (mode >= 2) ? 2 : 1;
+        SharedPreferences.Editor ed = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit();
+        for (String trigger : GESTURE_TRIGGER_KEYS) {
+            ed.remove("gesture_m" + safeMode + "_" + trigger);
+        }
+        ed.putInt(KEY_TRACKPAD_SPEED_PCT, 100);
+        ed.putInt(KEY_SCROLL_SPEED_PCT, 100);
+        if (safeMode == 2) {
+            ed.putBoolean(KEY_SHOW_CURSOR_DIRECT_TOUCH, false);
+        }
+        ed.apply();
+    }
+
+    public static int getTrackpadSpeedPercent(Context ctx) {
+        if (ctx == null) return 100;
+        return Math.max(50, Math.min(250,
+                ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_TRACKPAD_SPEED_PCT, 100)));
+    }
+
+    public static void setTrackpadSpeedPercent(Context ctx, int pct) {
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_TRACKPAD_SPEED_PCT, Math.max(50, Math.min(250, pct)))
+                .apply();
+    }
+
+    public static float getTrackpadSpeedMultiplier(Context ctx) {
+        return getTrackpadSpeedPercent(ctx) / 100.0f;
+    }
+
+    public static int getScrollSpeedPercent(Context ctx) {
+        if (ctx == null) return 100;
+        return Math.max(50, Math.min(250,
+                ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_SCROLL_SPEED_PCT, 100)));
+    }
+
+    public static void setScrollSpeedPercent(Context ctx, int pct) {
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_SCROLL_SPEED_PCT, Math.max(50, Math.min(250, pct)))
+                .apply();
+    }
+
+    public static float getScrollSpeedMultiplier(Context ctx) {
+        return getScrollSpeedPercent(ctx) / 100.0f;
+    }
+
+    private static String getGestureTriggerLabel(Context ctx, int mode, String triggerKey) {
+        switch (triggerKey) {
+            case "tap1":
+                return tr(ctx, "1-Finger Tap", "نقرة بإصبع واحد", "لێدان بە یەک پەنجە");
+            case "hold1":
+                return tr(ctx, "1-Finger Long-Press (Hold Still)", "ضغطة مطولة بإصبع واحد (بدون تحريك)", "پەنجە ڕاگرتن بە یەک پەنجە");
+            case "drag1":
+                return tr(ctx, "1-Finger Hold & Drag (Move)", "سحب وتحريك بإصبع واحد", "ڕاگرتن و ڕاکێشان بە یەک پەنجە");
+            case "tap2":
+                return tr(ctx, "2-Finger Tap", "نقرة بإصبعين معاً", "لێدان بە دوو پەنجە");
+            case "hold2":
+                return tr(ctx, "2-Finger Long-Press", "ضغطة مطولة بإصبعين", "ڕاگرتن بە دوو پەنجە");
+            case "glide2":
+                return tr(ctx, "2-Finger Glide Up/Down", "سحب بإصبعين للأعلى/الأسفل", "ڕاکێشان بە دوو پەنجە");
+            case "tap3":
+                return tr(ctx, "3-Finger Tap", "نقرة بـ ٣ أصابع", "لێدان بە ٣ پەنجە");
+            case "swipe3_up":
+                return tr(ctx, "3-Finger Swipe UP", "سحب بـ ٣ أصابع للأعلى", "ڕاکێشان بە ٣ پەنجە بۆ سەرەوە");
+            case "swipe3_down":
+                return tr(ctx, "3-Finger Swipe DOWN", "سحب بـ ٣ أصابع للأسفل", "ڕاکێشان بە ٣ پەنجە بۆ خوارەوە");
+            default:
+                return triggerKey;
+        }
+    }
+
+    private static String getGestureActionLabel(Context ctx, String actionKey) {
+        if (actionKey == null) return "";
+        switch (actionKey) {
+            case "left_click":
+                return tr(ctx, "Left Click", "نقر أيسر (Left Click)", "کرتەی چەپ (Left Click)");
+            case "right_click":
+                return tr(ctx, "Right Click (Context Menu)", "نقر أيمن (القائمة الفرعية)", "کرتەی ڕاست (لیستی لاوەکی)");
+            case "middle_click":
+                return tr(ctx, "Middle Click", "نقر أوسط (Middle Click)", "کرتەی ناوەڕاست");
+            case "double_click":
+                return tr(ctx, "Double Left Click", "نقر أيسر مزدوج (Double Click)", "دوو کرتەی چەپ");
+            case "drag_left":
+                return tr(ctx, "Hold & Drag Selection", "سحب وتحديد النصوص/النوافذ", "ڕاکێشان و دیاریکردن");
+            case "scroll_wheel":
+                return tr(ctx, "Mouse Scroll Wheel", "عجلة التمرير (Scroll Wheel)", "جوڵاندنی خشتە (Scroll)");
+            case "toggle_keyboard":
+                return tr(ctx, "Show / Hide Keyboard", "إظهار / إخفاء الكيبورد", "کردنەوە / داخستنی تەختەکلیل");
+            case "toggle_shortcut_bar":
+                return tr(ctx, "Show / Hide Shortcut Bar", "إظهار / إخفاء شريط الاختصارات", "پیشاندان / شاردنەوەی شریت");
+            case "toggle_calculator":
+                return tr(ctx, "Open / Hide Calculator", "فتح / إخفاء الحاسبة", "کردنەوە / شاردنەوەی ژمێرەر");
+            case "open_control_center":
+                return tr(ctx, "Open Control Center", "فتح مركز التحكم", "کردنەوەی ناوەندی کۆنترۆڵ");
+            case "open_display_settings":
+                return tr(ctx, "Open Display Settings", "فتح إعدادات العرض", "کردنەوەی ڕێکخستنی شاشە");
+            case "disabled":
+            default:
+                return tr(ctx, "Disabled (No Action)", "معطّل (بدون إجراء)", "ناچالاک");
+        }
+    }
+
+    /**
+     * Dedicated X11 Mouse, Touch & Finger Gestures Configuration Modal Window.
+     * Lets the user configure every 1-finger, 2-finger, and 3-finger click/hold/swipe per Input Mode,
+     * plus Trackpad Pointer Speed and 2-Finger Scroll Speed.
+     */
+    public static void showMouseAndGesturesModal(android.app.Activity rawActivity) {
+        if (!(rawActivity instanceof MainActivity)) return;
+        MainActivity activity = (MainActivity) rawActivity;
+        showMouseAndGesturesModal(activity, 0, null);
+    }
+
+    public static void showMouseAndGesturesModal(MainActivity activity, int initialModeOverride, MenuActionCallback cb) {
+        if (activity == null || activity.isFinishing()) return;
+        Prefs prefs = activity.prefs;
+        int currentActiveMode = 1;
+        try {
+            if (prefs != null) currentActiveMode = Integer.parseInt(prefs.touchMode.get()) >= 2 ? 2 : 1;
+        } catch (Exception ignored) {}
+        final int editingMode = (initialModeOverride >= 1 && initialModeOverride <= 2)
+                ? initialModeOverride : currentActiveMode;
+
+        Dialog dialog = createModalDialog(activity, 0.85f, 590, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(activity, 2), 0, dp(activity, 2), dp(activity, 8));
+
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(R.drawable.ic_menu_gestures);
+        icon.setImageTintList(ColorStateList.valueOf(SYSTEM_BLUE));
+        LinearLayout.LayoutParams icLp = new LinearLayout.LayoutParams(dp(activity, 20), dp(activity, 20));
+        icLp.setMarginEnd(dp(activity, 8));
+        header.addView(icon, icLp);
+
+        LinearLayout titleCol = new LinearLayout(activity);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView title = new TextView(activity);
+        title.setText(tr(activity,
+                "Mouse, Touch & Finger Gestures",
+                "إعدادات الماوس واللمس وإيماءات الأصابع",
+                "ڕێکخستنی ماوس و لەمس و جوڵەی پەنجەکان"));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.2f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        titleCol.addView(title);
+
+        TextView subtitle = new TextView(activity);
+        subtitle.setText(tr(activity,
+                "Customize clicks, holds, multi-finger swipes, and pointer speed for each Input Mode",
+                "خصّص النقرات والضغط المطول وإيماءات الأصابع وسرعة المؤشر لكل نمط تحكم",
+                "کرتە و ڕاگرتن و جوڵەی پەنجەکان و خێرایی ماوس بۆ هەر شێوازێک بە دڵی خۆت ڕێکبخە"));
+        subtitle.setTextColor(TEXT_SECONDARY);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.6f);
+        titleCol.addView(subtitle);
+        header.addView(titleCol);
+
+        header.addView(createIconButton(activity, R.drawable.ic_nav_back,
+                tr(activity, EN_BACK_CONTROL_CENTER, AR_BACK_CONTROL_CENTER, KU_BACK_CONTROL_CENTER),
+                false, false, v -> {
+                    dialog.dismiss();
+                    if (cb != null) {
+                        showDisplaySettingsModal(activity, cb);
+                    }
+                }));
+        root.addView(header);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        scrollLp.topMargin = dp(activity, 7);
+        scroll.setLayoutParams(scrollLp);
+
+        LinearLayout body = new LinearLayout(activity);
+        body.setOrientation(LinearLayout.VERTICAL);
+
+        Runnable reloadInputPrefs = () -> {
+            try {
+                Intent broadcast = new Intent(LoriePreferences.ACTION_PREFERENCES_CHANGED);
+                broadcast.putExtra(KEY_FROM_BROADCAST, true);
+                broadcast.setPackage(activity.getPackageName());
+                activity.sendBroadcast(broadcast, PERMISSION_INTERNAL_BROADCAST);
+                activity.onPreferencesChangedCallback();
+            } catch (Exception ignored) {}
+        };
+
+        // 1. Mode Selector Tabs (switches active mode & displays its gesture bindings)
+        body.addView(createSectionHeader(activity,
+                tr(activity, "SELECT INPUT MODE TO CONFIGURE & ACTIVATE",
+                        "اختر نمط التحكم لتفعيله وتخصيص أزراره",
+                        "شێوازی کۆنترۆڵکردن هەڵبژێرە بۆ چالاککردن و ڕێکخستن")));
+
+        LinearLayout modeRow = new LinearLayout(activity);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams mrLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        mrLp.bottomMargin = dp(activity, 10);
+        modeRow.setLayoutParams(mrLp);
+
+        addSegmentedChoice(activity, modeRow,
+                tr(activity, "1. Trackpad (Virtual Mouse)", "1. لوحة اللمس (ماوس افتراضي)", "١. تراكپاد (ماوسی خەیاڵی)"),
+                editingMode == 1, () -> {
+                    if (prefs != null) prefs.touchMode.put("1");
+                    reloadInputPrefs.run();
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, 1, cb);
+                });
+        addSegmentedChoice(activity, modeRow,
+                tr(activity, "2. Direct Touchscreen", "2. شاشة لمس مباشر", "٢. شاشەی لەمسی ڕاستەوخۆ"),
+                editingMode == 2, () -> {
+                    if (prefs != null) prefs.touchMode.put("2");
+                    reloadInputPrefs.run();
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, 2, cb);
+                });
+        body.addView(modeRow);
+
+        // 2. Input-Mode-Specific Toggles & Speed Sliders
+        body.addView(createSectionHeader(activity,
+                tr(activity, "INPUT METHOD OPTIONS & SENSITIVITY",
+                        "خيارات وحساسية نمط التحكم المختار",
+                        "بژاردەکان و هەستیاری شێوازی کۆنترۆڵکردن")));
+
+        GridLayout modeOptionsGrid = new GridLayout(activity);
+        modeOptionsGrid.setColumnCount(isCompactWidth(activity) ? 1 : 2);
+        LinearLayout.LayoutParams mogLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        mogLp.bottomMargin = dp(activity, 8);
+        modeOptionsGrid.setLayoutParams(mogLp);
+
+        boolean isTrackpadEditing = (editingMode == 1);
+        boolean mouseHelperEnabled = prefs != null && prefs.showMouseHelper.get();
+        LinearLayout mouseButtonsTile = addMenuTileWithBadge(activity, modeOptionsGrid, R.drawable.ic_menu_assist_keys,
+                tr(activity, "On-Screen Mouse Buttons (Trackpad)", "أزرار الماوس العائمة (لوحة اللمس)", "دوگمەکانی ماوس (تراکپاد)"),
+                isTrackpadEditing
+                        ? tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأوسط والأيمن العائمة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست")
+                        : tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە"),
+                isTrackpadEditing
+                        ? (mouseHelperEnabled ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                isTrackpadEditing && mouseHelperEnabled, false, () -> {
+                    if (!isTrackpadEditing) return;
+                    if (prefs != null) prefs.showMouseHelper.put(!mouseHelperEnabled);
+                    reloadInputPrefs.run();
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, editingMode, cb);
+                });
+        if (!isTrackpadEditing) {
+            disableOptionCard(mouseButtonsTile);
+        }
+
+        boolean showCursorDirect = isShowCursorInDirectTouch(activity);
+        LinearLayout cursorDirectTile = addMenuTileWithBadge(activity, modeOptionsGrid, R.drawable.ic_menu_display,
+                tr(activity, "Show Cursor in Direct Touch", "إظهار المؤشر في اللمس المباشر", "پیشاندانی ماوس لە لمسی ڕاستەوخۆ"),
+                !isTrackpadEditing
+                        ? tr(activity, "Keep cursor hidden (OFF) for natural touch, or turn ON to show it", "إبقاء المؤشر مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی")
+                        : tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)"),
+                !isTrackpadEditing
+                        ? (showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ"),
+                !isTrackpadEditing && showCursorDirect, false, () -> {
+                    if (isTrackpadEditing) return;
+                    setShowCursorInDirectTouch(activity, !showCursorDirect);
+                    reloadInputPrefs.run();
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, editingMode, cb);
+                });
+        if (isTrackpadEditing) {
+            disableOptionCard(cursorDirectTile);
+        }
+        body.addView(modeOptionsGrid);
+
+        int curPtrSpeed = getTrackpadSpeedPercent(activity);
+        LinearLayout ptrSpeedCard = createLivePreviewSliderCard(
+                activity, dialog, root, scroll, body,
+                isTrackpadEditing
+                        ? tr(activity, "Trackpad Pointer Speed", "سرعة مؤشر الماوس (لوحة اللمس)", "خێرایی نیشاندەری تراكپاد")
+                        : tr(activity, "Trackpad Pointer Speed (Trackpad Mode Only — Disabled in Direct Touch)",
+                                "سرعة مؤشر الماوس (خاص بوضع لوحة اللمس فقط — معطل في اللمس المباشر)",
+                                "خێرایی نیشاندەری تراكپاد (تەنها بۆ دۆخی تراكپاد — لە لمسی ڕاستەوخۆ ناچالاکە)"),
+                50, 250, curPtrSpeed,
+                new LiveSliderCallback() {
+                    @Override public void onStartPreview() {}
+                    @Override public void onLiveProgress(int val) { setTrackpadSpeedPercent(activity, val); }
+                    @Override public void onStopPreview(int val) { setTrackpadSpeedPercent(activity, val); }
+                });
+        if (!isTrackpadEditing) {
+            disableOptionCard(ptrSpeedCard);
+        }
+        body.addView(ptrSpeedCard);
+
+        int curScrollSpeed = getScrollSpeedPercent(activity);
+        body.addView(createLivePreviewSliderCard(
+                activity, dialog, root, scroll, body,
+                tr(activity, "Two-Finger Scroll Wheel Speed", "سرعة التمرير بإصبعين داخل الجداول", "خێرایی جوڵاندن بە دوو پەنجە"),
+                50, 250, curScrollSpeed,
+                new LiveSliderCallback() {
+                    @Override public void onStartPreview() {}
+                    @Override public void onLiveProgress(int val) { setScrollSpeedPercent(activity, val); }
+                    @Override public void onStopPreview(int val) { setScrollSpeedPercent(activity, val); }
+                }));
+
+        // 3. Per-Gesture Action Bindings List
+        body.addView(createSectionHeader(activity,
+                tr(activity, "CUSTOM FINGER GESTURE MAPPING (TAP ANY ROW TO CHANGE)",
+                        "تخصيص وظائف النقرات والإيماءات (اضغط على أي سطر لتغييره)",
+                        "ڕێکخستنی کاری پەنجەکان (پەنجە بنێ بە هەر ڕیزێکدا بۆ گۆڕینی)")));
+
+        for (final String triggerKey : GESTURE_TRIGGER_KEYS) {
+            final String curAction = getGestureAction(activity, editingMode, triggerKey);
+            final String defAction = getDefaultGestureAction(editingMode, triggerKey);
+            boolean isCustomized = !curAction.equals(defAction);
+
+            LinearLayout row = new LinearLayout(activity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
+            row.setBackground(createRippleCardDrawable(activity,
+                    SURFACE_GROUPED_CARD, 11, isCustomized ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
+            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rLp.bottomMargin = dp(activity, 6);
+            row.setLayoutParams(rLp);
+
+            LinearLayout leftCol = new LinearLayout(activity);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            leftCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView trigTv = new TextView(activity);
+            trigTv.setText(getGestureTriggerLabel(activity, editingMode, triggerKey));
+            trigTv.setTextColor(TEXT_PRIMARY);
+            trigTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            trigTv.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            leftCol.addView(trigTv);
+
+            TextView defHintTv = new TextView(activity);
+            defHintTv.setText(tr(activity, "Default: ", "الافتراضي: ", "بنەڕەتی: ")
+                    + getGestureActionLabel(activity, defAction));
+            defHintTv.setTextColor(TEXT_SECONDARY);
+            defHintTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.2f);
+            leftCol.addView(defHintTv);
+            row.addView(leftCol);
+
+            TextView actionPill = new TextView(activity);
+            actionPill.setText(getGestureActionLabel(activity, curAction) + " ▾");
+            actionPill.setTextColor( "disabled".equals(curAction) ? TEXT_SECONDARY : SYSTEM_BLUE);
+            actionPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            actionPill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+            actionPill.setPadding(dp(activity, 10), dp(activity, 5), dp(activity, 10), dp(activity, 5));
+            actionPill.setBackground(createCardDrawable(activity,
+                    "disabled".equals(curAction) ? SURFACE_INSET_CARD : SYSTEM_BLUE_TINT,
+                    8,
+                    "disabled".equals(curAction) ? SEPARATOR_HAIRLINE : SYSTEM_BLUE));
+            row.addView(actionPill);
+
+            row.setOnClickListener(v -> showGestureActionPickerDialog(activity, editingMode, triggerKey, () -> {
+                dialog.dismiss();
+                showMouseAndGesturesModal(activity, editingMode, cb);
+            }));
+
+            body.addView(row);
+        }
+
+        // 4. Footer Buttons: Reset to Mode Defaults + Replay Interactive Tutorial
+        LinearLayout footerRow = new LinearLayout(activity);
+        footerRow.setOrientation(LinearLayout.HORIZONTAL);
+        footerRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        fLp.topMargin = dp(activity, 8);
+        footerRow.setLayoutParams(fLp);
+
+        TextView resetBtn = createCupertinoButton(activity,
+                tr(activity, "↺ Reset Mode Defaults", "↺ استعادة الافتراضي", "↺ گەڕاندنەوەی بنەڕەتی"),
+                false, true, v -> {
+                    resetGestureActionsForMode(activity, editingMode);
+                    Toast.makeText(activity, tr(activity,
+                            "Gesture bindings reset to defaults",
+                            "تمت استعادة الإعدادات الافتراضية للإيماءات",
+                            "ڕێکخستنی جوڵەکان گەڕێنرایەوە باری بنەڕەتی"), Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, editingMode, cb);
+                });
+        footerRow.addView(resetBtn);
+
+        View fSpacer = new View(activity);
+        footerRow.addView(fSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
+
+        TextView tutorialBtn = createCupertinoButton(activity,
+                tr(activity, "Interactive Tutorial", "الدليل التفاعلي", "ڕێبەری فێرکاری"),
+                true, false, v -> {
+                    dialog.dismiss();
+                    AsycudaTutorialOverlay.showInteractiveTutorial(activity, true);
+                });
+        footerRow.addView(tutorialBtn);
+
+        body.addView(footerRow);
+        scroll.addView(body);
+        root.addView(scroll);
+
+        dialog.setContentView(root);
+        dialog.show();
+    }
+
+    private static void showGestureActionPickerDialog(
+            MainActivity activity,
+            int editingMode,
+            String triggerKey,
+            Runnable onSelected) {
+        Dialog picker = createModalDialog(activity, 0.78f, 460, true);
+        LinearLayout root = createDialogContainer(activity);
+
+        TextView title = new TextView(activity);
+        title.setText(getGestureTriggerLabel(activity, editingMode, triggerKey));
+        title.setTextColor(TEXT_PRIMARY);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        title.setPadding(dp(activity, 4), 0, dp(activity, 4), dp(activity, 8));
+        root.addView(title);
+        root.addView(createHairlineDivider(activity));
+
+        ScrollView scroll = new ScrollView(activity);
+        LinearLayout list = new LinearLayout(activity);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(0, dp(activity, 6), 0, dp(activity, 4));
+
+        String currentAction = getGestureAction(activity, editingMode, triggerKey);
+        for (final String actionKey : GESTURE_ACTION_KEYS) {
+            // Only offer "scroll_wheel" on glide2, and only offer "drag_left" on hold1
+            if ("scroll_wheel".equals(actionKey) && !"glide2".equals(triggerKey)) continue;
+            if ("glide2".equals(triggerKey) && !("scroll_wheel".equals(actionKey) || "disabled".equals(actionKey))) continue;
+
+            boolean selected = actionKey.equals(currentAction);
+            TextView opt = new TextView(activity);
+            opt.setText((selected ? "✓  " : "    ") + getGestureActionLabel(activity, actionKey));
+            opt.setTextColor(selected ? SYSTEM_BLUE : TEXT_PRIMARY);
+            opt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            opt.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, selected ? Typeface.BOLD : Typeface.NORMAL));
+            opt.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
+            opt.setBackground(createRippleCardDrawable(activity,
+                    selected ? SYSTEM_BLUE_TINT : SURFACE_GROUPED_CARD,
+                    9,
+                    selected ? SYSTEM_BLUE : SEPARATOR_HAIRLINE));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = dp(activity, 5);
+            opt.setLayoutParams(lp);
+            opt.setOnClickListener(v -> {
+                setGestureAction(activity, editingMode, triggerKey, actionKey);
+                picker.dismiss();
+                if (onSelected != null) onSelected.run();
+            });
+            list.addView(opt);
+        }
+
+        scroll.addView(list);
+        root.addView(scroll);
+        picker.setContentView(root);
+        picker.show();
+    }
+
     public static String tr(Context ctx, String en, String ar, String ku) {
         String lang = getAppLanguage(ctx);
         if ("ar".equals(lang)) return ar;
@@ -274,7 +869,7 @@ public class AsycudaMaterialUi {
         } catch (Throwable ignored) {
             // Fallback to current release version label
         }
-        return "v4.2.0";
+        return "v4.3.0";
     }
 
     public static boolean shouldShowWhatsNew(Context ctx) {
@@ -313,9 +908,9 @@ public class AsycudaMaterialUi {
 
         TextView title = new TextView(activity);
         title.setText(tr(activity,
-                "ASYCUDA World — Republic of Iraq",
-                "نظام أسيكودا العالمي — جمهورية العراق",
-                "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
+                "AsyLauncher — Launcher for ASYCUDA",
+                "AsyLauncher — مشغل أسيكودا",
+                "AsyLauncher — کارپێکەری ئەسیکۆدا"));
         title.setTextColor(TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -323,11 +918,11 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Control Center  |  Release " + getAppVersionLabel(activity),
-                "مركز التحكم  |  الإصدار " + getAppVersionLabel(activity),
-                "ناوەندی کۆنترۆڵ  |  وەشانی " + getAppVersionLabel(activity)));
+                "Native Android Compatibility Bridge (Unofficial)  •  " + getAppVersionLabel(activity),
+                "جسر التوافق الأصلي لأندرويد (تطبيق مستقل غير حكومي)  •  " + getAppVersionLabel(activity),
+                "پردی گونجاندنی ئەندرۆید (بەرنامەی سەربەخۆی نافەرمی)  •  " + getAppVersionLabel(activity)));
         subtitle.setTextColor(TEXT_SECONDARY);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         titleCol.addView(subtitle);
         header.addView(titleCol);
 
@@ -392,12 +987,40 @@ public class AsycudaMaterialUi {
                     showControlCenter(activity, cb);
                 });
 
+        boolean calcEnabled = AsycudaMiniCalculator.isFeatureEnabled(activity);
+        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_calculator,
+                tr(activity, "Mini Customs Calculator", "الحاسبة الكمركية المصغرة", "ژمێرەری گومرگی بچووک"),
+                calcEnabled
+                        ? tr(activity, "Attached calculator button on floating pill is active", "زر الحاسبة المدمج بجانب الزر العائم مفعّل", "دوگمەی ژمێرەر لە تەنیشت دوگمەی سەرئاوکەوتوو چالاکە")
+                        : tr(activity, "Hidden (tap to attach calculator button to floating pill)", "مخفي حالياً (اضغط لإظهار زر الحاسبة بجانب الزر العائم)", "شاردراوەتەوە (دابگرە بۆ پیشاندانی دوگمەی ژمێرەر)"),
+                calcEnabled ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
+                calcEnabled, false, () -> {
+                    boolean next = !AsycudaMiniCalculator.isFeatureEnabled(activity);
+                    AsycudaMiniCalculator.setFeatureEnabled(activity, next);
+                    dialog.dismiss();
+                    showControlCenter(activity, cb);
+                });
+
+        int unreadAlerts = AsycudaFirebaseManager.getUnreadAlertsCount(activity);
+        String alertsBadgeText = unreadAlerts > 0
+                ? tr(activity, unreadAlerts + " NEW", unreadAlerts + " جديد", unreadAlerts + " نوێ")
+                : tr(activity, "0 NEW", "0 جديد", "0 نوێ");
+        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_notifications,
+                tr(activity, "News & Release Alerts", "الأخبار والتنبيهات الفورية", "هەواڵ و ئاگادارییەکان"),
+                unreadAlerts > 0
+                        ? tr(activity, unreadAlerts + " unread announcement(s) & release highlights available", "يوجد " + unreadAlerts + " إشعارات وتحديثات جديدة غير مقروءة", unreadAlerts + " ئاگاداری و نوێکاری نەخوێندراوە هەیە")
+                        : tr(activity, "View latest announcements, server notices & release broadcasts", "عرض أحدث إشعارات وتنبيهات التحديثات والأخبار العامة", "بینینی نوێترین ڕاگەیاندن و ئاگادارییەکانی سیستەم"),
+                alertsBadgeText, unreadAlerts > 0, false, () -> {
+                    dialog.dismiss();
+                    AsycudaFirebaseManager.showNewsAndAlertsModal(activity, cb);
+                });
+
         boolean startupBusy = cb != null && cb.isStartupInProgress();
         LinearLayout updateTile = addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_cloud_sync,
                 tr(activity, "Check for Updates", "فحص التحديثات", "پشکنینی نوێکردنەوەکان"),
                 startupBusy
                         ? tr(activity, "Running automatically during startup...", "جارٍ الفحص تلقائياً أثناء بدء التشغيل...", "لە کاتی دەستپێکردندا خۆکارانە دەپشکنرێت...")
-                        : tr(activity, "Verify app releases and Iraqi Customs server packages", "التحقق من تحديثات التطبيق وملفات خادم الكمارك العراقية", "پشکنینی نوێکردنەوەی بەرنامە و پەڕگەکانی سێرڤەری گومرگ"),
+                        : tr(activity, "Verify AsyLauncher updates and ASYCUDA client packages", "التحقق من تحديثات التطبيق وحزم عميل أسيكودا", "پشکنینی نوێکردنەوەی بەرنامە و پەڕگەکانی ئەسیکۆدا"),
                 startupBusy ? tr(activity, "STARTUP", "قيد الفحص", "لە کاردایە") : null,
                 !startupBusy, false, () -> {
                     if (cb != null && cb.isStartupInProgress()) {
@@ -581,24 +1204,58 @@ public class AsycudaMaterialUi {
         touchRow.setLayoutParams(trLp);
 
         addSegmentedChoice(activity, touchRow,
-                tr(activity, "Trackpad (Mouse)", "لوحة لمس (ماوس)", "تراکپاد (ماوس)"),
+                tr(activity, "Trackpad (Virtual Mouse)", "لوحة اللمس (ماوس افتراضي)", "تراکپاد (ماوسی خەیاڵی)"),
                 "1".equals(curTouch), () -> {
                     if (prefs != null) prefs.touchMode.put("1");
                     applyChanges.run();
                 });
         addSegmentedChoice(activity, touchRow,
-                tr(activity, "Simulated Touch", "لمس محاكي", "لمسی هاوشێوە"),
-                "2".equals(curTouch), () -> {
+                tr(activity, "Direct Touchscreen", "شاشة لمس مباشر", "شاشەی لەمسی ڕاستەوخۆ"),
+                !"1".equals(curTouch), () -> {
                     if (prefs != null) prefs.touchMode.put("2");
                     applyChanges.run();
                 });
-        addSegmentedChoice(activity, touchRow,
-                tr(activity, "Direct Touch", "لمس مباشر", "لمسی ڕاستەوخۆ"),
-                "3".equals(curTouch), () -> {
-                    if (prefs != null) prefs.touchMode.put("3");
-                    applyChanges.run();
-                });
         body.addView(touchRow);
+
+        // Quick Launch Row: Mouse, Touch & Finger Gestures Window + Replay Interactive Tutorial
+        LinearLayout gestureLaunchRow = new LinearLayout(activity);
+        gestureLaunchRow.setOrientation(LinearLayout.HORIZONTAL);
+        gestureLaunchRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams glrLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        glrLp.bottomMargin = dp(activity, 12);
+        gestureLaunchRow.setLayoutParams(glrLp);
+
+        TextView openGesturesBtn = createCupertinoButton(activity,
+                tr(activity,
+                        "Mouse, Touch & Finger Gestures...",
+                        "إعدادات الماوس وإيماءات الأصابع...",
+                        "ڕێکخستنی ماوس و جوڵەی پەنجەکان..."),
+                true, false, v -> {
+                    dialog.dismiss();
+                    showMouseAndGesturesModal(activity, 0, cb);
+                });
+        LinearLayout.LayoutParams ogLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.35f);
+        ogLp.setMarginEnd(dp(activity, 6));
+        openGesturesBtn.setGravity(Gravity.CENTER);
+        openGesturesBtn.setLayoutParams(ogLp);
+        gestureLaunchRow.addView(openGesturesBtn);
+
+        TextView replayTutorialBtn = createCupertinoButton(activity,
+                tr(activity,
+                        "Interactive Tutorial",
+                        "الدليل التفاعلي",
+                        "ڕێبەری فێرکاری"),
+                false, false, v -> {
+                    dialog.dismiss();
+                    AsycudaTutorialOverlay.showInteractiveTutorial(activity, true);
+                });
+        LinearLayout.LayoutParams rtLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.95f);
+        replayTutorialBtn.setGravity(Gravity.CENTER);
+        replayTutorialBtn.setLayoutParams(rtLp);
+        gestureLaunchRow.addView(replayTutorialBtn);
+
+        body.addView(gestureLaunchRow);
 
         // Section 2: Display Resolution Mode
         body.addView(createSectionHeader(activity,
@@ -904,9 +1561,100 @@ public class AsycudaMaterialUi {
                 });
         body.addView(backRow);
 
-        // Section 6: Toggles Grid
+        // Section 6: Input-Method-Specific Options (Greyed out when not applicable to active Touch Mode)
+        boolean isTrackpadMode = "1".equals(curTouch);
         body.addView(createSectionHeader(activity,
-                tr(activity, "DISPLAY & INPUT OPTIONS", "خيارات الشاشة والإدخال المتقدمة", "بژاردەکانی پێشکەوتووی شاشە و تێکردن")));
+                tr(activity, "INPUT METHOD SPECIFIC OPTIONS",
+                        "خيارات خاصة بنمط التحكم المختار",
+                        "بژاردەکانی تایبەت بە شێوازی کۆنترۆڵکردن")));
+
+        GridLayout inputModeGrid = new GridLayout(activity);
+        inputModeGrid.setColumnCount(isCompactWidth(activity) ? 1 : 2);
+        LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        imgLp.bottomMargin = dp(activity, 12);
+        inputModeGrid.setLayoutParams(imgLp);
+
+        boolean mouseHelper = prefs != null && prefs.showMouseHelper.get();
+        LinearLayout mouseHelperTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
+                tr(activity, "On-Screen Mouse Buttons (Trackpad)", "أزرار الماوس العائمة (لوحة اللمس)", "دوگمە سەرئاوکەوتووەکانی ماوس (تراکپاد)"),
+                isTrackpadMode
+                        ? tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأوسط والأيمن العائمة على الشاشة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست لەسەر شاشە")
+                        : tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في وضع اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە"),
+                isTrackpadMode
+                        ? (mouseHelper ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                isTrackpadMode && mouseHelper, false, () -> {
+                    if (!isTrackpadMode) return;
+                    if (prefs != null) prefs.showMouseHelper.put(!mouseHelper);
+                    applyChanges.run();
+                });
+        if (!isTrackpadMode) {
+            disableOptionCard(mouseHelperTile);
+        }
+
+        boolean tapToMove = prefs != null && prefs.tapToMove.get();
+        LinearLayout tapToMoveTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
+                tr(activity, "Double-Tap & Glide to Drag (Trackpad)", "النقر المزدوج والسحب للتحريك (لوحة اللمس)", "دوو جار داگرتن و ڕاکێشان (تراکپاد)"),
+                isTrackpadMode
+                        ? tr(activity, "Double-tap and slide 1 finger in Trackpad mode to drag windows", "انقر مرتين واسحب بإصبع واحد في وضع لوحة اللمس لتحريك النوافذ", "دوو جار پەنجە بنێ و ڕایبکێشە لە دۆخی تراكپاد بۆ جوڵاندنی پەنجەرە")
+                        : tr(activity, "Available in Trackpad mode only (Direct Touch drags directly)", "متاح في وضع لوحة اللمس فقط (اللمس المباشر يسحب مباشرة)", "تەنها لە دۆخی تراكپاد بەردەستە (لمسی ڕاستەوخۆ ڕاستەوخۆ ڕادەکێشێت)"),
+                isTrackpadMode
+                        ? (tapToMove ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                isTrackpadMode && tapToMove, false, () -> {
+                    if (!isTrackpadMode) return;
+                    if (prefs != null) prefs.tapToMove.put(!tapToMove);
+                    applyChanges.run();
+                });
+        if (!isTrackpadMode) {
+            disableOptionCard(tapToMoveTile);
+        }
+
+        boolean scaleTouchpad = prefs != null && prefs.scaleTouchpad.get();
+        boolean scaleTouchpadApplicable = isTrackpadMode && !"native".equals(curResMode);
+        LinearLayout scaleTouchpadTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_assist_keys,
+                tr(activity, "Scale Trackpad to Resolution", "موازنة سرعة لوحة اللمس مع الدقة", "هاوتاکردنی خێرایی تراكپاد لەگەڵ وردی شاشە"),
+                scaleTouchpadApplicable
+                        ? tr(activity, "Match virtual mouse travel distance to scaled display resolution", "مواءمة مسافة حركة المؤشر مع نسبة تكبير الشاشة في وضع لوحة اللمس", "گونجاندنی جوڵەی نیشاندەری ماوس لەگەڵ قەبارەی شاشە")
+                        : (!isTrackpadMode
+                                ? tr(activity, "Available in Trackpad mode only — disabled in Direct Touch", "متاح في وضع لوحة اللمس فقط — معطل في اللمس المباشر", "تەنها لە دۆخی تراكپاد بەردەستە — لە لمسی ڕاستەوخۆ ناچالاکە")
+                                : tr(activity, "Requires Scaled/Exact/Custom resolution in Trackpad mode", "يتطلب دقة عرض مقياسية أو ثابتة في وضع لوحة اللمس", "پێویستی بە وردی شاشەی پێوانەکراو هەیە لە دۆخی تراكپاد")),
+                scaleTouchpadApplicable
+                        ? (scaleTouchpad ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "TRACKPAD", "للوحة اللمس", "تراكپاد"),
+                scaleTouchpadApplicable && scaleTouchpad, false, () -> {
+                    if (!scaleTouchpadApplicable) return;
+                    if (prefs != null) prefs.scaleTouchpad.put(!scaleTouchpad);
+                    applyChanges.run();
+                });
+        if (!scaleTouchpadApplicable) {
+            disableOptionCard(scaleTouchpadTile);
+        }
+
+        boolean showCursorDirect = isShowCursorInDirectTouch(activity);
+        LinearLayout showCursorDirectTile = addMenuTileWithBadge(activity, inputModeGrid, R.drawable.ic_menu_display,
+                tr(activity, "Show Cursor in Direct Touch", "إظهار المؤشر في اللمس المباشر", "پیشاندانی ماوس لە لمسی ڕاستەوخۆ"),
+                !isTrackpadMode
+                        ? tr(activity, "Keep desktop arrow hidden (OFF) for natural touch, or turn ON to see it", "إبقاء سهم الماوس مخفياً (إيقاف) للمس الطبيعي أو تفعيله لإظهاره", "شاردنەوەی نیشاندەری ماوس بۆ لمسی ئاسایی یان پیشاندانی")
+                        : tr(activity, "Applies to Direct Touchscreen only (Always visible in Trackpad)", "خاص بوضع اللمس المباشر فقط (المؤشر مرئي دائماً في لوحة اللمس)", "تایبەت بە لمسی ڕاستەوخۆ (لە تراكپاد هەمیشە دیارە)"),
+                !isTrackpadMode
+                        ? (showCursorDirect ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF))
+                        : tr(activity, "DIRECT TOUCH", "للمس المباشر", "لمسی ڕاستەوخۆ"),
+                !isTrackpadMode && showCursorDirect, false, () -> {
+                    if (isTrackpadMode) return;
+                    setShowCursorInDirectTouch(activity, !showCursorDirect);
+                    applyChanges.run();
+                });
+        if (isTrackpadMode) {
+            disableOptionCard(showCursorDirectTile);
+        }
+
+        body.addView(inputModeGrid);
+
+        // Section 7: General Display & Workspace Options (Apply to all Input Modes)
+        body.addView(createSectionHeader(activity,
+                tr(activity, "GENERAL DISPLAY & WORKSPACE OPTIONS", "خيارات الشاشة ومساحة العمل العامة", "بژاردە گشتییەکانی شاشە و شوێنی کارکردن")));
 
         GridLayout grid = new GridLayout(activity);
         grid.setColumnCount(isCompactWidth(activity) ? 1 : 2);
@@ -950,26 +1698,6 @@ public class AsycudaMaterialUi {
                 isStretch ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
                 isStretch, false, () -> {
                     if (prefs != null) prefs.displayStretch.put(!isStretch);
-                    applyChanges.run();
-                });
-
-        boolean mouseHelper = prefs != null && prefs.showMouseHelper.get();
-        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_assist_keys,
-                tr(activity, "On-Screen Mouse Buttons", "أزرار الماوس العائمة", "دوگمە سەرئاوکەوتووەکانی ماوس"),
-                tr(activity, "Show floating Left, Middle, and Right click buttons", "إظهار أزرار النقر الأيسر والأيمن العائمة على الشاشة", "پیشاندانی دوگمەی کلیکی چەپ و ناوەڕاست و ڕاست لەسەر شاشە"),
-                mouseHelper ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
-                mouseHelper, false, () -> {
-                    if (prefs != null) prefs.showMouseHelper.put(!mouseHelper);
-                    applyChanges.run();
-                });
-
-        boolean tapToMove = prefs != null && prefs.tapToMove.get();
-        addMenuTileWithBadge(activity, grid, R.drawable.ic_menu_assist_keys,
-                tr(activity, "Tap to Move Cursor", "النقر لتحريك مؤشر الماوس", "داگرتن بۆ گواستنەوەی نیشاندەری ماوس"),
-                tr(activity, "Jump cursor directly to tapped position in Trackpad mode", "نقل مؤشر الماوس مباشرة إلى موضع اللمس في وضع لوحة اللمس", "گواستنەوەی ڕاستەوخۆی نیشاندەری ماوس بۆ شوێنی داگرتن"),
-                tapToMove ? tr(activity, "ON", AR_ON, KU_ON) : tr(activity, "OFF", AR_OFF, KU_OFF),
-                tapToMove, false, () -> {
-                    if (prefs != null) prefs.tapToMove.put(!tapToMove);
                     applyChanges.run();
                 });
 
@@ -1288,7 +2016,7 @@ public class AsycudaMaterialUi {
 
         TextView appStatus = new TextView(activity);
         appStatus.setText(tr(activity,
-                "Checking GitHub releases...",
+                "Checking app release status...",
                 "جاري البحث عن إصدار جديد...",
                 "گەڕان بۆ وەشانی نوێ..."));
         appStatus.setTextColor(TEXT_PRIMARY);
@@ -1313,7 +2041,7 @@ public class AsycudaMaterialUi {
         appCard.addView(appProgress, progLp);
 
         TextView installAppBtn = createCupertinoButton(activity,
-                tr(activity, "Download & Install Update", "تحميل وتثبيت التحديث", "دابەزاندن و دامەزراندنی نوێکردنەوە"),
+                tr(activity, "View Update & Release Notes", "عرض التحديث وملاحظات الإصدار", "بینینی نوێکردنەوە و تێبینییەکان"),
                 true, false, null);
         LinearLayout.LayoutParams instLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1323,9 +2051,42 @@ public class AsycudaMaterialUi {
         installAppBtn.setVisibility(View.GONE);
         appCard.addView(installAppBtn);
 
+        // Official Google Play Store Link Row
+        LinearLayout storeLinksRow = new LinearLayout(activity);
+        storeLinksRow.setOrientation(LinearLayout.HORIZONTAL);
+        storeLinksRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams slLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        slLp.topMargin = dp(activity, 8);
+        storeLinksRow.setLayoutParams(slLp);
+
+        TextView playStoreBtn = createCupertinoButton(activity,
+                tr(activity, "▶ Google Play", "▶ متجر Google Play", "▶ Google Play"),
+                true, false, v -> {
+                    try {
+                        Intent market = new Intent(Intent.ACTION_VIEW,
+                                android.net.Uri.parse("market://details?id=" + activity.getPackageName()));
+                        market.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(market);
+                    } catch (Exception e) {
+                        try {
+                            Intent web = new Intent(Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + activity.getPackageName()));
+                            web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            activity.startActivity(web);
+                        } catch (Exception ignored) {}
+                    }
+                });
+        LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        playStoreBtn.setGravity(Gravity.CENTER);
+        playStoreBtn.setLayoutParams(psLp);
+        storeLinksRow.addView(playStoreBtn);
+
+        appCard.addView(storeLinksRow);
+
         scrollBody.addView(appCard);
 
-        // 2. MOF Government JARs Card
+        // 2. ASYCUDA JNLP Client Packages Card
         LinearLayout mofCard = new LinearLayout(activity);
         mofCard.setOrientation(LinearLayout.VERTICAL);
         mofCard.setPadding(pad, dp(activity, 12), pad, dp(activity, 12));
@@ -1336,14 +2097,14 @@ public class AsycudaMaterialUi {
         mofCard.setLayoutParams(mofLp);
 
         TextView mofHeader = createSectionHeader(activity,
-                tr(activity, "CUSTOMS SERVER PACKAGES", "ملفات خادم الكمارك (وزارة المالية)", "پەڕگەکانی سێرڤەری گومرگ"));
+                tr(activity, "ASYCUDA CLIENT PACKAGES", "حزم عميل نظام أسيكودا", "پەڕگەکانی سیستەمی ئەسیکۆدا"));
         mofCard.addView(mofHeader);
 
         TextView mofStatus = new TextView(activity);
         mofStatus.setText(tr(activity,
                 "Connecting to asy.mof.gov.iq...",
-                "جاري الاتصال بخادم وزارة المالية...",
-                "پەیوەندیکردن بە سێرڤەری وەزارەتی دارایی..."));
+                "جاري الاتصال بخادم أسيكودا (asy.mof.gov.iq)...",
+                "پەیوەندیکردن بە ڕاژەی ئەسیکۆدا (asy.mof.gov.iq)..."));
         mofStatus.setTextColor(TEXT_PRIMARY);
         mofStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
         mofStatus.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
@@ -1877,7 +2638,7 @@ public class AsycudaMaterialUi {
                 return;
             }
             if (handler != null && controllerRef[0] != null) {
-                handler.onSubmitToSentry(desc, currentImageHolder[0], controllerRef[0], dialog);
+                handler.onSubmitDiagnosticReport(desc, currentImageHolder[0], controllerRef[0], dialog);
             }
         });
         LinearLayout.LayoutParams sbLp = (LinearLayout.LayoutParams) submitBtn.getLayoutParams();
@@ -2161,9 +2922,9 @@ public class AsycudaMaterialUi {
     private static Dialog sActiveNetworkDiagDialog;
 
     /**
-     * Universal Error & Network Diagnostic Modal (Proposal B + Sentry Known-Issues Catalog).
+     * Universal Error & Network Diagnostic Modal (Proposal B + Known-Issues Catalog).
      * Displays a natural, human-written explanation of any connection, system, or runtime error in EN/AR/KU,
-     * highlights brand-new uncatalogued errors with a prompt to share to Sentry, provides a user-consented
+     * highlights brand-new uncatalogued errors with a prompt to submit a diagnostic report, provides a user-consented
      * Verified Fix button for known issues, and includes a compact developer button
      * ({@code </> View Error Code & Technical Log}) for full stack/socket telemetry.
      */
@@ -2259,7 +3020,7 @@ public class AsycudaMaterialUi {
         LinearLayout contentCol = new LinearLayout(activity);
         contentCol.setOrientation(LinearLayout.VERTICAL);
 
-        // 0. If this is a brand-new / uncatalogued error, show a prominent highlight banner suggesting Sentry share + Cloud Resync
+        // 0. If this is a brand-new / uncatalogued error, show a prominent highlight banner suggesting Cloud Resync + Diagnostic Report
         if (isNewUncataloguedError) {
             LinearLayout newErrCard = new LinearLayout(activity);
             newErrCard.setOrientation(LinearLayout.VERTICAL);
@@ -2273,9 +3034,9 @@ public class AsycudaMaterialUi {
 
             TextView newErrBanner = new TextView(activity);
             newErrBanner.setText(tr(activity,
-                    "NEW UNCATALOGUED ERROR DETECTED\nThis error is not yet recorded in the local Known-Issues Catalog. Tap 'Sync Known-Issues Catalog' to check if a verified fix has been published on GitHub, or tap 'Share to Sentry' below.",
-                    "تم رصد خطأ جديد غير مسجل في قاعدة البيانات المحلية\nاضغط على زر (مزامنة سجل الأعطال) للتحقق من توفر حل جديد على GitHub، أو اضغط على (مشاركة إلى Sentry) بالأسفل.",
-                    "هەڵەیەکی نوێی تۆمارنەکراو دۆزرایەوە\nدوگمەی (هاوکاتکردنی بنکەی هەڵەکان) دابگرە بۆ پشکنینی چارەسەری نوێ لە GitHub، یان (هاوبەشکردن بۆ Sentry) دابگرە."));
+                    "NEW UNCATALOGUED ERROR DETECTED\nThis error is not yet recorded in the local Known-Issues Catalog. Tap 'Sync Known-Issues Catalog from Cloud' to check if a verified fix has been published, or tap 'Send Diagnostic Report' below.",
+                    "تم رصد خطأ جديد غير مسجل في قاعدة البيانات المحلية\nاضغط على زر (مزامنة سجل الأعطال المعروفة من السحابة) للتحقق من توفر حل جديد، أو اضغط على (إرسال تقرير الفحص الفني) بالأسفل.",
+                    "هەڵەیەکی نوێی تۆمارنەکراو دۆزرایەوە\nدوگمەی (هاوکاتکردنی بنکەی هەڵەکان لە هەورەوە) دابگرە بۆ پشکنینی چارەسەری نوێ، یان (ناردنی ڕاپۆرتی پشکنین) دابگرە."));
             newErrBanner.setTextColor(Color.WHITE);
             newErrBanner.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.2f);
             newErrBanner.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -2449,7 +3210,7 @@ public class AsycudaMaterialUi {
         scroll.addView(contentCol);
         root.addView(scroll);
 
-        // Footer Buttons: Share to Sentry + Retry Connection
+        // Footer Buttons: Send Diagnostic Report + Retry Connection
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -2457,8 +3218,8 @@ public class AsycudaMaterialUi {
         if (onOpenReportCenter != null) {
             TextView reportBtn = createCupertinoButton(activity,
                     isNewUncataloguedError
-                            ? tr(activity, "Share New Error to Sentry", "مشاركة الخطأ الجديد إلى Sentry", "هاوبەشکردنی هەڵەی نوێ بۆ Sentry")
-                            : tr(activity, "Share to Sentry / Report", "مشاركة إلى Sentry / إبلاغ", "هاوبەشکردن بۆ Sentry"),
+                            ? tr(activity, "Send New Error Report", "إرسال تقرير الخطأ الجديد", "ناردنی ڕاپۆرتی هەڵەی نوێ")
+                            : tr(activity, "Send Diagnostic Report", "إرسال تقرير الفحص الفني", "ناردنی ڕاپۆرتی پشکنین"),
                     isNewUncataloguedError, false, v -> {
                         dialog.dismiss();
                         onOpenReportCenter.run();
@@ -4019,18 +4780,18 @@ public class AsycudaMaterialUi {
 
         TextView appTitle = new TextView(activity);
         appTitle.setText(tr(activity,
-                "ASYCUDA World — Republic of Iraq",
-                "نظام أسيكودا العالمي — جمهورية العراق",
-                "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
+                "AsyLauncher — Launcher for ASYCUDA",
+                "AsyLauncher — مشغل أسيكودا",
+                "AsyLauncher — کارپێکەری ئەسیکۆدا"));
         appTitle.setTextColor(TEXT_PRIMARY);
         appTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
         appTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         heroTextCol.addView(appTitle);
 
         TextView verPill = new TextView(activity);
-        verPill.setText("Version " + getAppVersionLabel(activity) + " (Major Release)  •  Android Desktop Environment");
+        verPill.setText("Version " + getAppVersionLabel(activity) + "  •  Independent Native Android Compatibility Bridge (Unofficial)");
         verPill.setTextColor(SYSTEM_BLUE);
-        verPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        verPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         verPill.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.NORMAL));
         heroTextCol.addView(verPill);
         heroTop.addView(heroTextCol);
@@ -4038,9 +4799,9 @@ public class AsycudaMaterialUi {
 
         TextView appDesc = new TextView(activity);
         appDesc.setText(tr(activity,
-                "Runs the full Iraqi Customs ASYCUDA World desktop system on Android phones and tablets, complete with built-in PDF printing, a private document vault, and automatic updates from the official customs server.",
-                "يتيح تشغيل النظام الكامل لأسيكودا العالمي التابع للهيئة العامة للكمارك العراقية على الهواتف والأجهزة اللوحية بنظام أندرويد، مع دعم مدمج لطباعة ملفات PDF وخزنة خاصة للمستندات وتحديث تلقائي من خادم الكمارك الرسمي.",
-                "سیستەمی تەواوی ئەسیکۆدای جیهانی سەر بە گومرگی عێراق لەسەر مۆبایل و تابلێتی ئەندرۆید کارپێدەکات، لەگەڵ چاپکردنی ڕاستەوخۆی PDF، قاسەی تایبەتی بەڵگەنامەکان و نوێکردنەوەی خۆکار لە ڕاژەی فەرمی گومرگەوە."));
+                "An independent, unofficial utility built to supply the Android operating system with the missing native Java/Swing/JNLP runtime components required to open and launch the official Iraqi Customs ASYCUDA World system (asy.mof.gov.iq) natively — without using a Linux desktop environment underneath. Also packages user-friendly customs productivity tools including a floating Mini Calculator, direct PDF printing, a private Document Vault, and customizable finger gestures.",
+                "تطبيق تقني مستقل وغير رسمي (لا يتبع لوزارة المالية)، صُمم لتزويد نظام التشغيل أندرويد بالمكونات البرمجية الأصلية المفقودة اللازمة لفتح وتشغيل نظام أسيكودا العالمي الرسمي للكمارك العراقية (asy.mof.gov.iq) بشكل أصلي ومباشر — دون استخدام سطح مكتب لينكس بالخلفية. كما يضم أدوات مساعدة مدمجة لتسهيل العمل الكمركي مثل الحاسبة العائمة المصغرة، والطباعة المباشرة بصيغة PDF، والخزنة الخاصة للمستندات، وتخصيص إيماءات الأصابع.",
+                "بەرنامەیەکی تەکنیکی سەربەخۆ و نافەرمییە (سەر بە وەزارەتی دارایی نییە)، دروستکراوە بۆ دابینکردنی پێکهاتە پێویستەکانی جاڤا بۆ سیستەمی ئەندرۆید تاوەکو سیستەمی فەرمی ئەسیکۆدای گومرگی عێراق (asy.mof.gov.iq) بە شێوەی ڕاستەوخۆ و بەبێ سیستەمی دێسکتۆپی لینوکس بکاتەوە. هەروەها ئامرازی بەسوودی تێدایە وەک ژمێرەری سەرئاوکەوتوو، چاپکردنی PDF، قاسەی تایبەتی بەڵگەنامەکان و ڕێکخستنی جوڵەی پەنجەکان."));
         appDesc.setTextColor(TEXT_SECONDARY);
         appDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
         LinearLayout.LayoutParams descLp = new LinearLayout.LayoutParams(
@@ -4078,9 +4839,9 @@ public class AsycudaMaterialUi {
 
         TextView secBody = new TextView(activity);
         secBody.setText(tr(activity,
-                "This app is 100% open-source so anyone can inspect how it works. Your ASYCUDA username, password, and customs declarations connect directly to the Ministry of Finance server (asy.mof.gov.iq) — this app never sees, saves, or collects them. Release " + getAppVersionLabel(activity) + " is a Major Security & Architecture Release; all earlier versions (< v4.2.0) are now unsafe, superseded, and not recommended.",
-                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. اسم المستخدم وكلمة المرور والتصاريح الكمركية الخاصة بك تتصل مباشرة بخادم وزارة المالية (asy.mof.gov.iq)، ولا يقوم التطبيق بقراءتها أو حفظها أو جمعها نهائياً. الإصدار " + getAppVersionLabel(activity) + " هو إصدار رئيسي للأمان والبنية البرمجية، وجميع الإصدارات السابقة (< v4.2.0) أصبحت غير آمنة وغير موصى بها.",
-                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. ناوی بەکارهێنەر و وشەی تێپەڕ و مامەڵە گومرگییەکانت ڕاستەوخۆ دەچنە سێرڤەری وەزارەتی دارایی (asy.mof.gov.iq) و ئەم بەرنامەیە هەرگیز نایانبینێت و پاشەکەوتیان ناکات. وەشانی " + getAppVersionLabel(activity) + " وەشانێکی سەرەکی ئاسایشە و گشت وەشانەکانی پێشتر (< v4.2.0) چیتر سەلامەت نین و پێشنیار ناکرێن."));
+                "This app is 100% open-source so anyone can inspect how it works. Inside the embedded Java 8 runtime, a strict SecurityManager locks your ASYCUDA session exclusively to the official Ministry of Finance server (asy.mof.gov.iq) and blocks all other internet connections — your username, password, and declarations are never seen or collected by this app. Outside the Java sandbox, the Android UI wrapper connects to Google Firebase (Cloud Firestore) solely on official signed builds to fetch News & Release Alerts, sync Known-Issues diagnostic definitions, and record a once-per-day non-personal installation metric (random app-scoped UUID, app version, Android SDK level, device model class, UI language, and active UTC date) with zero personal data.",
+                "هذا التطبيق مفتوح المصدر بالكامل ليتمكن أي شخص أو مبرمج من فحصه والتأكد من أمانه. داخل بيئة جافا المدمجة، يفرض حارس الأمان (SecurityManager) عزل جلسة أسيكودا وحصر اتصالها بخادم وزارة المالية الرسمي (asy.mof.gov.iq) فقط وحظر أي اتصال خارجي آخر — فلا يطلع التطبيق نهائياً على اسم المستخدم أو كلمة المرور أو التصاريح الكمركية. أما واجهة أندرويد الخارجية فتتصل بخدمة Google Firebase (Cloud Firestore) في النسخ الرسمية الموقعة فقط لجلب التنبيهات الفورية، وتحديث قاعدة بيانات تشخيص الأعطال، وتسجيل إحصائية تقنية يومية غير شخصية (معرّف تثبيت عشوائي، إصدار التطبيق، إصدار الأندرويد، فئة الجهاز، لغة الواجهة، وتاريخ النشاط) دون أي بيانات شخصية.",
+                "ئەم بەرنامەیە ١٠٠٪ سەرچاوە کراوەیە بۆ ئەوەی هەر کەسێک بتوانێت کۆدەکەی بپشکنێت. لەناو ژینگەی جاڤادا، سیستەمی پاراستن (SecurityManager) پەیوەندی ئەسیکۆدا تەنها بە سێرڤەری فەرمی وەزارەتی دارایی (asy.mof.gov.iq) سنووردار دەکات و هەموو پەیوەندییەکی دەرەکی تر بلۆک دەکات — ناوی بەکارهێنەر و وشەی تێپەڕ هەرگیز نابینرێن. لە دەرەوەی ژینگەی جاڤا، ڕووکاری ئەندرۆید پەیوەندی بە Google Firebase (Cloud Firestore) دەکات تەنها بۆ هەواڵ و ئاگادارییەکان، نوێکردنەوەی بنکەی دەستنیشانکردنی هەڵەکان، و تۆمارکردنی زانیاری تەکنیکی گشتی نا-کەسی (ناسنامەی هەڕەمەکی دامەزراندن، وەشانی بەرنامە، وەشانی ئەندرۆید، جۆری ئامێر، زمانی ڕووکار و بەروار) بەبێ هیچ زانیارییەکی کەسی."));
         secBody.setTextColor(TEXT_PRIMARY);
         secBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
@@ -4206,15 +4967,15 @@ public class AsycudaMaterialUi {
         TextView bridgeAttrBody = new TextView(activity);
         bridgeAttrBody.setText(tr(activity,
                 "Original Java Bridge Author: Mohammed Ammar Hussein (@MohammedALShimmary)\n"
-                        + "Original Project: ASYCUDA Iraq Android (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)\n"
+                        + "Original Project: AsyLauncher — Launcher for ASYCUDA (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)\n"
                         + "Source: https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android\n\n"
                         + "Licensed under GNU GPL-3.0 with Section 7 attribution preservation terms (see java-bridge/ATTRIBUTION-TERMS.md).",
                 "مؤلف جسر الجافا الأصلي: Mohammed Ammar Hussein (@MohammedALShimmary)\n"
-                        + "المشروع الأصلي: ASYCUDA Iraq Android (حزم 00_bootpatch.jar و 00_boot.jar و 00_jnlp.jar)\n"
+                        + "المشروع الأصلي: AsyLauncher — مشغل أسيكودا (حزم 00_bootpatch.jar و 00_boot.jar و 00_jnlp.jar)\n"
                         + "المصدر الرسمي: https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android\n\n"
                         + "مرخّص بموجب رخصة GNU GPL-3.0 مع شروط حفظ حقوق النسبة للمؤلف الأصلي وفق القسم 7.",
                 "دانەری سەرەکی پردی جاڤا: Mohammed Ammar Hussein (@MohammedALShimmary)\n"
-                        + "پڕۆژەی سەرەکی: ASYCUDA Iraq Android (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)\n"
+                        + "پڕۆژەی سەرەکی: AsyLauncher — کارپێکەری ئەسیکۆدا (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)\n"
                         + "سەرچاوە: https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android"));
         bridgeAttrBody.setTextColor(TEXT_PRIMARY);
         bridgeAttrBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
@@ -4233,7 +4994,7 @@ public class AsycudaMaterialUi {
                 tr(activity, "OPEN-SOURCE ACKNOWLEDGEMENTS & LICENCES", "المكتبات والمشاريع مفتوحة المصدر", "پڕۆژە و کتێبخانە سەرچاوە کراوەکان")));
 
         addCreditEntry(activity, ossCard,
-                "ASYCUDA Iraq Java Compatibility Bridge (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)",
+                "AsyLauncher Java Compatibility Bridge (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar)",
                 "GNU GPL-3.0 (Sec. 7 Attribution)",
                 "Mohammed Ammar Hussein (@MohammedALShimmary)",
                 "Original Android X11/Swing desktop bridge, JFileChooser native document picker router, DirectPdfPrintService, and hardened JVM SecurityManager.");
@@ -4545,9 +5306,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Major Security & Architecture Upgrade — Previous Versions (< v4.2.0) Are Unsafe & Not Recommended",
-                "تحديث رئيسي شامل للأمان والبنية — جميع الإصدارات السابقة (< v4.2.0) غير آمنة وغير موصى بها",
-                "نوێکردنەوەی سەرەکی ئاسایش — گشت وەشانەکانی پێشتر (< v4.2.0) سەلامەت نین و پێشنیار ناکرێن"));
+                "Major Security & Architecture Upgrade — Previous Versions (< v4.3.0) Are Unsafe & Not Recommended",
+                "تحديث رئيسي شامل للأمان والبنية — جميع الإصدارات السابقة (< v4.3.0) غير آمنة وغير موصى بها",
+                "نوێکردنەوەی سەرەکی ئاسایش — گشت وەشانەکانی پێشتر (< v4.3.0) سەلامەت نین و پێشنیار ناکرێن"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
@@ -4579,23 +5340,33 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "1. Automatic Connection Setup from the Official Customs Server",
-                        "1. الضبط التلقائي للاتصال من خادم الكمارك الرسمي",
-                        "١. ڕێکخستنی خۆکاری پەیوەندی لە ڕاژەی فەرمی گومرگەوە"),
+                        "1. Customizable Finger Gestures & Interactive Startup Tutorial",
+                        "1. تخصيص إيماءات الأصابع والدليل التفاعلي الذكي",
+                        "١. ڕێکخستنی جوڵەی پەنجەکان و ڕێبەری فێرکاری زیرەک"),
                 tr(activity,
-                        "The app now reads server connection settings and communication ports directly from the official Ministry of Finance configuration file (AWIQWorld.jnlp) and automatically reconnects when switching between Wi-Fi and mobile data.",
-                        "يقرأ التطبيق الآن إعدادات الاتصال وأرقام المنافذ مباشرة من ملف الإعدادات الرسمي لوزارة المالية (AWIQWorld.jnlp)، ويعيد ربط الاتصال تلقائياً عند التنقل بين شبكة الواي فاي وبيانات الهاتف.",
-                        "بەرنامەکە ئێستا ڕێکخستنەکانی پەیوەندی و دەرچەکان ڕاستەوخۆ لە پەڕگەی فەرمی وەزارەتی دارایی (AWIQWorld.jnlp) وەردەگرێت و لە کاتی گۆڕینی نێوان وایفای و ئینتەرنێتی مۆبایلدا پەیوەندییەکە نوێ دەکاتەوە."));
+                        "Customize every 1-finger, 2-finger, and 3-finger click, hold, or swipe per Input Mode inside Display Settings → Mouse, Touch & Finger Gestures, plus a new Two-Stage Interactive Tutorial.",
+                        "يمكنك الآن تخصيص وظيفة كل لمسة أو ضغطة مطولة أو سحب لكل نمط تحكم عبر إعدادات العرض ← إعدادات الماوس وإيماءات الأصابع، مع دليل بدء تفاعلي متحرك.",
+                        "ئێستا دەتوانیت کاری هەموو لێدان و ڕاگرتن و ڕاکێشانێکی پەنجەکان بۆ هەر شێوازێک لە ڕێکخستنەکانی شاشە دیاری بکەیت، لەگەڵ ڕێبەری فێرکاری نوێ."));
 
         addPolicyClause(activity, card,
                 tr(activity,
-                        "2. File & Folder Renaming in the Document Vault",
-                        "2. ميزة تعديل أسماء الملفات والمجلدات داخل الخزنة",
-                        "٢. تایبەتمەندی گۆڕینی ناوی پەڕگە و بوخچەکان لەناو قاسەدا"),
+                        "2. Floating Mini Customs Calculator Attached to Control Center",
+                        "2. حاسبة كمركية مصغّرة عائمة مدمجة مع الزر العائم",
+                        "٢. ژمێرەری گومرگی بچووک لە تەنیشت دوگمەی سەرئاوکەوتوو"),
                 tr(activity,
-                        "You can now rename any saved PDF, imported document, or folder directly inside the Vault File Manager so your customs declarations and attachments stay neatly organized.",
-                        "يمكنك الآن تعديل وإعادة تسمية أي ملف PDF مطبوع أو مستند مستورد أو مجلد مباشرة من داخل مدير ملفات الخزنة لترتيب معاملاتك ومرفقاتك الكمركية بسهولة.",
-                        "ئێستا دەتوانیت ناوی هەر پەڕگەیەکی PDF، بەڵگەنامەی هاوردەکراو، یان بوخچەیەک ڕاستەوخۆ لەناو بەڕێوەبەری پەڕگەکانی قاسەدا بگۆڕیت بۆ ڕێکخستنی باشتری مامەڵەکانت."));
+                        "Tap the calculator icon attached to the floating Control Center pill to expand a freeform, draggable, edge-resizable calculator. Hide (—) collapses it back while keeping your math; Close (✕) resets it.",
+                        "اضغط على أيقونة الحاسبة الملتصقة بالزر العائم لفتح نافذة حاسبة حرة الحركة وتغيير الحجم. زر الإخفاء (—) يطويها داخل الزر العائم مع حفظ حساباتك، وزر الإغلاق (✕) يصفرها.",
+                        "دوگمەی ژمێرەر لە تەنیشت دوگمەی سەرئاوکەوتوو دابگرە بۆ کردنەوەی ژمێرەرێکی جوڵاو. دوگمەی (—) دەیشارێتەوە بە پاراستنی ژمارەکانت، و (✕) دایئەخات."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "3. Reliable Keyboard Toggle & Real-Time News/Release Alerts",
+                        "3. تحسين زر الكيبورد ونظام الإشعارات والأخبار الفورية",
+                        "٣. چاکسازی دوگمەی تەختەکلیل و سیستەمی ئاگادارییەکان"),
+                tr(activity,
+                        "The Shortcut Bar keyboard button now reliably both opens and closes docked and floating keyboards, and the app receives real-time release announcements and catalog updates.",
+                        "أصبح زر الكيبورد في الشريط العلوي يفتح ويغلق لوحة المفاتيح بكفاءة تامة، مع دعم استقبال إشعارات التحديثات والأخبار الفورية.",
+                        "دوگمەی تەختەکلیل لە شریتی سەرەوە ئێستا بە تەواوی تەختەکلیل دەکاتەوە و دایدەخات، لەگەڵ وەرگرتنی ئاگاداری و هەواڵە نوێیەکان."));
 
         addPolicyClause(activity, card,
                 tr(activity,
@@ -4825,13 +5596,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "1. Purpose of Application & Non-Affiliation",
-                        "1. الغرض من التطبيق وعدم التبعية الرسمية",
-                        "١. مەبەستی بەرنامەکە و سەربەخۆیی"),
+                        "1. Independent Native Android Compatibility Bridge & Non-Affiliation",
+                        "1. جسر توافق أصلي مستقل لأندرويد وعدم التبعية الرسمية",
+                        "١. پردی گونجاندنی سەربەخۆی ئەندرۆید و نەبوونی پەیوەندی فەرمی"),
                 tr(activity,
-                        "This free, open-source application (GPL v3 License) was created solely as a technical utility to assist customs brokers, logistics coordinators, and trade companies in running the Iraqi Customs ASYCUDA World desktop environment on Android devices. It is an independent project and is not affiliated with, sponsored by, or officially endorsed by the Iraqi Ministry of Finance, the General Commission for Customs, or UNCTAD.",
-                        "تم تطوير هذا التطبيق المجاني مفتوح المصدر (بموجب رخصة GPL v3) لغرض المساعدة التقنية فقط وتسهيل عمل المخلصين الكمركيين والشركات التجارية في تشغيل بيئة نظام أسيكودا العالمي على أجهزة الأندرويد. هذا التطبيق مبادرة تقنية مستقلة ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD).",
-                        "ئەم بەرنامە خۆڕایی و سەرچاوە کراوەیە (مۆڵەتی GPL v3) تەنها بە مەبەستی هاوکاری تەکنیکی بۆ بریکارانی گومرگی و کۆمپانیا بازرگانییەکان دروستکراوە بۆ بەکارهێنانی سیستەمی ئەسیکۆدای جیهانی لەسەر ئامێرەکانی ئەندرۆید، و بە فەرمی سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە."));
+                        "This free, open-source application (GPL v3 License) is an independent utility built to supply the Android operating system with the missing native Java/Swing/JNLP runtime components required to open and launch the official Iraqi Customs ASYCUDA World system (asy.mof.gov.iq) natively — without using a Linux desktop environment underneath — alongside helpful productivity tools. It is an independent project and is NOT affiliated with, sponsored by, or officially endorsed by the Iraqi Ministry of Finance, the General Commission for Customs, or UNCTAD.",
+                        "هذا التطبيق المجاني مفتوح المصدر (رخصة GPL v3) هو أداة تقنية مستقلة صُممت لتزويد نظام أندرويد بالمكونات البرمجية الأصلية المفقودة اللازمة لفتح وتشغيل نظام أسيكودا العالمي الرسمي للكمارك العراقية (asy.mof.gov.iq) بشكل أصلي ومباشر — دون استخدام بيئة سطح مكتب لينكس بالخلفية — مع توفير أدوات مساعدة للمستخدمين. هذا التطبيق مستقل تماماً ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة UNCTAD.",
+                        "ئەم بەرنامە خۆڕایی و سەرچاوە کراوەیە (مۆڵەتی GPL v3) ئامرازێکی تەکنیکی سەربەخۆیە کە پێکهاتە پێویستەکانی جاڤا بۆ سیستەمی ئەندرۆید دابین دەکات بۆ کردنەوەی سیستەمی فەرمی ئەسیکۆدای گومرگی عێراق (asy.mof.gov.iq) بە شێوەی ڕاستەوخۆ و بەبێ سیستەمی دێسکتۆپی لینوکس. ئەم پڕۆژەیە سەربەخۆیە و بە فەرمی سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە."));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
@@ -4855,13 +5626,13 @@ public class AsycudaMaterialUi {
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,
-                        "4. Privacy & Personal Data Protection",
-                        "4. حماية الخصوصية وعدم جمع البيانات الشخصية",
-                        "٤. پاراستنی تایبەتمەندی و کۆنەکردنەوەی زانیاری کەسی"),
+                        "4. Privacy, Zero Personal Data & Transparent Google Firebase / Cloud Firestore Telemetry",
+                        "4. حماية الخصوصية وعدم جمع البيانات الشخصية وشفافية الاتصال بخدمة Google Firebase",
+                        "٤. پاراستنی تایبەتمەندی و کۆنەکردنەوەی زانیاری کەسی و شەفافیەتی Google Firebase"),
                 tr(activity,
-                        "This application does not collect personal information, names, company details, hardware identifiers, or ASYCUDA login credentials. Your acceptance of these terms is saved only as a simple setting on your phone, and nothing is sent to any external server when you accept. Technical logs are only shared if you choose to submit a report through the 'Report a Technical Issue' screen.",
-                        "لا يقوم هذا التطبيق بجمع أي معلومات شخصية أو أسماء للأفراد أو الشركات أو معرفات للأجهزة أو بيانات دخول لنظام أسيكودا. يتم حفظ موافقتك على هذه الشروط كإعداد بسيط داخل هاتفك فقط، ولا يتم إرسال أي بيانات إلى أي جهة خارجية عند الموافقة. ولا تُرسل السجلات الفنية إلا إذا قمت بنفسك بإرسال بلاغ عبر نافذة «الإبلاغ عن مشكلة فنية».",
-                        "ئەم بەرنامەیە هیچ زانیارییەکی کەسی، ناوی کەسەکان، زانیاری کۆمپانیا، ناسنامەی ئامێر، یان زانیاری چوونەژوورەوەی ئەسیکۆدا کۆناکاتەوە. پەسەندکردنی ئەم مەرجانە تەنها وەک ڕێکخستنێکی سادە لەناو مۆبایلەکەتدا هەڵدەگیرێت و هیچ زانیارییەک لە کاتی پەسەندکردندا نانێردرێت. تۆمارە تەکنیکییەکان تەنها کاتێک دەنێردرێن کە خۆت ڕاپۆرتێک لە ڕێگەی بەشی «ناردنی ڕاپۆرتی کێشەی تەکنیکی» بنێریت."));
+                        "This application does NOT collect personal information, names, company details, email addresses, hardware serial/IMEI identifiers, or ASYCUDA login credentials. Inside the embedded Java 8 runtime, a strict SecurityManager locks your ASYCUDA customs session exclusively to the official Ministry of Finance server (asy.mof.gov.iq) and blocks all other outbound connections. Your acceptance of these Terms & Conditions is saved locally on your phone only. Outside the Java customs session, the Android UI wrapper communicates with Google Firebase (Cloud Firestore — firestore.googleapis.com) on official signed builds to provide live News & Release Alerts, hot-updatable Known-Issues diagnostic definitions, and once-per-day anonymous active-installation metrics using only 6 non-personal technical fields (a random app-scoped installation UUID that resets on uninstall, app version, Android SDK level, generic device model class, UI language preference, and active UTC date). Detailed diagnostic logs (scrubbed of all credentials in RAM with a full preview) are only transmitted if you voluntarily submit a report via the 'Report an Issue' screen.",
+                        "لا يقوم هذا التطبيق مطلقاً بجمع أي معلومات شخصية أو أسماء للأفراد أو الشركات أو عناوين بريد إلكتروني أو الأرقام التسلسلية للأجهزة (IMEI) أو بيانات الدخول لنظام أسيكودا. داخل بيئة جافا المدمجة، يفرض حارس الأمان (SecurityManager) قفل جلسة أسيكودا وحصر اتصالها بخادم وزارة المالية الرسمي (asy.mof.gov.iq) فقط وحظر أي اتصال خارجي آخر. يتم حفظ موافقتك على هذه الشروط محلياً داخل هاتفك فقط. وخارج جلسة جافا الكمركية، تتواصل واجهة أندرويد في النسخ الرسمية الموقعة مع خدمة Google Firebase (Cloud Firestore — firestore.googleapis.com) لتوفير التنبيهات والأخبار الفورية، وتحديث قاعدة بيانات تشخيص الأعطال المعروفة، وقياس استقرار التطبيق وعدد النسخ الفعالة يومياً بشكل مجهول الهوية باستخدام 6 بيانات تقنية عامة وغير شخصية حصراً (معرّف تثبيت عشوائي خاص بالتطبيق يُحذف عند إلغاء التثبيت، رقم إصدار التطبيق، مستوى نظام أندرويد، فئة طراز الهاتف، لغة الواجهة، وتاريخ النشاط اليومي فقط). ولا يتم إرسال أي سجلات تشخيصية مفصلة (بعد تنقيتها بالكامل في الذاكرة العشوائية RAM مع إتاحة معاينتها لك) إلا إذا اخترت بنفسك إرسال بلاغ عبر نافذة «الإبلاغ عن مشكلة فنية».",
+                        "ئەم بەرنامەیە بە هیچ شێوەیەک زانیاری کەسی، ناوی کەسەکان، زانیاری کۆمپانیا، ئیمەیڵ، ژمارەی زنجیرەیی ئامێر (IMEI)، یان زانیاری چوونەژوورەوەی ئەسیکۆدا کۆناکاتەوە. لەناو ژینگەی جاڤادا، سیستەمی پاراستن (SecurityManager) پەیوەندی ئەسیکۆدا تەنها بە سێرڤەری فەرمی وەزارەتی دارایی (asy.mof.gov.iq) سنووردار دەکات. پەسەندکردنی ئەم مەرجانە تەنها لەناو مۆبایلەکەتدا هەڵدەگیرێت. لە دەرەوەی دانیشتنی جاڤا، ڕووکاری ئەندرۆید پەیوەندی بە Google Firebase (Cloud Firestore) دەکات بۆ دابینکردنی هەواڵ و ئاگادارییەکان، نوێکردنەوەی بنکەی دەستنیشانکردنی کێشە ناسراوەکان، و پێوانەکردنی جێگیری بەرنامەکە و ژمارەی بەکارهێنەران بە شێوەیەکی نەناسراو تەنها بە بەکارهێنانی ٦ زانیاری تەکنیکی گشتی نا-کەسی (ناسنامەی هەڕەمەکی دامەزراندن کە لەگەڵ سڕینەوەی بەرنامەکە دەسڕێتەوە، وەشانی بەرنامە، وەشانی ئەندرۆید، جۆری مۆبایل، زمانی ڕووکار و بەرواری چالاکی). تۆمارە تەکنیکییەکان تەنها کاتێک دەنێردرێن کە خۆت بە ویستی خۆت ڕاپۆرتێک لە بەشی «ناردنی ڕاپۆرتی کێشەی تەکنیکی» بنێریت."));
 
         scrollContent.addView(bodyCard);
 
@@ -4960,6 +5731,7 @@ public class AsycudaMaterialUi {
                 return;
             }
             recordTermsAccepted(activity);
+            AsycudaFirebaseManager.syncOnStartup(activity);
             dialog.dismiss();
             if (onAccepted != null) {
                 onAccepted.onAccepted();
@@ -5074,7 +5846,7 @@ public class AsycudaMaterialUi {
         return tv;
     }
 
-    private static View createHairlineDivider(Context ctx) {
+    public static View createHairlineDivider(Context ctx) {
         View v = new View(ctx);
         v.setBackgroundColor(SEPARATOR_HAIRLINE);
         v.setLayoutParams(new LinearLayout.LayoutParams(
@@ -5096,7 +5868,7 @@ public class AsycudaMaterialUi {
     }
 
     @SuppressLint("NewApi")
-    private static Dialog createModalDialog(MainActivity activity, float widthFraction, int maxWidthDp, boolean cancelable) {
+    public static Dialog createModalDialog(MainActivity activity, float widthFraction, int maxWidthDp, boolean cancelable) {
         DisplayMetrics dm = activity.getResources().getDisplayMetrics();
         final int targetW = Math.min((int) (dm.widthPixels * widthFraction), dp(activity, maxWidthDp));
         Dialog dialog = new Dialog(activity) {
@@ -5314,7 +6086,7 @@ public class AsycudaMaterialUi {
         }
     }
 
-    private static LinearLayout createDialogContainer(Context ctx) {
+    public static LinearLayout createDialogContainer(Context ctx) {
         return new DialogRootContainer(ctx);
     }
 

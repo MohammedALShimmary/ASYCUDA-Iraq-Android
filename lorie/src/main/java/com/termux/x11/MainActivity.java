@@ -318,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
 
         frm = findViewById(R.id.frame);
         findViewById(R.id.preferences_button).setOnClickListener((l) -> AsycudaStandaloneManager.openDisplaySettings(this));
-        findViewById(R.id.help_button).setOnClickListener((l) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-x11/blob/master/README.md#running-graphical-applications"))));
+        findViewById(R.id.help_button).setOnClickListener((l) -> AsycudaStandaloneManager.openDisplaySettings(this));
         findViewById(R.id.exit_button).setOnClickListener((l) -> finish());
         findViewById(R.id.displays_button).setOnClickListener((l) -> showDisplaysDialog());
 
@@ -428,6 +428,11 @@ public class MainActivity extends AppCompatActivity {
         Button visibility = findViewById(R.id.button_visibility);
         LinearLayout overlay = findViewById(R.id.mouse_helper_visibility);
         LinearLayout buttons = findViewById(R.id.mouse_helper_secondary_layer);
+        android.graphics.drawable.GradientDrawable stylusDeckBg = new android.graphics.drawable.GradientDrawable();
+        stylusDeckBg.setColor(0xEB0F172A);
+        stylusDeckBg.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+        stylusDeckBg.setStroke(Math.max(1, (int) getResources().getDisplayMetrics().density), 0xFF334155);
+        overlay.setBackground(stylusDeckBg);
         overlay.setOnTouchListener((v, e) -> true);
         overlay.setOnHoverListener((v, e) -> true);
         overlay.setOnGenericMotionListener((v, e) -> true);
@@ -573,7 +578,7 @@ public class MainActivity extends AppCompatActivity {
     private void showMouseAuxButtons(boolean show) {
         View v = findViewById(R.id.mouse_buttons);
         v.setVisibility((getLorieView().connected() && show && "1".equals(prefs.touchMode.get())) ? View.VISIBLE : View.GONE);
-        v.setAlpha(isInPictureInPictureMode ? 0.f : 0.7f);
+        v.setAlpha(isInPictureInPictureMode ? 0.f : 0.95f);
         makeSureHelpersAreVisibleAndInScreenBounds();
     }
 
@@ -600,6 +605,13 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout primaryLayer = findViewById(R.id.mouse_buttons);
         LinearLayout secondaryLayer = findViewById(R.id.mouse_buttons_secondary_layer);
 
+        float density = getResources().getDisplayMetrics().density;
+        android.graphics.drawable.GradientDrawable deckBg = new android.graphics.drawable.GradientDrawable();
+        deckBg.setColor(0xEB0F172A);
+        deckBg.setCornerRadius(14 * density);
+        deckBg.setStroke(Math.max(1, (int) density), 0xFF334155);
+        primaryLayer.setBackground(deckBg);
+
         primaryLayer.setOnHoverListener((v, e) -> true);
         primaryLayer.setOnGenericMotionListener((v, e) -> true);
         if (SDK_INT >= VERSION_CODES.O)
@@ -610,12 +622,14 @@ public class MainActivity extends AppCompatActivity {
 
         pos.setOnClickListener((v) -> {
             if (secondaryLayer.getOrientation() == LinearLayout.HORIZONTAL) {
-                setSize(left, 48, 96);
-                setSize(right, 48, 96);
+                setSize(left, 44, 58);
+                setSize(middle, 44, 38);
+                setSize(right, 44, 58);
                 secondaryLayer.setOrientation(LinearLayout.VERTICAL);
             } else {
-                setSize(left, 96, 48);
-                setSize(right, 96, 48);
+                setSize(left, 70, 38);
+                setSize(middle, 42, 38);
+                setSize(right, 70, 38);
                 secondaryLayer.setOrientation(LinearLayout.HORIZONTAL);
             }
             handler.postDelayed(() -> {
@@ -945,7 +959,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public boolean isImeCurrentlyVisible() {
+        return imeHeight > 0;
+    }
+
     public void setImeHeight(int height) {
+        if (height > 0) {
+            getLorieView().onImeVisibilityChanged(true);
+        } else if (imeHeight > 0) {
+            getLorieView().onImeVisibilityChanged(false);
+        }
         // Reported on every insets dispatch, but relaying out the bar for it must not become a loop.
         if (imeHeight == height)
             return;
@@ -1246,8 +1269,11 @@ public class MainActivity extends AppCompatActivity {
             // We should recover connection in the case if file descriptor for some reason was broken...
             if (!connected)
                 tryConnect();
-            else
+            else {
                 getLorieView().setPointerIcon(PointerIcon.getSystemIcon(this, PointerIcon.TYPE_NULL));
+                if (mInputHandler != null)
+                    mInputHandler.reloadPreferences(prefs);
+            }
 
             applyWindowSettings();
         });

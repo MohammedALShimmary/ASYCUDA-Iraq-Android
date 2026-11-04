@@ -16,7 +16,7 @@ public final class KeyInterceptor {
     }
 
     public static void launch(@NonNull MainActivity activity) {
-        // Intentionally disabled: no AccessibilityService is used by ASYCUDA Iraq
+        // Intentionally disabled: no AccessibilityService is used by AsyLauncher
     }
 
     public static void shutdown(boolean onlyIfEnabledAutomatically) {

@@ -134,7 +134,7 @@ public final class SecurityVerificationTest {
         String sessionToken = "9f8e7d6c-5b4a-3210-fedc-ba9876543210";
         String authPrefix = "AUTH|" + sessionToken + "|";
 
-        String unauthenticated = "OPEN|/data/data/iq.asycuda/shared_prefs/asycuda_legal_consent.xml";
+        String unauthenticated = "OPEN|/data/data/io.github.mohammedalshimmary.asylauncher/shared_prefs/asycuda_legal_consent.xml";
         if (unauthenticated.startsWith(authPrefix)) {
             throw new AssertionError("Unauthenticated bridge command must be rejected");
         }
@@ -150,8 +150,8 @@ public final class SecurityVerificationTest {
         if (!mgrSrc.contains("MessageDigest.isEqual") || !mgrSrc.contains("isLoopbackPeerOwnedByOurUid")) {
             throw new AssertionError("AsycudaStandaloneManager must enforce constant-time MessageDigest.isEqual and loopback UID peer verification");
         }
-        if (mgrSrc.contains("NextGen-Customs-") || !mgrSrc.contains("MohammedALShimmary/ASYCUDA-Iraq-Android")) {
-            throw new AssertionError("AsycudaStandaloneManager must use the official ASYCUDA-Iraq-Android catalog URL (R5-04)");
+        if (mgrSrc.contains("NextGen-Customs-") || !mgrSrc.contains("AsycudaFirebaseManager.fetchAndSyncKnownErrorsCatalog")) {
+            throw new AssertionError("AsycudaStandaloneManager must sync Known-Issues Catalog exclusively via AsycudaFirebaseManager (R5-04)");
         }
         if (mgrSrc.contains("requestNetwork(") || mgrSrc.contains("BIND_4G_RELAY_PORT")
                 || mgrSrc.contains("ROUTE_4G_CELLULAR") || mgrSrc.contains("sCellularBypassNetwork")
@@ -219,10 +219,28 @@ public final class SecurityVerificationTest {
         File mgrFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
         String mgrSrc = new String(Files.readAllBytes(mgrFile.toPath()), StandardCharsets.UTF_8);
         if (mgrSrc.contains("ip_address")) {
-            throw new AssertionError("AsycudaStandaloneManager.java must not attach ip_address to Sentry events");
+            throw new AssertionError("AsycudaStandaloneManager.java must not attach ip_address to diagnostic events");
         }
-        if (mgrSrc.contains("uploadConsentReceiptToSentry")) {
-            throw new AssertionError("AsycudaStandaloneManager.java must not upload consent receipts to Sentry");
+        if (mgrSrc.toLowerCase(java.util.Locale.US).contains("sentry") || mgrSrc.contains("api.github.com")) {
+            throw new AssertionError("AsycudaStandaloneManager.java must not reference legacy third-party crash trackers or background GitHub API polling");
+        }
+
+        File fbFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaFirebaseManager.java");
+        String fbSrc = new String(Files.readAllBytes(fbFile.toPath()), StandardCharsets.UTF_8);
+        if (fbSrc.contains("consent_receipts") || fbSrc.contains("submitConsentReceipt")) {
+            throw new AssertionError("AsycudaFirebaseManager.java must not upload consent receipts");
+        }
+        if (fbSrc.contains("gen-lang-client-") || !fbSrc.contains("BuildConfig.FIREBASE_PROJECT_ID")
+                || !fbSrc.contains("isAuthorizedOfficialBuild")
+                || !fbSrc.contains("d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023")
+                || !fbSrc.contains("X-Android-Cert")) {
+            throw new AssertionError("AsycudaFirebaseManager.java must enforce 3-layer fork/clone protection (BuildConfig.FIREBASE_PROJECT_ID, release signing cert lock, and X-Android-Cert header)");
+        }
+
+        File catFile = resolveProjectFile("java-bridge/known-errors-catalog.json");
+        String catSrc = new String(Files.readAllBytes(catFile.toPath()), StandardCharsets.UTF_8);
+        if (catSrc.toLowerCase(java.util.Locale.US).contains("sentry")) {
+            throw new AssertionError("known-errors-catalog.json must use ASY-* error codes and contain zero references to legacy trackers");
         }
     }
 
@@ -253,11 +271,11 @@ public final class SecurityVerificationTest {
                 "Untrusted external IP must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkAllowedOutboundNetwork("10.0.0.1", 2006),
                 "Untrusted private IP must be blocked by AsycudaBoot.checkAllowedOutboundNetwork");
-        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/shared_prefs/asycuda_legal_consent.xml"),
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/io.github.mohammedalshimmary.asylauncher/shared_prefs/asycuda_legal_consent.xml"),
                 "Android shared_prefs must be blocked by AsycudaBoot.checkBlockedHostPath");
-        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/user/0/iq.asycuda/files/legal_consent_receipt.json"),
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/user/0/io.github.mohammedalshimmary.asylauncher/files/legal_consent_receipt.json"),
                 "Consent receipt path must be blocked by AsycudaBoot.checkBlockedHostPath");
-        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/files/known_errors_catalog.json"),
+        expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/io.github.mohammedalshimmary.asylauncher/files/known_errors_catalog.json"),
                 "Known-Errors Catalog path must be blocked from JVM access by AsycudaBoot.checkBlockedHostPath");
         expectSecurityException(() -> asycuda.AsycudaBoot.checkBlockedHostPath("../known_errors_catalog.json"),
                 "Relative Known-Errors Catalog path must be blocked from JVM access by AsycudaBoot.checkBlockedHostPath");
@@ -319,7 +337,7 @@ public final class SecurityVerificationTest {
                 "createSecurityManager must be blocked by HardenedSecurityManager");
         expectSecurityException(() -> sm.checkPermission(new java.security.SecurityPermission("setPolicy")),
                 "setPolicy must be blocked by HardenedSecurityManager");
-        expectSecurityException(() -> sm.checkWrite("/data/data/iq.asycuda/files/client/jars/client.jar"),
+        expectSecurityException(() -> sm.checkWrite("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/jars/client.jar"),
                 "Overwriting signed JARs in /files/client/jars/ must be blocked");
         expectSecurityException(() -> sm.checkWrite("00_bootpatch.jar"),
                 "Relative path write to 00_bootpatch.jar must be canonicalized and blocked (R2-01)");
@@ -327,7 +345,7 @@ public final class SecurityVerificationTest {
                 "Relative path write to jars/client.jar must be canonicalized and blocked (R2-01)");
         expectSecurityException(() -> sm.checkWrite("../jre8/bin/java"),
                 "Relative parent-traversal write to ../jre8/bin/java must be blocked (R2-01)");
-        expectSecurityException(() -> sm.checkDelete("/data/data/iq.asycuda/files/client/jars/client.jar"),
+        expectSecurityException(() -> sm.checkDelete("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/jars/client.jar"),
                 "Deleting signed JARs in /files/client/jars/ must be blocked");
         expectSecurityException(() -> sm.checkDelete("00_bootpatch.jar"),
                 "Relative path delete of 00_bootpatch.jar must be blocked (R2-01)");
@@ -357,16 +375,16 @@ public final class SecurityVerificationTest {
                 "Untrusted caller invoking setProxySelector must be blocked (R3-02)");
         expectSecurityException(() -> sm.checkPermission(new java.security.SecurityPermission("insertProvider")),
                 "Untrusted caller invoking insertProvider must be blocked (R3-02)");
-        expectSecurityException(() -> sm.checkWrite("/data/data/iq.asycuda/cache/updates/payload.apk"),
+        expectSecurityException(() -> sm.checkWrite("/data/data/io.github.mohammedalshimmary.asylauncher/cache/updates/payload.apk"),
                 "Writing to /cache/updates/ from JVM must be blocked");
-        expectSecurityException(() -> sm.checkLink("/data/data/iq.asycuda/files/client/tmp/evil.so"),
+        expectSecurityException(() -> sm.checkLink("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/tmp/evil.so"),
                 "Loading native libraries from writable /tmp/ directory must be blocked");
         expectSecurityException(() -> sm.checkLink("evil_implant"),
                 "Short library name not in JRE allowlist must be blocked (R2-07)");
-        expectSecurityException(() -> sm.checkLink("/data/data/iq.asycuda/files/jre8/jre/lib/aarch64/../../../client/tmp/evil.so"),
+        expectSecurityException(() -> sm.checkLink("/data/data/io.github.mohammedalshimmary.asylauncher/files/jre8/jre/lib/aarch64/../../../client/tmp/evil.so"),
                 "Path-traversal native library load must be canonicalized and blocked (R2-07)");
         sm.checkLink("awt");
-        sm.checkLink("/data/data/iq.asycuda/files/jre8/jre/lib/aarch64/libawt.so");
+        sm.checkLink("/data/data/io.github.mohammedalshimmary.asylauncher/files/jre8/jre/lib/aarch64/libawt.so");
         expectSecurityException(() -> sm.checkPermission(new java.lang.reflect.ReflectPermission("suppressAccessChecks")),
                 "Untrusted caller invoking suppressAccessChecks must be blocked across full stack (R2-02)");
         expectSecurityException(() -> sm.checkPermission(new RuntimePermission("accessDeclaredMembers")),
@@ -446,19 +464,36 @@ public final class SecurityVerificationTest {
             throw new AssertionError("AsycudaStandaloneManager.java must not contain '|| true' in UID check or pass bridge token via command-line argv");
         }
         if (mgrSrc.contains("contents/lorie-app/src/main/assets/known-errors-catalog.json")
-                || !mgrSrc.contains("contents/java-bridge/known-errors-catalog.json")
-                || !mgrSrc.contains(".bootpatch_v4_2_0")) {
-            throw new AssertionError("AsycudaStandaloneManager.java must reference java-bridge/known-errors-catalog.json and .bootpatch_v4_2_0 (R7-01/R7-03)");
+                || !mgrSrc.contains("known-errors-catalog-remote.json")
+                || !mgrSrc.contains(".bootpatch_v4_3_0")) {
+            throw new AssertionError("AsycudaStandaloneManager.java must reference known-errors-catalog-remote.json and .bootpatch_v4_3_0 (R7-01/R7-03)");
         }
         expectSecurityException(
-                () -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/iq.asycuda/files/client/known-errors-catalog.json"),
+                () -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/known-errors-catalog.json"),
                 "JVM must be blocked from reading hyphenated known-errors-catalog.json (R7-03)");
         expectSecurityException(
-                () -> asycuda.AsycudaBoot.checkBlockedWriteOrDeletePath("/data/data/iq.asycuda/files/client/00_bootpatch.jar"),
+                () -> asycuda.AsycudaBoot.checkBlockedWriteOrDeletePath("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/00_bootpatch.jar"),
                 "JVM must be blocked from modifying 00_bootpatch.jar (R7-01)");
         expectSecurityException(
-                () -> asycuda.AsycudaBoot.checkBlockedWriteOrDeletePath("/data/data/iq.asycuda/files/usr/tmp/mof_cacerts.jks"),
+                () -> asycuda.AsycudaBoot.checkBlockedWriteOrDeletePath("/data/data/io.github.mohammedalshimmary.asylauncher/files/usr/tmp/mof_cacerts.jks"),
                 "JVM must be blocked from modifying mof_cacerts.jks truststore (R7-02)");
+        expectSecurityException(
+                () -> asycuda.AsycudaBoot.checkBlockedHostPath("/data/data/io.github.mohammedalshimmary.asylauncher/files/known-errors-catalog-remote.json"),
+                "JVM must be blocked from reading known-errors-catalog-remote.json (R9-01)");
+        expectSecurityException(
+                () -> asycuda.AsycudaBoot.checkBlockedWriteOrDeletePath("/data/data/io.github.mohammedalshimmary.asylauncher/files/known-errors-catalog-remote.json"),
+                "JVM must be blocked from writing known-errors-catalog-remote.json (R9-01)");
+
+        File fbFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaFirebaseManager.java");
+        String fbSrc = new String(Files.readAllBytes(fbFile.toPath()), StandardCharsets.UTF_8);
+        if (fbSrc.contains("installedFromPlayStore")
+                || !fbSrc.contains("validateKnownErrorsCatalogJson(catalogJson)")
+                || !fbSrc.contains("MAX_FIRESTORE_RESPONSE_BYTES")
+                || !fbSrc.contains("sanitizeTrustedAnnouncementUrl")
+                || !fbSrc.contains("setInstanceFollowRedirects(false)")
+                || !fbSrc.contains("AsycudaSecurityValidator.redactSensitiveLogContent")) {
+            throw new AssertionError("AsycudaFirebaseManager.java must enforce R9-01..R9-04 hardening controls");
+        }
     }
 
     private static File resolveProjectFile(String relativePath) {

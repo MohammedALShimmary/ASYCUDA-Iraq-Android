@@ -24,11 +24,11 @@ def hostApplicationId = hostProject.android.defaultConfig.applicationId ?: hostP
 android {
     namespace 'com.termux.x11'
     //noinspection GrDeprecatedAPIUsage
-    compileSdkVersion 34
+    compileSdkVersion 35
     ndkVersion termuxX11NdkVersion
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 35
         def localProps = new Properties()
         def localPropsFile = rootProject.file('local.properties')
         if (localPropsFile.exists()) {
@@ -38,12 +38,12 @@ android {
         if (credPropsFile.exists()) {
             credPropsFile.withInputStream { localProps.load(it) }
         }
-        def defaultSentryDsn = "https://89805f1c6efda1d97a28cc2e21c5cc69@o4512278937206784.ingest.de.sentry.io/4512279030530128"
-        def sentryDsn = localProps.getProperty('sentry.dsn') ?: (System.getenv('SENTRY_DSN') ?: defaultSentryDsn)
-        buildConfigField "String", "VERSION_NAME", "\"${termuxX11VersionName}\""
+        def firebaseProjectId = System.getenv('FIREBASE_PROJECT_ID') ?: localProps.getProperty('gcp.projectId', localProps.getProperty('FIREBASE_PROJECT_ID', ''))
+        buildConfigField "String", "VERSION_NAME", "\"4.3.0\""
+        buildConfigField "int", "VERSION_CODE", "51"
         buildConfigField "String", "COMMIT", "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""
         buildConfigField "String", "APPLICATION_ID", "\"${hostApplicationId}\""
-        buildConfigField "String", "SENTRY_DSN", "\"${sentryDsn}\""
+        buildConfigField "String", "FIREBASE_PROJECT_ID", "\"${firebaseProjectId}\""
 
         consumerProguardFiles 'proguard-rules.pro'
     }
@@ -128,13 +128,4 @@ afterEvaluate {
     }
     android.sourceSets.main.java.srcDirs += 'build/generated/java'
     preBuild.dependsOn generatePrefs
-
-    tasks.register("generateShortcuts") {
-        def out = file('build/generated/templateRes/xml/lorie_shortcuts.xml')
-        out.getParentFile().exists() || out.getParentFile().mkdirs()
-        out.text = file('src/main/templates/xml/shortcuts.xml').text
-                .replace('@@APPLICATION_ID@@', hostApplicationId)
-    }
-    android.sourceSets.main.res.srcDirs += 'build/generated/templateRes'
-    preBuild.dependsOn generateShortcuts
 }

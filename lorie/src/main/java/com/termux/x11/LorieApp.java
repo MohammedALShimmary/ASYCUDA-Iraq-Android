@@ -82,14 +82,14 @@ public class LorieApp extends Application {
 
         // The parts of the notification that don't depend on preferences, built once and reused as a template.
         baseNotification = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle("ASYCUDA Iraq")
+                .setContentTitle("AsyLauncher")
                 .setSmallIcon(R.drawable.ic_x11_icon)
                 .setContentText(getResources().getText(R.string.lorie_notification_content_text))
                 .setOngoing(true)
-                .setPriority(Notification.PRIORITY_MAX)
+                .setPriority(Notification.PRIORITY_LOW)
                 .setSilent(true)
                 .setShowWhen(false)
-                .setColor(0xFF607D8B)
+                .setColor(0xFF0A84FF)
                 .build();
     }
 
@@ -102,22 +102,20 @@ public class LorieApp extends Application {
     }
 
     public void onActivityResumed(MainActivity activity) {
-        notificationManager.notify(NOTIFICATION_ID, buildNotification(activity));
+        // AsycudaKeepAliveService already provides the single localized foreground notification.
+        if (notificationManager != null) {
+            notificationManager.cancel(NOTIFICATION_ID);
+        }
     }
 
     public void onActivityPaused() {
-        // Keep persistent notification active while backgrounded so Android does not throttle network/JVM
+        // Keep AsycudaKeepAliveService foreground notification active while backgrounded
     }
 
     void refreshNotificationIfShown() {
-        MainActivity activity = MainActivity.getFocusedOrAnyInstance();
-        if (activity == null)
-            return;
-        for (StatusBarNotification notification : notificationManager.getActiveNotifications())
-            if (notification.getId() == NOTIFICATION_ID) {
-                notificationManager.notify(NOTIFICATION_ID, buildNotification(activity));
-                return;
-            }
+        if (notificationManager != null) {
+            notificationManager.cancel(NOTIFICATION_ID);
+        }
     }
 
     private Notification buildNotification(MainActivity activity) {
@@ -146,7 +144,7 @@ public class LorieApp extends Application {
                 boolean sameConnection = binder.equals(activeService) || binder.equals(pendingConnection);
                 if (!sameConnection && ((activeService != null && activeService.isBinderAlive()) || (pendingConnection != null && pendingConnection.isBinderAlive()))) {
                     try {
-                        ICmdEntryInterface.Stub.asInterface(binder).reportFatalError("Termux:X11 already has an active X server connection.");
+                        ICmdEntryInterface.Stub.asInterface(binder).reportFatalError("AsyLauncher already has an active X server connection.");
                     } catch (RemoteException ignored) {}
                     break;
                 }

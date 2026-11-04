@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Reproducible Build Script for ASYCUDA World Android Java Bridge Archives
+# Reproducible Build Script for AsyLauncher (Launcher for ASYCUDA) Java Bridge Archives
 # ==============================================================================
 # Compiles the open-source Java bridge sources in java-bridge/ into:
 #   1. build/00_bootpatch.jar  (java.awt.Desktop bridge for OpenJDK 8 on Android)

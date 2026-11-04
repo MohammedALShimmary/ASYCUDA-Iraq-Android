@@ -335,23 +335,42 @@ public class LorieView extends SurfaceView implements InputStub {
         updateViewport();
     }
 
+    private boolean mSoftKeyboardVisible = false;
+
+    public void onImeVisibilityChanged(boolean visible) {
+        mSoftKeyboardVisible = visible;
+    }
+
     /** Shows or hides the soft keyboard for this view, the same way focusing an editable field would. */
     public void setKeyboardVisible(boolean visible) {
+        mSoftKeyboardVisible = visible;
         if (visible) {
             requestFocus();
+            if (activity != null && activity.getWindow() != null) {
+                androidx.core.view.WindowCompat.getInsetsController(activity.getWindow(), this)
+                        .show(androidx.core.view.WindowInsetsCompat.Type.ime());
+            }
             mIMM.showSoftInput(this, 0);
-        } else
+        } else {
+            if (activity != null && activity.getWindow() != null) {
+                androidx.core.view.WindowCompat.getInsetsController(activity.getWindow(), this)
+                        .hide(androidx.core.view.WindowInsetsCompat.Type.ime());
+            }
             mIMM.hideSoftInputFromWindow(getWindowToken(), 0);
+        }
     }
 
     public void toggleKeyboardVisible() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsets insets = getRootWindowInsets();
-            setKeyboardVisible(insets == null || !insets.isVisible(WindowInsets.Type.ime()));
-        } else {
-            requestFocus();
-            mIMM.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+        boolean currentlyVisible = mSoftKeyboardVisible || (activity != null && activity.isImeCurrentlyVisible());
+        if (!currentlyVisible && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsets insets = (activity != null && activity.getWindow() != null)
+                    ? activity.getWindow().getDecorView().getRootWindowInsets()
+                    : getRootWindowInsets();
+            if (insets != null && insets.isVisible(WindowInsets.Type.ime())) {
+                currentlyVisible = true;
+            }
         }
+        setKeyboardVisible(!currentlyVisible);
     }
 
     void getDimensionsFromSettings(int width, int height) {

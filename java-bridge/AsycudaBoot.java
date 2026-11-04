@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2026 Mohammed Ammar Hussein (@MohammedALShimmary)
- * Original Java bridge code authored for ASYCUDA Iraq Android.
+ * Original Java bridge code authored for AsyLauncher (Launcher for ASYCUDA).
  * Licensed under GNU GPL-3.0; see the repository LICENSE file and java-bridge/ATTRIBUTION-TERMS.md.
  */
 package asycuda;
@@ -13,7 +13,6 @@ import java.io.*;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.Permission;
@@ -38,8 +37,8 @@ import javax.swing.text.JTextComponent;
 public class AsycudaBoot {
 
     private static final String PRINTER_NAME = "ASYCUDA_PDF_Printer";
-    private static final String DEFAULT_TMP_DIR = "/data/data/iq.asycuda/files/tmp";
-    private static final String DEFAULT_PRINTS_DIR = "/data/data/iq.asycuda/files/prints";
+    private static final String DEFAULT_TMP_DIR = "/data/data/io.github.mohammedalshimmary.asylauncher/files/tmp";
+    private static final String DEFAULT_PRINTS_DIR = "/data/data/io.github.mohammedalshimmary.asylauncher/files/prints";
     private static final String DEFAULT_WORKSPACE_DIR = DEFAULT_PRINTS_DIR;
     private static final String PDF_MIME = "application/pdf";
     private static final String JPG_MIME = "image/jpeg";
@@ -975,7 +974,7 @@ public class AsycudaBoot {
     }
 
     private static void waitForX11DisplaySocket() {
-        File x0Socket = new File("/data/data/iq.asycuda/files/usr/tmp/.X11-unix/X0");
+        File x0Socket = new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/usr/tmp/.X11-unix/X0");
         for (int i = 0; i < 50; i++) {
             if (x0Socket.exists()) {
                 return;
@@ -1450,7 +1449,7 @@ public class AsycudaBoot {
      */
     private static void installMofHttpsTrustStore() {
         try {
-            File crtFile = new File("/data/data/iq.asycuda/files/client/mof.crt");
+            File crtFile = new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/mof.crt");
             if (!crtFile.isFile()) {
                 crtFile = new File("mof.crt");
             }
@@ -1460,7 +1459,7 @@ public class AsycudaBoot {
             java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
             File defaultCacerts = new File(System.getProperty("java.home", ""), "lib/security/cacerts");
             if (!defaultCacerts.isFile()) {
-                defaultCacerts = new File("/data/data/iq.asycuda/files/jre8/jre/lib/security/cacerts");
+                defaultCacerts = new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/jre8/jre/lib/security/cacerts");
             }
             if (defaultCacerts.isFile()) {
                 try (FileInputStream cacertsIn = new FileInputStream(defaultCacerts)) {
@@ -1476,7 +1475,7 @@ public class AsycudaBoot {
                     ks.setCertificateEntry("mof_" + (idx++), cert);
                 }
             }
-            File outTrustStore = new File("/data/data/iq.asycuda/files/usr/tmp/mof_cacerts.jks");
+            File outTrustStore = new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/usr/tmp/mof_cacerts.jks");
             if (outTrustStore.getParentFile() != null && outTrustStore.getParentFile().isDirectory()) {
                 if (outTrustStore.exists()) {
                     outTrustStore.setWritable(true, true);
@@ -1524,7 +1523,7 @@ public class AsycudaBoot {
                     }
                 }
             }
-            File hostsFile = new File("/data/data/iq.asycuda/files/usr/glibc/etc/hosts");
+            File hostsFile = new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/usr/glibc/etc/hosts");
             if (hostsFile.exists()) {
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(hostsFile), StandardCharsets.UTF_8))) {
                     String line;
@@ -1559,7 +1558,7 @@ public class AsycudaBoot {
             }
             File[] candidates = new File[] {
                 new File("AWIQWorld.jnlp"),
-                new File("/data/data/iq.asycuda/files/client/AWIQWorld.jnlp")
+                new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/client/AWIQWorld.jnlp")
             };
             for (File f : candidates) {
                 if (f.exists() && f.isFile()) {
@@ -1775,7 +1774,7 @@ public class AsycudaBoot {
         if (rawPath == null || rawPath.isEmpty()) return "";
         String slash = rawPath.replace('\\', '/').trim();
         if (!slash.startsWith("/")) {
-            slash = "/data/data/iq.asycuda/files/client/" + slash;
+            slash = "/data/data/io.github.mohammedalshimmary.asylauncher/files/client/" + slash;
         }
         String[] parts = slash.split("/");
         java.util.List<String> stack = new ArrayList<String>(parts.length);
@@ -1808,7 +1807,7 @@ public class AsycudaBoot {
         try {
             File f = file.startsWith("/")
                     ? new File(file)
-                    : new File("/data/data/iq.asycuda/files/client", file);
+                    : new File("/data/data/io.github.mohammedalshimmary.asylauncher/files/client", file);
             return f.getCanonicalPath().replace('\\', '/').toLowerCase(Locale.US);
         } catch (Throwable ignored) {
             return normalizeUnixPath(file);
@@ -1825,8 +1824,8 @@ public class AsycudaBoot {
                 || (norm.startsWith("/proc/") && (norm.endsWith("/environ") || norm.endsWith("/mem") || norm.endsWith("/maps") || norm.endsWith("/cmdline")))
                 || norm.contains("/shared_prefs")
                 || norm.contains("legal_consent_receipt.json")
-                || norm.contains("known_errors_catalog.json")
-                || norm.contains("known-errors-catalog.json")
+                || norm.contains("known_errors_catalog")
+                || norm.contains("known-errors-catalog")
                 || norm.contains("/databases/")
                 || norm.endsWith("/databases")
                 || norm.contains("/datastore/")
@@ -1853,13 +1852,14 @@ public class AsycudaBoot {
                 || norm.contains("/files/client/classpath.txt")
                 || norm.contains("/files/client/awiqworld.jnlp")
                 || norm.contains("/files/client/mof.crt")
-                || norm.contains("known_errors_catalog.json")
-                || norm.contains("known-errors-catalog.json")
+                || norm.contains("known_errors_catalog")
+                || norm.contains("known-errors-catalog")
                 || norm.contains("/mof_cacerts.jks")
                 || norm.endsWith(".jks")
                 || norm.endsWith(".crt")
                 || norm.contains("/files/.extracted_")
                 || norm.contains("/files/.bootpatch_")
+                || norm.contains(".asy_runtime")
                 || norm.contains("/files/jre8")
                 || (norm.contains("/files/usr") && !norm.contains("/files/usr/tmp"))
                 || norm.contains("/cache/updates")

@@ -147,9 +147,9 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
         super.onResume();
         IntentFilter filter = new IntentFilter(ACTION_PREFERENCES_CHANGED);
         if (SDK_INT >= Build.VERSION_CODES.O)
-            registerReceiver(receiver, filter, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST", null, SDK_INT >= Build.VERSION_CODES.TIRAMISU ? RECEIVER_NOT_EXPORTED : 0);
+            registerReceiver(receiver, filter, "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST", null, SDK_INT >= Build.VERSION_CODES.TIRAMISU ? RECEIVER_NOT_EXPORTED : 0);
         else
-            registerReceiver(receiver, filter, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST", null);
+            registerReceiver(receiver, filter, "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST", null);
     }
 
     @Override
@@ -556,7 +556,7 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
             broadcast.putExtra("key", key);
             broadcast.putExtra("fromBroadcast", true);
             broadcast.setPackage(requireContext().getPackageName());
-            requireContext().sendBroadcast(broadcast, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
+            requireContext().sendBroadcast(broadcast, "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST");
 
             return true;
         }
@@ -725,7 +725,7 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
                         intent0.putExtra("key", key);
                         intent0.putExtra("fromBroadcast", true);
                         intent0.setPackage(context.getPackageName());
-                        context.sendBroadcast(intent0, "iq.asycuda.PERMISSION_INTERNAL_BROADCAST");
+                        context.sendBroadcast(intent0, "io.github.mohammedalshimmary.asylauncher.PERMISSION_INTERNAL_BROADCAST");
                     }
                     edit.commit();
                 }

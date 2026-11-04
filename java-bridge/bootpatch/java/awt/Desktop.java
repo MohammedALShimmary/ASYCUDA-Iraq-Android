@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2026 Mohammed Ammar Hussein (@MohammedALShimmary)
- * Original Java bridge code authored for ASYCUDA Iraq Android.
+ * Original Java bridge code authored for AsyLauncher (Launcher for ASYCUDA).
  * Licensed under GNU GPL-3.0; see the repository LICENSE file and java-bridge/ATTRIBUTION-TERMS.md.
  */
 package java.awt;

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 4-way drag & rotate indicator matching Cupertino/Material dark theme -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M12,2L8.5,5.5H11V11H5.5V8.5L2,12L5.5,15.5V13H11V18.5H8.5L12,22L15.5,18.5H13V13H18.5V15.5L22,12L18.5,8.5V11H13V5.5H15.5L12,2Z" />
+</vector>

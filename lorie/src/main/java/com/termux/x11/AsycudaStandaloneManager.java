@@ -7,9 +7,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.Signature;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -54,7 +52,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -77,7 +74,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -94,13 +90,11 @@ import javax.net.ssl.TrustManagerFactory;
 @SuppressWarnings({"java:S3776", "java:S1141", "java:S2696", "java:S135", "java:S1075", "java:S1192", "java:S3063", "java:S9391", "java:S9439"})
 public class AsycudaStandaloneManager {
 
-    private static final String MOF_CODEBASE_URL = "https://asy.mof.gov.iq/aw/";
     private static final String MOF_JNLP_URL     = "https://asy.mof.gov.iq/aw/AWIQWorld.jnlp";
-    private static final String GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/latest";
     public static final int REQ_PICK_FEEDBACK_IMAGE = 47892;
     public static final int REQ_PICK_WORKSPACE_FILE = 47893;
 
-    private static final String FILE_PROVIDER_AUTH = "iq.asycuda.fileprovider";
+    private static final String FILE_PROVIDER_AUTH = "io.github.mohammedalshimmary.asylauncher.fileprovider";
     private static final String SANS_SERIF_MEDIUM = "sans-serif-medium";
     private static final String FLOATING_PILL_TAG = "asycuda_floating_pill";
     private static final String PREF_OPACITY_EK_BAR = "opacityEKBar";
@@ -109,17 +103,7 @@ public class AsycudaStandaloneManager {
     private static final String ACTION_OPEN_PREFS = "open preferences";
     private static final String ACTION_NO_ACTION = "no action";
     private static final String MIME_PDF = "application/pdf";
-    private static final String MIME_JSON = "application/json";
     private static final String MIME_ZIP = "application/zip";
-    private static final String KEY_CONTENT_TYPE = "content_type";
-    private static final String KEY_ATTACHMENT_TYPE = "attachment_type";
-    private static final String VAL_EVENT_ATTACHMENT = "event.attachment";
-    private static final String TYPE_ATTACHMENT = "attachment";
-    private static final String KEY_FILENAME = "filename";
-    private static final String KEY_LENGTH = "length";
-    private static final String KEY_EVENT_ID = "event_id";
-    private static final String KEY_DEVICE_MODEL = "device_model";
-    private static final String KEY_APP_VERSION = "app_version";
     private static final String BOOT_JAR_REL = "jars/00_boot.jar";
     private static final String JNLP_JAR_REL = "jars/00_jnlp.jar";
     private static final String BOOTPATCH_JAR_NAME = "00_bootpatch.jar";
@@ -240,6 +224,7 @@ public class AsycudaStandaloneManager {
     private static volatile Runnable sOnVaultImportCallback = null;
     private static volatile boolean sTermsDialogShowing = false;
     private static volatile boolean sWhatsNewDialogShowing = false;
+    private static volatile boolean sTutorialDialogShowing = false;
 
     private FrameLayout mSplashOverlay;
     private TextView mSplashStatus;
@@ -475,7 +460,7 @@ public class AsycudaStandaloneManager {
     public static void onSingleBackPressForExit(MainActivity activity) {
         if (activity == null) return;
         UI.post(() -> Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                "Press Back again to exit ASYCUDA",
+                "Press Back again to exit AsyLauncher",
                 "اضغط زر الرجوع مرة أخرى للخروج من التطبيق",
                 "دووبارە دوگمەی گەڕانەوە دابگرە بۆ دەرچوون لە بەرنامە"), Toast.LENGTH_SHORT).show());
     }
@@ -635,6 +620,10 @@ public class AsycudaStandaloneManager {
             return;
         }
 
+        // Once Terms & Conditions are accepted, run the quiet once-per-session Cloud Firestore sync
+        // (News & Release Alerts, Known Errors Catalog, and once-per-day Zero-PII Anonymous Heartbeat).
+        AsycudaFirebaseManager.syncOnStartup(activity);
+
         // Gate 0.5: Post-Install / Post-Update In-App Changelog Modal ("What's New")
         if (AsycudaMaterialUi.shouldShowWhatsNew(activity)) {
             if (!sWhatsNewDialogShowing) {
@@ -647,6 +636,30 @@ public class AsycudaStandaloneManager {
                         });
                     } catch (Exception t) {
                         sWhatsNewDialogShowing = false;
+                    }
+                });
+            }
+            return;
+        }
+
+        // Gate 0.75: First-Launch Interactive Input Mode & Controls Tutorial
+        // Runs BEFORE bootstrapEnvironmentAndStart so no network or diagnostic popups can interrupt the tutorial;
+        // as soon as the user finishes (or skips) the tutorial, the ASYCUDA session starts immediately.
+        if (!AsycudaTutorialOverlay.isTutorialCompleted(activity)) {
+            updateStatus(AsycudaMaterialUi.tr(activity,
+                    "Choose your input method & complete the quick guide to start...",
+                    "اختر طريقة التحكم وأكمل الدليل التفاعلي لبدء الجلسة...",
+                    "شێوازی کۆنترۆڵکردن هەڵبژێرە بۆ دەستپێکردن..."));
+            if (!sTutorialDialogShowing) {
+                sTutorialDialogShowing = true;
+                UI.post(() -> {
+                    try {
+                        AsycudaTutorialOverlay.showBeforeSessionStartup(activity, () -> {
+                            sTutorialDialogShowing = false;
+                            checkPermissionsAndProceed(activity);
+                        });
+                    } catch (Exception t) {
+                        sTutorialDialogShowing = false;
                     }
                 });
             }
@@ -708,9 +721,9 @@ public class AsycudaStandaloneManager {
 
         TextView title = new TextView(activity);
         title.setText(AsycudaMaterialUi.tr(activity,
-                "ASYCUDA World — Republic of Iraq",
-                "نظام أسيكودا العالمي — جمهورية العراق",
-                "سیستەمی ئەسیکۆدای جیهانی — کۆماری عێراق"));
+                "AsyLauncher — Launcher for ASYCUDA",
+                "AsyLauncher — مشغل أسيكودا",
+                "AsyLauncher — کارپێکەری ئەسیکۆدا"));
         title.setTextColor(AsycudaMaterialUi.TEXT_PRIMARY);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
         title.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
@@ -719,9 +732,9 @@ public class AsycudaStandaloneManager {
 
         TextView sub = new TextView(activity);
         sub.setText(AsycudaMaterialUi.tr(activity,
-                "General Commission for Customs • Client " + AsycudaMaterialUi.getAppVersionLabel(activity),
-                "الهيئة العامة للكمارك • الإصدار " + AsycudaMaterialUi.getAppVersionLabel(activity),
-                "دەستەی گشتیی گومرگ • وەشانی " + AsycudaMaterialUi.getAppVersionLabel(activity)));
+                "Independent Native Compatibility Bridge (Unofficial) • " + AsycudaMaterialUi.getAppVersionLabel(activity),
+                "جسر التوافق الأصلي لأندرويد (تطبيق مستقل غير حكومي) • " + AsycudaMaterialUi.getAppVersionLabel(activity),
+                "پردی گونجاندنی ئەندرۆید (بەرنامەی سەربەخۆی نافەرمی) • " + AsycudaMaterialUi.getAppVersionLabel(activity)));
         sub.setTextColor(AsycudaMaterialUi.TEXT_SECONDARY);
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         sub.setGravity(Gravity.CENTER);
@@ -816,14 +829,15 @@ public class AsycudaStandaloneManager {
             File homeDir = new File(filesDir, "home");
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
-            File runtimeMarker = new File(filesDir, ".extracted_v3_2");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_2_0");
+            File runtimeMarker = new File(filesDir, ".extracted_v4_3_0");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_3_0");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
                 deleteRecursive(new File(filesDir, "jre8"));
                 deleteQuietly(new File(filesDir, ".extracted_v3"));
                 deleteQuietly(new File(filesDir, ".extracted_v3_1"));
+                deleteQuietly(new File(filesDir, ".extracted_v3_2"));
 
                 updateStatus(AsycudaMaterialUi.tr(activity,
                         "Setting up the Java environment (1/2)...",
@@ -833,9 +847,9 @@ public class AsycudaStandaloneManager {
 
                 if (!new File(clientDir, BOOTPATCH_JAR_NAME).exists()) {
                     updateStatus(AsycudaMaterialUi.tr(activity,
-                            "Unpacking ASYCUDA World components (2/2)...",
-                            "جاري استخراج مكونات نظام أسيكودا (2/2)...",
-                            "دەرهێنانی پێکهاتەکانی سیستەمی ئەسیکۆدا (2/2)..."));
+                            "Unpacking AsyLauncher bridge components (2/2)...",
+                            "جاري استخراج مكونات المشغل (2/2)...",
+                            "دەرهێنانی پێکهاتەکانی کارپێکەر (2/2)..."));
                     ensureDir(clientDir);
                     extractTarXzAsset(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
                 }
@@ -949,13 +963,14 @@ public class AsycudaStandaloneManager {
                 return;
             }
 
-            // Background Startup App Update Check (checks GitHub releases without blocking startup)
+            // Background Startup Cloud Sync (checks Firestore announcements, error catalog & daily anonymous heartbeat)
             checkStartupAppUpdateQuietly(activity);
 
             ensureDir(x11UnixDir);
             ensureDir(homeDir);
             ensureDir(printsDir);
             ensureDir(workspaceDir);
+            ensureRuntimeCwdSymlinks(activity, filesDir, clientDir, usrTmpDir);
 
             Os.setenv("HOME", homeDir.getAbsolutePath(), true);
             Os.setenv("PREFIX", new File(filesDir, "usr").getAbsolutePath(), true);
@@ -970,9 +985,9 @@ public class AsycudaStandaloneManager {
             ensureX11ServerSocketReady(activity, filesDir);
 
             updateStatus(AsycudaMaterialUi.tr(activity,
-                    "Starting ASYCUDA World Iraq...",
-                    "جاري تشغيل نظام أسيكودا العالمي...",
-                    "پێکردنی سیستەمی ئەسیکودای جیهانی..."));
+                    "Starting AsyLauncher session...",
+                    "جاري تشغيل جلسة المشغل...",
+                    "پێکردنی دانیشتنی کارپێکەر..."));
             launchAsycudaJvm(activity);
 
         } catch (InterruptedException ie) {
@@ -1030,8 +1045,6 @@ public class AsycudaStandaloneManager {
         }
     }
 
-    private static final String GITHUB_KNOWN_ERRORS_CATALOG_API =
-            "https://api.github.com/repos/MohammedALShimmary/ASYCUDA-Iraq-Android/contents/java-bridge/known-errors-catalog.json";
     private static final String FILE_KNOWN_ERRORS_CATALOG = "known_errors_catalog.json";
     private static final String ASSET_KNOWN_ERRORS_CATALOG = "known-errors-catalog.json";
     private static final Set<String> ALLOWED_VERIFIED_FIX_IDS = new HashSet<>(java.util.Arrays.asList(
@@ -1050,120 +1063,24 @@ public class AsycudaStandaloneManager {
     ));
 
     /**
-     * Checks GitHub Releases on launch in the background.
+     * Triggers Cloud Firestore startup sync in the background.
      */
     private void checkStartupAppUpdateQuietly(MainActivity activity) {
         if (!sStartupAppCheckDone.compareAndSet(false, true)) return;
-        new Thread(() -> {
-            HttpURLConnection ghConn = null;
-            try {
-                String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
-                ghConn = (HttpURLConnection) new URL(GITHUB_LATEST_RELEASE_API).openConnection();
-                ghConn.setConnectTimeout(4000);
-                ghConn.setReadTimeout(6000);
-                ghConn.setRequestProperty("Accept", "application/vnd.github+json");
-                ghConn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android/" + currentVer);
-                if (ghConn.getResponseCode() == 200) {
-                    String jsonStr;
-                    try (InputStream in = ghConn.getInputStream();
-                         ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-                        jsonStr = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-                    }
-                    JSONObject rel = new JSONObject(jsonStr);
-                    String tagName = rel.optString("tag_name", "");
-                    if (isRemoteVersionNewer(tagName, currentVer)) {
-                        UI.postDelayed(() -> {
-                            MainActivity act = sCurrentActivity != null ? sCurrentActivity : activity;
-                            if (act != null && !act.isFinishing()) {
-                                runUnifiedUpdateCheckModal(act);
-                            }
-                        }, 1500);
-                    }
-                }
-            } catch (Exception ignored) {
-                // Ignore offline errors during background startup update check
-            } finally {
-                if (ghConn != null) ghConn.disconnect();
-            }
-        }, "Asycuda-StartupAppUpdateCheck").start();
+        AsycudaFirebaseManager.syncOnStartup(activity);
     }
 
     /**
-     * On-Demand Read-Only Resync of {@code java-bridge/known-errors-catalog.json}
-     * via the official GitHub Contents API ({@code api.github.com}). Only invoked when the user
-     * explicitly taps the Resync button inside the Diagnostics modal. Strictly validates that the
-     * JSON is data-only and references only allowlisted {@code verifiedFixId} constants.
+     * On-Demand Read-Only Resync of the Known-Errors Catalog from Cloud Firestore
+     * ({@code app_config/known_errors_catalog}). Only invoked when the user explicitly taps
+     * the Resync button inside the Diagnostics modal.
      */
     private boolean syncKnownErrorsCatalogOnDemand(Context appCtx) {
         if (appCtx == null) return false;
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(GITHUB_KNOWN_ERRORS_CATALOG_API);
-            String lowPath = url.getPath() != null ? url.getPath().toLowerCase(Locale.US) : "";
-            if (!SCHEME_HTTPS.equalsIgnoreCase(url.getProtocol())
-                    || !"api.github.com".equalsIgnoreCase(url.getHost())
-                    || !lowPath.startsWith("/repos/mohammedalshimmary/asycuda-iraq-android/")) {
-                return false;
-            }
-            android.content.SharedPreferences sp = appCtx.getSharedPreferences("asy_catalog_sync", Context.MODE_PRIVATE);
-            String cachedEtag = sp.getString("etag", "");
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(7000);
-            conn.setUseCaches(false);
-            conn.setRequestProperty("Accept", "application/vnd.github.raw+json");
-            conn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android");
-            if (cachedEtag != null && !cachedEtag.isEmpty()) {
-                conn.setRequestProperty("If-None-Match", cachedEtag);
-            }
-            int code = conn.getResponseCode();
-            if (code == 304) {
-                return true;
-            }
-            if (code == 200) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                try (InputStream in = conn.getInputStream()) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    int total = 0;
-                    while ((n = in.read(buf)) != -1) {
-                        total += n;
-                        if (total > 262144) {
-                            // Reject abnormally large catalog (> 256 KB)
-                            return false;
-                        }
-                        bos.write(buf, 0, n);
-                    }
-                }
-                String jsonStr = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-                if (validateKnownErrorsCatalogJson(jsonStr)) {
-                    File catalogFile = new File(appCtx.getFilesDir(), FILE_KNOWN_ERRORS_CATALOG);
-                    setWritableOwnerOnly(catalogFile);
-                    try (FileOutputStream fos = new FileOutputStream(catalogFile)) {
-                        fos.write(jsonStr.getBytes(StandardCharsets.UTF_8));
-                        fos.getFD().sync();
-                    }
-                    setReadableOwnerOnly(catalogFile);
-                    String newEtag = conn.getHeaderField("ETag");
-                    if (newEtag != null && !newEtag.isEmpty()) {
-                        sp.edit().putString("etag", newEtag).apply();
-                    }
-                    return true;
-                }
-            }
-        } catch (Exception ignored) {
-            // Offline or GitHub unreachable — app uses local cached or bundled APK catalog
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-        return false;
+        return AsycudaFirebaseManager.fetchAndSyncKnownErrorsCatalog(appCtx);
     }
 
-    private static boolean validateKnownErrorsCatalogJson(String jsonStr) {
+    static boolean validateKnownErrorsCatalogJson(String jsonStr) {
         if (jsonStr == null || jsonStr.isEmpty() || jsonStr.length() > 262144) return false;
         try {
             JSONObject root = new JSONObject(jsonStr);
@@ -1719,15 +1636,15 @@ public class AsycudaStandaloneManager {
                     modalCtrl.setMofUpdateStatus("Server unreachable, using " + cached + " local files",
                             errDetail, 0, 0, false);
                 }
-                // Only show the startup diagnostic modal here if all local manifest JARs already exist
-                // (otherwise bootstrapEnvironmentAndStart handles initial_package_download right after return)
-                if (sCurrentActivity != null && (areAllManifestJarsPresent(clientDir) || modalCtrl != null)) {
+                // Only show the diagnostic modal here during an explicit manual update check
+                // (during automatic startup, if cached manifest JARs exist we launch with cached JARs and let the JVM session monitor handle any real connection failure)
+                if (sCurrentActivity != null && (manualForceCheck || modalCtrl != null)) {
                     MainActivity act = sCurrentActivity;
                     diagnoseAndShowUniversalNetworkModal(
                             act,
-                            manualForceCheck ? "mof_jar_sync" : "startup_mof_unreachable",
+                            "mof_jar_sync",
                             err,
-                            "EXIT CODE = 12 | SERVER NOT FOUND | " + errDetail,
+                            "HTTPS JNLP/JAR sync failed: " + errDetail,
                             () -> restartAsycudaSession(act));
                 }
                 Thread.sleep(300);
@@ -1942,6 +1859,47 @@ public class AsycudaStandaloneManager {
         // Tracked JVM child processes are terminated cleanly via sJavaProcess.destroyForcibly().
     }
 
+    /**
+     * Maintains the 27-byte package-agnostic runtime symlink (/proc/self/cwd/.asy_runtime -> filesDir)
+     * across clientDir, filesDir, usrTmpDir, and cacheDir so the embedded ARM64 glibc/X11/OpenJDK
+     * binaries resolve all internal /usr and /jre8 paths cleanly under any Android applicationId.
+     */
+    private void ensureRuntimeCwdSymlinks(MainActivity activity, File filesDir, File clientDir, File usrTmpDir) {
+        try {
+            ensureDir(filesDir);
+            ensureDir(clientDir);
+            ensureDir(usrTmpDir);
+            String target = filesDir.getAbsolutePath();
+            File[] parents = new File[] {
+                clientDir,
+                filesDir,
+                usrTmpDir,
+                activity != null ? activity.getCacheDir() : null
+            };
+            for (File parent : parents) {
+                if (parent == null) continue;
+                ensureDir(parent);
+                File link = new File(parent, ".asy_runtime");
+                try {
+                    Os.lstat(link.getAbsolutePath());
+                    String existing = Os.readlink(link.getAbsolutePath());
+                    if (!target.equals(existing)) {
+                        deleteQuietly(link);
+                        Os.symlink(target, link.getAbsolutePath());
+                    }
+                } catch (Exception notFound) {
+                    try {
+                        Os.symlink(target, link.getAbsolutePath());
+                    } catch (Exception ignored) {
+                        // Best-effort symlink creation
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Best-effort symlink initialization
+        }
+    }
+
     private void ensureX11ServerSocketReady(MainActivity activity, File filesDir) throws InterruptedException {
         File usrTmpDir = new File(filesDir, DIR_USR_TMP);
         File x11UnixDir = new File(usrTmpDir, ".X11-unix");
@@ -2033,7 +1991,7 @@ public class AsycudaStandaloneManager {
                 ensureDir(printsDir);
                 ensureDir(workspaceDir);
 
-                // Keep user.home on fast internal flash (/data/data/iq.asycuda/files/home)
+                // Keep user.home on fast internal flash (/data/data/io.github.mohammedalshimmary.asylauncher/files/home)
                 // so ASYCUDA's .SOClassCache (178 MB of small DB files) avoids Android's slow FUSE layer
                 File fastInternalHome = new File(filesDir, "home");
                 ensureDir(fastInternalHome);
@@ -2068,15 +2026,8 @@ public class AsycudaStandaloneManager {
                     }
                 }
 
-                List<String> cmd = new ArrayList<>();
-                if (nativeLdLinux.exists()) {
-                    cmd.add(nativeLdLinux.getAbsolutePath());
-                    cmd.add("--argv0");
-                    cmd.add(javaBin.getAbsolutePath());
-                }
-                cmd.add(javaBin.getAbsolutePath());
-                cmd.add("-Dasycuda.running=1");
-                cmd.add("-Xbootclasspath/p:" + new File(clientDir, BOOTPATCH_JAR_NAME).getAbsolutePath());
+                ensureRuntimeCwdSymlinks(activity, filesDir, clientDir, new File(filesDir, DIR_USR_TMP));
+
                 String hardenedLibPath = new File(jreDir, "jre/lib/aarch64").getAbsolutePath() + ":"
                         + new File(jreDir, "jre/lib/aarch64/jli").getAbsolutePath() + ":"
                         + new File(jreDir, "jre/lib/aarch64/server").getAbsolutePath() + ":"
@@ -2084,6 +2035,19 @@ public class AsycudaStandaloneManager {
                         + new File(jreDir, "lib/aarch64/jli").getAbsolutePath() + ":"
                         + new File(jreDir, "lib/aarch64/server").getAbsolutePath() + ":"
                         + new File(filesDir, "usr/glibc/lib").getAbsolutePath();
+
+                List<String> cmd = new ArrayList<>();
+                if (nativeLdLinux.exists()) {
+                    cmd.add(nativeLdLinux.getAbsolutePath());
+                    cmd.add("--inhibit-cache");
+                    cmd.add("--library-path");
+                    cmd.add(hardenedLibPath);
+                    cmd.add("--argv0");
+                    cmd.add(javaBin.getAbsolutePath());
+                }
+                cmd.add(javaBin.getAbsolutePath());
+                cmd.add("-Dasycuda.running=1");
+                cmd.add("-Xbootclasspath/p:" + new File(clientDir, BOOTPATCH_JAR_NAME).getAbsolutePath());
                 cmd.add("-Djava.library.path=" + hardenedLibPath);
                 cmd.add("-Xms256m");
                 cmd.add("-Xmx1280m");
@@ -2147,8 +2111,14 @@ public class AsycudaStandaloneManager {
 
         try {
             Thread.sleep(2200);
+            if (sJavaProcess != proc) {
+                return;
+            }
             if (!isProcessAlive(proc)) {
                 int code = proc.exitValue();
+                if (sJavaProcess != proc || code == 143 || code == 137) {
+                    return;
+                }
                 String errTail = readTail(logFile, 1200);
                 updateStatus("JVM exited (code " + code + "):\n" + errTail);
                 if (code != 0 || isAbnormalJvmExit(code, errTail)) {
@@ -2161,6 +2131,7 @@ public class AsycudaStandaloneManager {
                 }
             } else {
                 hideSplashDelayed(600);
+                scheduleFirstRunTutorialIfNeeded(activity);
                 watchJvmProcessForNetworkExit(activity, proc, logFile);
             }
         } catch (InterruptedException ie) {
@@ -2168,6 +2139,15 @@ public class AsycudaStandaloneManager {
         } catch (Exception t) {
             updateStatus("JVM status error: " + t.getMessage());
         }
+    }
+
+    private void scheduleFirstRunTutorialIfNeeded(final MainActivity activity) {
+        if (activity == null) return;
+        UI.postDelayed(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            AsycudaFirebaseManager.syncOnStartup(activity);
+            AsycudaTutorialOverlay.showIfNeededOnFirstSession(activity);
+        }, 1100);
     }
 
     private static boolean isAbnormalJvmExit(int exitCode, String logTail) {
@@ -2216,7 +2196,7 @@ public class AsycudaStandaloneManager {
                     Thread.sleep(800);
                 }
                 int exitCode = proc.waitFor();
-                if (sJavaProcess != proc) {
+                if (sJavaProcess != proc || exitCode == 143 || exitCode == 137) {
                     // Process was intentionally restarted or shut down by the user
                     return;
                 }
@@ -2327,6 +2307,19 @@ public class AsycudaStandaloneManager {
 
     private org.json.JSONArray loadKnownErrorsCatalogEntries(Context ctx) {
         if (ctx == null) return null;
+        // 0. Try Cloud Firestore synced catalog (/files/known-errors-catalog-remote.json)
+        File firestoreFile = new File(ctx.getFilesDir(), "known-errors-catalog-remote.json");
+        if (firestoreFile.isFile() && firestoreFile.length() > 20 && firestoreFile.length() <= 262144) {
+            try {
+                byte[] bytes = readFileBytes(firestoreFile);
+                String json = new String(bytes, StandardCharsets.UTF_8);
+                if (validateKnownErrorsCatalogJson(json)) {
+                    return new JSONObject(json).optJSONArray("entries");
+                }
+            } catch (Exception ignored) {
+                // Fall back to GitHub-synced or bundled catalog
+            }
+        }
         // 1. Try synced catalog in private internal storage (/files/known_errors_catalog.json)
         File syncedFile = new File(ctx.getFilesDir(), FILE_KNOWN_ERRORS_CATALOG);
         if (syncedFile.isFile() && syncedFile.length() > 0 && syncedFile.length() <= 262144) {
@@ -2610,11 +2603,11 @@ public class AsycudaStandaloneManager {
     }
 
     /**
-     * Proposal B + Sentry Known-Issues Catalog Engine.
+     * Proposal B + Known-Issues Catalog Engine.
      * Detects, logs (with exact Java file/method/line number), and explains in clear human language
      * all known network, system, and security issues from the local/synced catalog, provides a
      * user-consented Verified Fix button, and highlights brand-new uncatalogued errors with a
-     * prompt to share to Sentry.
+     * prompt to submit a voluntary diagnostic report via Cloud Firestore.
      */
     private void diagnoseAndShowUniversalNetworkModal(
             final MainActivity activity,
@@ -2692,21 +2685,23 @@ public class AsycudaStandaloneManager {
                 // Priority 2: Match network conditions if not already matched to a system/runtime issue
                 if (matchedEntry == null) {
                     if (resolvedIp == null) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-002");
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-002");
                     } else if ((caughtException instanceof javax.net.ssl.SSLException)
                             || combinedUpper.contains("SSLHANDSHAKE") || combinedUpper.contains("CERTPATHVALIDATOR")) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-005");
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-005");
                     } else if ((caughtException instanceof SecurityException)
                             || combinedUpper.contains("BLOCKED OUTBOUND") || combinedUpper.contains("SECURITYEXCEPTION")) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-SEC-001");
-                    } else if (isDesktopMainExit12 || (!httpsOk && "initial_package_download".equals(stage))) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-003");
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-SEC-001");
+                    } else if (isDesktopMainExit12) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-003");
                     } else if (!httpsOk && areAllManifestJarsPresent(clientDir)) {
-                        matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-004");
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-004");
+                    } else if (!httpsOk && "initial_package_download".equals(stage)) {
+                        matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-003");
                     } else if (!httpsOk || "initial_package_download".equals(stage) || stage.startsWith("manual_")) {
                         matchedEntry = findCatalogEntryByKeywords(catalogEntries, combinedUpper);
                         if (matchedEntry == null) {
-                            matchedEntry = findCatalogEntryById(catalogEntries, "SENTRY-NET-007");
+                            matchedEntry = findCatalogEntryById(catalogEntries, "ASY-NET-007");
                         }
                     }
                 }
@@ -2719,7 +2714,7 @@ public class AsycudaStandaloneManager {
                 String fixedInVersion = "";
 
                 if (matchedEntry != null) {
-                    errorCodeBadge = matchedEntry.optString("badge", matchedEntry.optString("id", "SENTRY-KNOWN"));
+                    errorCodeBadge = matchedEntry.optString("badge", matchedEntry.optString("id", "ASY-KNOWN"));
                     humanTitle = AsycudaMaterialUi.tr(activity,
                             matchedEntry.optString("titleEn", "Known Issue Detected"),
                             matchedEntry.optString("titleAr", "تم رصد مشكلة معروفة"),
@@ -2735,8 +2730,8 @@ public class AsycudaStandaloneManager {
                         verifiedFixId = "OPEN_APP_UPDATE_CENTER";
                     }
                 } else {
-                    // Brand-New / Uncatalogued Error -> Extract generic human explanation & highlight Sentry share
-                    errorCodeBadge = "SENTRY-NEW-000 • UNCATALOGUED_RUNTIME_ERROR";
+                    // Brand-New / Uncatalogued Error -> Extract generic human explanation & highlight diagnostic report
+                    errorCodeBadge = "DIAG-NEW-000 • UNCATALOGUED_RUNTIME_ERROR";
                     String simpleErrName = caughtException != null
                             ? caughtException.getClass().getSimpleName()
                             : extractFirstExceptionNameFromLog(rawContextLog, stage);
@@ -2756,7 +2751,7 @@ public class AsycudaStandaloneManager {
                             + "• Network Status: " + transportName + " (Server Port :" + rmiPortLabel + ")\n\n"
                             + "What you can do right now:\n"
                             + "1. Tap the Cloud Sync button at the top of this dialog to fetch the latest Known-Issues Catalog.\n"
-                            + "2. Tap 'Share New Error to Sentry' below so our engineering team can identify this error and publish a direct fix to the catalog.\n"
+                            + "2. Tap 'Send Diagnostic Report' below so our engineering team can identify this error and publish a direct fix to the catalog.\n"
                             + "3. Or tap 'Apply Fix: Clear Temporary Cache & Restart Session' to recover immediately.",
                             "حدث خطأ غير متوقع وغير مدرج بعد في قاعدة بيانات الأعطال المعروفة:\n\n"
                             + "• نوع الخطأ المرصود: " + simpleErrName + "\n"
@@ -2765,22 +2760,22 @@ public class AsycudaStandaloneManager {
                             + "• حالة الشبكة: " + transportName + " (منفذ الخادم :" + rmiPortLabel + ")\n\n"
                             + "الخطوات المقترحة الآن:\n"
                             + "1. اضغط على زر التحديث السحابي أعلى النافذة لجلب أحدث سجل للأعطال المعروفة.\n"
-                            + "2. اضغط على زر (مشاركة الخطأ الجديد إلى Sentry) بالأسفل ليتم تسجيل هذا الخطأ في قاعدة البيانات وإضافة حل مباشر له.\n"
+                            + "2. اضغط على زر (إرسال تقرير الفحص الفني) بالأسفل ليتم تسجيل هذا الخطأ في قاعدة البيانات وإضافة حل مباشر له.\n"
                             + "3. أو اضغط على زر (مسح الملفات المؤقتة وإعادة تشغيل الجلسة) للاستئناف فوراً.",
                             "هەڵەیەکی چاوەڕواننەکراو ڕوویدا کە هێشتا لە بنکەی زانیاری تۆمار نەکراوە:\n\n"
                             + "• جۆری هەڵە: " + simpleErrName + "\n"
                             + "• وردەکاری: " + simpleErrMsg + "\n"
                             + "• شوێنی کۆد: " + primaryCodeLocation + "\n\n"
-                            + "تکایە دوگمەی (هاوبەشکردنی هەڵەی نوێ بۆ Sentry) لە خوارەوە دابگرە تا چارەسەری بۆ زیاد بکرێت.");
+                            + "تکایە دوگمەی (ناردنی ڕاپۆرتی پشکنین) لە خوارەوە دابگرە تا چارەسەری بۆ زیاد بکرێت.");
                     verifiedFixId = "CLEAR_TEMP_AND_LOCKS";
                 }
 
                 StringBuilder tech = new StringBuilder();
-                tech.append("=== ASYCUDA UNIVERSAL DIAGNOSTIC & SENTRY CATALOG LOG (IN-RAM REDACTED) ===\n");
+                tech.append("=== ASYCUDA UNIVERSAL DIAGNOSTIC CATALOG LOG (IN-RAM REDACTED) ===\n");
                 tech.append("PrivacyPolicy    : STRICT_RAM_ONLY (Credentials, usernames, passwords, TINs, tokens, and server IPs scrubbed; zero disk writes)\n");
                 tech.append("Timestamp        : ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS Z", Locale.US).format(new Date())).append("\n");
                 tech.append("Diagnostic Stage : ").append(stage).append("\n");
-                tech.append("Catalog Status   : ").append(isNewUncataloguedError ? "NEW_UNCATALOGUED_ERROR (Suggest Sentry Share)" : "KNOWN_CATALOG_MATCH").append("\n");
+                tech.append("Catalog Status   : ").append(isNewUncataloguedError ? "NEW_UNCATALOGUED_ERROR (Suggest Diagnostic Report)" : "KNOWN_CATALOG_MATCH").append("\n");
                 tech.append("Error Code       : ").append(errorCodeBadge).append("\n");
                 tech.append("Verified Fix ID  : ").append(verifiedFixId).append("\n");
                 tech.append("Code Line Source : ").append(primaryCodeLocation).append("\n");
@@ -2852,17 +2847,17 @@ public class AsycudaStandaloneManager {
                                         buildDiagnosticPreviewBufferInRam(activity, fSummaryContext)),
                                 () -> {
                                     Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                                            "Syncing Known-Issues Catalog from GitHub...",
-                                            "جاري تحديث سجل الأعطال المعروفة من GitHub...",
-                                            "نوێکردنەوەی تۆماری کێشە ناسراوەکان لە GitHub..."), Toast.LENGTH_SHORT).show();
+                                            "Syncing Known-Issues Catalog from Cloud Firestore...",
+                                            "جاري تحديث سجل الأعطال المعروفة من السحابة...",
+                                            "نوێکردنەوەی تۆماری کێشە ناسراوەکان لە هەورەوە..."), Toast.LENGTH_SHORT).show();
                                     new Thread(() -> {
                                         boolean ok = syncKnownErrorsCatalogOnDemand(activity.getApplicationContext());
                                         UI.post(() -> {
                                             if (!activity.isFinishing()) {
                                                 Toast.makeText(activity, AsycudaMaterialUi.tr(activity,
-                                                        ok ? "Catalog updated! Re-analyzing issue..." : "Could not reach GitHub API — using local catalog.",
-                                                        ok ? "تم تحديث السجل بنجاح! جاري إعادة الفحص..." : "تعذر الاتصال بـ GitHub — يتم استخدام السجل المحلي.",
-                                                        ok ? "تۆمارەکە نوێکرایەوە! دووبارە پشکنین..." : "پەیوەندی بە GitHub نەکرا — تۆماری ناوخۆیی بەکاردێت."), Toast.LENGTH_SHORT).show();
+                                                        ok ? "Catalog updated! Re-analyzing issue..." : "Could not reach Cloud server — using local catalog.",
+                                                        ok ? "تم تحديث السجل بنجاح! جاري إعادة الفحص..." : "تعذر الاتصال بالسحابة — يتم استخدام السجل المحلي.",
+                                                        ok ? "تۆمارەکە نوێکرایەوە! دووبارە پشکنین..." : "پەیوەندی بە هەورەوە نەکرا — تۆماری ناوخۆیی بەکاردێت."), Toast.LENGTH_SHORT).show();
                                                 if (ok) {
                                                     diagnoseAndShowUniversalNetworkModal(activity, stage, caughtException, rawContextLog, onRetry);
                                                 }
@@ -3291,6 +3286,76 @@ public class AsycudaStandaloneManager {
         }
     }
 
+    private static View sFloatingCalculatorBabyBtn = null;
+    private static ImageView sFloatingCalculatorBabyIcon = null;
+    private static View sFloatingCalculatorSavedDot = null;
+    private static View sFloatingCalculatorDivider = null;
+    private static TextView sFloatingAlertsBadgeTv = null;
+
+    public static View getFloatingCalculatorBabyView() {
+        return sFloatingCalculatorBabyBtn;
+    }
+
+    public static void refreshFloatingCalculatorBabyButton(android.app.Activity activity) {
+        if (activity == null) return;
+        UI.post(() -> {
+            if (sFloatingAlertsBadgeTv != null) {
+                int unread = AsycudaFirebaseManager.getUnreadAlertsCount(activity);
+                if (unread > 0) {
+                    sFloatingAlertsBadgeTv.setText(String.valueOf(unread));
+                    sFloatingAlertsBadgeTv.setVisibility(View.VISIBLE);
+                } else {
+                    sFloatingAlertsBadgeTv.setVisibility(View.GONE);
+                }
+            }
+            if (sFloatingCalculatorBabyBtn == null) return;
+            boolean enabled = AsycudaMiniCalculator.isFeatureEnabled(activity);
+            sFloatingCalculatorBabyBtn.setVisibility(enabled ? View.VISIBLE : View.GONE);
+            if (sFloatingCalculatorDivider != null) {
+                sFloatingCalculatorDivider.setVisibility(enabled ? View.VISIBLE : View.GONE);
+            }
+            if (enabled) {
+                boolean isOpen = AsycudaMiniCalculator.isWindowOpen();
+                boolean hasSavedMath = AsycudaMiniCalculator.hasPreservedHiddenState() && !isOpen;
+                GradientDrawable bg = new GradientDrawable();
+                if (isOpen) {
+                    bg.setColor(AsycudaMaterialUi.SYSTEM_BLUE);
+                    bg.setStroke(Math.max(1, dp(activity, 1)), AsycudaMaterialUi.SYSTEM_BLUE);
+                } else if (hasSavedMath) {
+                    bg.setColor(AsycudaMaterialUi.SYSTEM_BLUE_TINT);
+                    bg.setStroke(Math.max(1, dp(activity, 1)), AsycudaMaterialUi.SYSTEM_BLUE);
+                } else {
+                    bg.setColor(AsycudaMaterialUi.SURFACE_GROUPED_CARD);
+                    bg.setStroke(Math.max(1, dp(activity, 1)), AsycudaMaterialUi.SEPARATOR_HAIRLINE);
+                }
+                bg.setCornerRadius(dp(activity, 11));
+                sFloatingCalculatorBabyBtn.setBackground(bg);
+
+                if (sFloatingCalculatorBabyIcon != null) {
+                    int tint = isOpen ? Color.WHITE
+                            : (hasSavedMath ? AsycudaMaterialUi.SYSTEM_BLUE : Color.parseColor("#FFE2E8F0"));
+                    sFloatingCalculatorBabyIcon.setImageTintList(android.content.res.ColorStateList.valueOf(tint));
+                }
+                if (sFloatingCalculatorSavedDot != null) {
+                    sFloatingCalculatorSavedDot.setVisibility(hasSavedMath ? View.VISIBLE : View.GONE);
+                }
+            }
+        });
+    }
+
+    public static void toggleMiniCalculatorFromGesture(MainActivity activity) {
+        if (activity == null) return;
+        UI.post(() -> AsycudaMiniCalculator.toggleWindow(activity, sFloatingCalculatorBabyBtn));
+    }
+
+    public static void openControlCenterFromGesture(MainActivity activity) {
+        if (activity == null) return;
+        UI.post(() -> {
+            if (sInstance == null) sInstance = new AsycudaStandaloneManager();
+            sInstance.openMaterialControlCenter(activity);
+        });
+    }
+
     public static void openDisplaySettings(MainActivity activity) {
         if (activity == null) return;
         UI.post(() -> {
@@ -3302,16 +3367,17 @@ public class AsycudaStandaloneManager {
     @SuppressLint("ClickableViewAccessibility")
     private void setupFloatingMenuPill(MainActivity activity, FrameLayout root) {
         if (root.findViewWithTag(FLOATING_PILL_TAG) != null) {
+            refreshFloatingCalculatorBabyButton(activity);
             return;
         }
         LinearLayout pill = new LinearLayout(activity);
         pill.setTag(FLOATING_PILL_TAG);
         pill.setOrientation(LinearLayout.HORIZONTAL);
         pill.setGravity(Gravity.CENTER_VERTICAL);
-        int hp = dp(activity, 11);
-        int vp = dp(activity, 5);
-        pill.setPadding(hp, vp, hp, vp);
-        pill.setAlpha(0.90f);
+        int hp = dp(activity, 9);
+        int vp = dp(activity, 4);
+        pill.setPadding(hp, vp, dp(activity, 5), vp);
+        pill.setAlpha(0.92f);
         pill.setElevation(dp(activity, 10));
 
         GradientDrawable pillBg = new GradientDrawable();
@@ -3320,19 +3386,92 @@ public class AsycudaStandaloneManager {
         pillBg.setStroke(Math.max(1, dp(activity, 1)), Color.parseColor("#FF38383A"));
         pill.setBackground(pillBg);
 
+        // Main Control Center trigger area (Logo + ASYCUDA label)
+        LinearLayout mainTrigger = new LinearLayout(activity);
+        mainTrigger.setOrientation(LinearLayout.HORIZONTAL);
+        mainTrigger.setGravity(Gravity.CENTER_VERTICAL);
+        mainTrigger.setPadding(dp(activity, 2), dp(activity, 2), dp(activity, 6), dp(activity, 2));
+
         ImageView dot = new ImageView(activity);
         dot.setImageResource(R.drawable.ic_asycuda_logo);
         LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(activity, 16), dp(activity, 16));
         dotLp.rightMargin = dp(activity, 6);
-        pill.addView(dot, dotLp);
+        mainTrigger.addView(dot, dotLp);
 
         TextView label = new TextView(activity);
-        label.setText("ASYCUDA");
+        label.setText("AsyLauncher");
         label.setTextColor(Color.WHITE);
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         label.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
         label.setLetterSpacing(0.04f);
-        pill.addView(label);
+        mainTrigger.addView(label);
+
+        TextView alertsBadge = new TextView(activity);
+        alertsBadge.setTextColor(Color.WHITE);
+        alertsBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f);
+        alertsBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        alertsBadge.setGravity(Gravity.CENTER);
+        alertsBadge.setPadding(dp(activity, 5), dp(activity, 1), dp(activity, 5), dp(activity, 1));
+        GradientDrawable alertsBadgeBg = new GradientDrawable();
+        alertsBadgeBg.setCornerRadius(dp(activity, 8));
+        alertsBadgeBg.setColor(AsycudaMaterialUi.SYSTEM_BLUE);
+        alertsBadge.setBackground(alertsBadgeBg);
+        LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        abLp.leftMargin = dp(activity, 5);
+        int initialUnread = AsycudaFirebaseManager.getUnreadAlertsCount(activity);
+        if (initialUnread > 0) {
+            alertsBadge.setText(String.valueOf(initialUnread));
+            alertsBadge.setVisibility(View.VISIBLE);
+        } else {
+            alertsBadge.setVisibility(View.GONE);
+        }
+        mainTrigger.addView(alertsBadge, abLp);
+        sFloatingAlertsBadgeTv = alertsBadge;
+
+        pill.addView(mainTrigger);
+
+        // Subtle vertical hairline divider between ASYCUDA trigger and attached Baby Calculator capsule
+        View divider = new View(activity);
+        divider.setBackgroundColor(AsycudaMaterialUi.SEPARATOR_HAIRLINE);
+        LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(Math.max(1, dp(activity, 1)), dp(activity, 15));
+        divLp.leftMargin = dp(activity, 2);
+        divLp.rightMargin = dp(activity, 5);
+        sFloatingCalculatorDivider = divider;
+        pill.addView(divider, divLp);
+
+        // Attached "Baby" Calculator Button sitting on the same floating Control Center pill (Dedicated Vector Icon)
+        FrameLayout babyCalcBtn = new FrameLayout(activity);
+        int bPadH = dp(activity, 7);
+        int bPadV = dp(activity, 4);
+        babyCalcBtn.setPadding(bPadH, bPadV, bPadH, bPadV);
+
+        ImageView calcIcon = new ImageView(activity);
+        calcIcon.setImageResource(R.drawable.ic_menu_calculator);
+        calcIcon.setImageTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#FFE2E8F0")));
+        FrameLayout.LayoutParams iconLp = new FrameLayout.LayoutParams(dp(activity, 14), dp(activity, 14), Gravity.CENTER);
+        babyCalcBtn.addView(calcIcon, iconLp);
+        sFloatingCalculatorBabyIcon = calcIcon;
+
+        // Subtle green indicator dot when hidden calculator holds saved math state
+        View savedDot = new View(activity);
+        GradientDrawable dotBg = new GradientDrawable();
+        dotBg.setShape(GradientDrawable.OVAL);
+        dotBg.setColor(AsycudaMaterialUi.SYSTEM_GREEN);
+        savedDot.setBackground(dotBg);
+        savedDot.setVisibility(View.GONE);
+        FrameLayout.LayoutParams savedDotLp = new FrameLayout.LayoutParams(dp(activity, 5), dp(activity, 5), Gravity.TOP | Gravity.END);
+        babyCalcBtn.addView(savedDot, savedDotLp);
+        sFloatingCalculatorSavedDot = savedDot;
+
+        LinearLayout.LayoutParams babyLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        babyCalcBtn.setLayoutParams(babyLp);
+        boolean calcEnabled = AsycudaMiniCalculator.isFeatureEnabled(activity);
+        babyCalcBtn.setVisibility(calcEnabled ? View.VISIBLE : View.GONE);
+        divider.setVisibility(calcEnabled ? View.VISIBLE : View.GONE);
+        sFloatingCalculatorBabyBtn = babyCalcBtn;
+        pill.addView(babyCalcBtn);
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3340,7 +3479,7 @@ public class AsycudaStandaloneManager {
         lp.topMargin = dp(activity, 14);
         lp.rightMargin = dp(activity, 16);
 
-        pill.setOnTouchListener(new View.OnTouchListener() {
+        View.OnTouchListener sharedPillDragListener = new View.OnTouchListener() {
             float dX;
             float dY;
             float downX;
@@ -3351,9 +3490,9 @@ public class AsycudaStandaloneManager {
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        v.setAlpha(1.0f);
-                        dX = v.getX() - event.getRawX();
-                        dY = v.getY() - event.getRawY();
+                        pill.setAlpha(1.0f);
+                        dX = pill.getX() - event.getRawX();
+                        dY = pill.getY() - event.getRawY();
                         downX = event.getRawX();
                         downY = event.getRawY();
                         dragged = false;
@@ -3363,23 +3502,32 @@ public class AsycudaStandaloneManager {
                             dragged = true;
                         }
                         if (dragged) {
-                            v.setX(event.getRawX() + dX);
-                            v.setY(event.getRawY() + dY);
+                            pill.setX(event.getRawX() + dX);
+                            pill.setY(event.getRawY() + dY);
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
-                        v.setAlpha(0.90f);
+                        pill.setAlpha(0.92f);
                         if (!dragged) {
-                            openMaterialControlCenter(activity);
+                            if (v == babyCalcBtn) {
+                                AsycudaMiniCalculator.toggleWindow(activity, babyCalcBtn);
+                            } else {
+                                openMaterialControlCenter(activity);
+                            }
                         }
                         return true;
                     default:
                         return false;
                 }
             }
-        });
+        };
+
+        pill.setOnTouchListener(sharedPillDragListener);
+        mainTrigger.setOnTouchListener(sharedPillDragListener);
+        babyCalcBtn.setOnTouchListener(sharedPillDragListener);
 
         root.addView(pill, lp);
+        refreshFloatingCalculatorBabyButton(activity);
     }
 
     private AsycudaMaterialUi.MenuActionCallback createMenuCallback(MainActivity activity) {
@@ -3545,80 +3693,39 @@ public class AsycudaStandaloneManager {
             boolean appUpdateAvailable = false;
             try {
                 ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                        "Checking GitHub for new app releases...",
-                        "جاري البحث عن تحديث للتطبيق...",
-                        "گەڕان بۆ وەشانی نوێی بەرنامە..."), 0, true);
+                        "Checking Cloud Firestore for app release status...",
+                        "جاري التحقق من حالة تحديثات التطبيق...",
+                        "پشکنینی دۆخی نوێکردنەوەی بەرنامە..."), 0, true);
 
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
-                HttpURLConnection ghConn = (HttpURLConnection) new URL(GITHUB_LATEST_RELEASE_API).openConnection();
-                ghConn.setConnectTimeout(4500);
-                ghConn.setReadTimeout(7000);
-                ghConn.setRequestProperty("Accept", "application/vnd.github+json");
-                ghConn.setRequestProperty(HEADER_USER_AGENT, "ASYCUDA-Iraq-Android/" + currentVer);
-
-                if (ghConn.getResponseCode() == 200) {
-                    String jsonStr;
-                    try (InputStream in = ghConn.getInputStream();
-                         ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-                        jsonStr = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-                    } finally {
-                        ghConn.disconnect();
-                    }
-
-                    JSONObject rel = new JSONObject(jsonStr);
-                    String tagName = rel.optString("tag_name", "");
-                    String body = rel.optString("body", "");
-                    String apkUrl = null;
-                    String apkSha256 = null;
-                    long apkSize = 0;
-
-                    JSONArray assets = rel.optJSONArray("assets");
-                    if (assets != null) {
-                        for (int i = 0; i < assets.length(); i++) {
-                            JSONObject a = assets.getJSONObject(i);
-                            String name = a.optString("name", "");
-                            if (name.endsWith(".apk")) {
-                                apkUrl = a.optString("browser_download_url", null);
-                                apkSize = a.optLong("size", 0);
-                                String digest = a.optString("digest", "");
-                                if (digest.startsWith("sha256:")) {
-                                    apkSha256 = digest.substring("sha256:".length()).trim();
+                String remoteTag = AsycudaFirebaseManager.getCachedRemoteVersionTag(activity);
+                if (isRemoteVersionNewer(remoteTag, currentVer)) {
+                    appUpdateAvailable = true;
+                    ctrl.showAppUpdateAvailable(remoteTag,
+                            AsycudaMaterialUi.tr(activity,
+                                    "A newer release (" + remoteTag + ") is available on Google Play Store.",
+                                    "يتوفر إصدار أحدث (" + remoteTag + ") على متجر Google Play.",
+                                    "وەشانێکی نوێتر (" + remoteTag + ") لە فرۆشگای Google Play بەردەستە."),
+                            () -> UI.post(() -> {
+                                try {
+                                    Intent market = new Intent(Intent.ACTION_VIEW,
+                                            Uri.parse("market://details?id=" + activity.getPackageName()));
+                                    market.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    activity.startActivity(market);
+                                } catch (Exception e) {
+                                    try {
+                                        Intent web = new Intent(Intent.ACTION_VIEW,
+                                                Uri.parse("https://play.google.com/store/apps/details?id=" + activity.getPackageName()));
+                                        web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        activity.startActivity(web);
+                                    } catch (Exception ignored) {}
                                 }
-                                break;
-                            }
-                        }
-                    }
-                    if (!AsycudaSecurityValidator.isValidSha256Hex(apkSha256)) {
-                        apkSha256 = AsycudaSecurityValidator.extractSha256FromReleaseBody(body);
-                    }
-
-                    if (apkUrl != null && isRemoteVersionNewer(tagName, currentVer)) {
-                        appUpdateAvailable = true;
-                        final String finalApkUrl = apkUrl;
-                        final long finalApkSize = apkSize;
-                        final String finalTag = tagName;
-                        final String finalSha256 = apkSha256;
-                        String shortNotes = cleanReleaseNotesPreview(body);
-                        ctrl.showAppUpdateAvailable(tagName, shortNotes, () -> {
-                            sApkDownloadActive.set(true);
-                            new Thread(() -> downloadAndInstallApkUpdate(activity, finalApkUrl, finalApkSize, finalTag, finalSha256, ctrl),
-                                    "Asycuda-ApkDownloader").start();
-                        });
-                    } else {
-                        ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                                "App is up to date (" + currentVer + ")",
-                                "التطبيق محدّث (" + currentVer + ")",
-                                "بەرنامەکە نوێکراوەتەوە (" + currentVer + ")"), -1, false);
-                    }
+                            }));
                 } else {
-                    ghConn.disconnect();
                     ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                            "Current version: " + currentVer,
-                            "الإصدار الحالي: " + currentVer,
-                            "وەشانی ئێستا: " + currentVer), -1, false);
+                            "App is up to date (" + currentVer + ")",
+                            "التطبيق محدّث (" + currentVer + ")",
+                            "بەرنامەکە نوێکراوەتەوە (" + currentVer + ")"), -1, false);
                 }
             } catch (Exception ignored) {
                 String currentVer = AsycudaMaterialUi.getAppVersionLabel(activity);
@@ -3637,65 +3744,6 @@ public class AsycudaStandaloneManager {
                 sSyncInProgress.set(false);
             }
         }, "Asycuda-UnifiedUpdater").start();
-    }
-
-    private static String cleanReleaseNotesPreview(String rawBody) {
-        if (rawBody == null || rawBody.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder();
-        String[] lines = rawBody.split("\n");
-        for (String line : lines) {
-            String t = line.trim();
-            if (t.isEmpty() || t.startsWith("[!") || t.startsWith("[![")
-                    || t.startsWith("|") || t.startsWith("---") || t.startsWith(">")) {
-                continue;
-            }
-            while (t.startsWith("#")) {
-                t = t.substring(1).trim();
-            }
-            t = t.replace("**", "").replace("`", "").trim();
-            if (t.isEmpty()) continue;
-            if (sb.length() > 0) sb.append("\n");
-            sb.append(t);
-            if (sb.length() >= 180) break;
-        }
-        String res = sb.toString().trim();
-        return res.length() > 190 ? res.substring(0, 187).trim() + "..." : res;
-    }
-
-    private void downloadAndInstallApkUpdate(MainActivity activity, String apkUrl, long expectedSize,
-                                             String versionTag, String expectedSha256,
-                                             AsycudaMaterialUi.UpdateCenterController ctrl) {
-        sApkDownloadActive.set(true);
-        try {
-            if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(apkUrl)) {
-                ctrl.setAppUpdateStatus("Security error: Untrusted APK download URL", -1, false);
-                return;
-            }
-            if (!AsycudaSecurityValidator.isValidSha256Hex(expectedSha256)) {
-                ctrl.setAppUpdateStatus("Security error: Missing or invalid release SHA-256 digest", -1, false);
-                return;
-            }
-            cleanupStaleUpdateApks(activity);
-
-            ctrl.setAppUpdateStatus(AsycudaMaterialUi.tr(activity,
-                    "Verified GitHub Release (" + versionTag + "). Opening official APK download in browser...",
-                    "تم التحقق من الإصدار الرسمي (" + versionTag + "). جاري فتح رابط التحميل في المتصفح...",
-                    "وەشانی فەرمی (" + versionTag + ") پشتڕاستکرایەوە. کردنەوەی بەستەری دابەزاندن لە وێبگەڕ..."), 100, false);
-
-            UI.post(() -> {
-                try {
-                    Intent viewRelease = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
-                    viewRelease.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    activity.startActivity(viewRelease);
-                } catch (Exception t) {
-                    Toast.makeText(activity, "Browser error: " + t.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            });
-        } catch (Exception t) {
-            ctrl.setAppUpdateStatus("Update launch failed: " + t.getMessage(), -1, false);
-        } finally {
-            sApkDownloadActive.set(false);
-        }
     }
 
     private static boolean isRemoteVersionNewer(String remoteTag, String localTag) {
@@ -3814,17 +3862,30 @@ public class AsycudaStandaloneManager {
             }
 
             @Override
-            public void onSubmitToSentry(String description, File attachedImage,
-                                         AsycudaMaterialUi.FeedbackModalController controller, Dialog feedbackDialog) {
+            public void onSubmitDiagnosticReport(String description, File attachedImage,
+                                                 AsycudaMaterialUi.FeedbackModalController controller, Dialog feedbackDialog) {
                 controller.setUploadState(true, AsycudaMaterialUi.tr(activity,
-                        "Sending report and logs...",
-                        "جاري إرسال البلاغ والسجلات...",
-                        "ناردنی ڕاپۆرت و تۆمارەکان..."), false);
+                        "Sending redacted diagnostic report...",
+                        "جاري إرسال التقرير التشخيصي المنقّح...",
+                        "ناردنی ڕاپۆرتی پشکنینی تەکنیکی..."), false);
 
                 new Thread(() -> {
                     try {
-                        byte[] zipBytes = buildDiagnosticsZipBytes(activity, description, attachedImage);
-                        boolean sent = uploadReportEnvelopeToSentry(activity, description, zipBytes, attachedImage);
+                        StringBuilder ramPreview = buildDiagnosticPreviewBufferInRam(activity, description);
+                        String redactedSummary = redactSensitiveLogContent(ramPreview.toString());
+                        for (int i = 0; i < ramPreview.length(); i++) {
+                            ramPreview.setCharAt(i, '\0');
+                        }
+                        ramPreview.setLength(0);
+
+                        boolean sent = AsycudaFirebaseManager.submitDiagnosticReportSync(
+                                activity,
+                                "USER_FEEDBACK",
+                                "Voluntary User Technical Report",
+                                redactedSummary,
+                                "",
+                                redactSensitiveLogContent(description),
+                                "");
                         if (sent) {
                             if (attachedImage != null && attachedImage.getName().equals(FILE_SCREEN_CAPTURE)) {
                                 deleteQuietly(attachedImage);
@@ -3842,14 +3903,14 @@ public class AsycudaStandaloneManager {
                             }, 1300);
                         } else {
                             controller.setUploadState(false, AsycudaMaterialUi.tr(activity,
-                                    "Couldn't connect to Sentry. Please check your internet connection and try again.",
-                                    "تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.",
-                                    "پەیوەندی نەکرا. تکایە هێڵی ئینتەرنێت بپشکنە و هەوڵ بدەرەوە."), false);
+                                    "Couldn't connect to Cloud server. Please check your internet connection and try again.",
+                                    "تعذر الاتصال بالخادم السحابي. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.",
+                                    "پەیوەندی بە سێرڤەری هەوری نەکرا. تکایە هێڵی ئینتەرنێت بپشکنە و هەوڵ بدەرەوە."), false);
                         }
                     } catch (Exception t) {
                         controller.setUploadState(false, "Upload error: " + t.getMessage(), false);
                     }
-                }, "Asycuda-SentryUploader").start();
+                }, "Asycuda-DiagnosticReportUploader").start();
             }
         }, () -> openMaterialControlCenter(activity));
     }
@@ -3902,83 +3963,6 @@ public class AsycudaStandaloneManager {
         return sb;
     }
 
-    /**
-     * Builds a strictly sanitized, credential-free diagnostic archive purely in memory
-     * ({@link ByteArrayOutputStream}) for direct HTTPS transmission to Sentry.
-     * Zero diagnostic {@code .zip} files are ever written to disk (neither internal nor external storage),
-     * raw JNLP/SharedPreferences/PII files are excluded, logcat is scoped strictly to {@code --pid},
-     * and all usernames, passwords, tokens, TINs, and session IDs are scrubbed before packaging.
-     */
-    private byte[] buildDiagnosticsZipBytes(MainActivity activity, String userDescription, File attachedImage) throws IOException {
-        File filesDir = activity.getFilesDir();
-        File clientDir = new File(filesDir, DIR_CLIENT);
-        purgeStaleDiagnosticFiles(new File(activity.getCacheDir(), "diagnostics"),
-                new File(filesDir, DIR_PRINTS));
-
-        String safeDescription = redactSensitiveLogContent(userDescription);
-        ByteArrayOutputStream zipBuffer = new ByteArrayOutputStream(65536);
-
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(zipBuffer)) {
-
-            // 1. Sanitized Device Summary (zero credentials, zero raw user PII, zero on-disk file)
-            StringBuilder info = new StringBuilder();
-            info.append("=== ASYCUDA Iraq Sanitized Diagnostics Report (In-Memory Sentry Stream) ===\n");
-            info.append("PrivacySanitization: STRICT (Credentials, usernames, passwords, TINs, cookies, and session tokens scrubbed; streamed in RAM only; zero local ZIP files written to disk)\n");
-            info.append("Timestamp: ").append(new Date().toString()).append("\n");
-            info.append("App Version: ").append(AsycudaMaterialUi.getAppVersionLabel(activity)).append("\n");
-            info.append("Package: ").append(activity.getPackageName()).append("\n");
-            info.append("Language: ").append(AsycudaMaterialUi.getAppLanguage(activity)).append("\n");
-            info.append("Auto-Show Keyboard: ").append(AsycudaMaterialUi.isAutoKeyboardEnabled(activity)).append("\n");
-            info.append("Function Keys Bar: ").append(AsycudaMaterialUi.isAssistKeysEnabled(activity)).append("\n");
-            info.append("Device Manufacturer: ").append(Build.MANUFACTURER).append("\n");
-            info.append("Device Model: ").append(Build.MODEL).append(" (").append(Build.DEVICE).append(")\n");
-            info.append("Android Version: ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
-            info.append("Supported ABIs: ").append(java.util.Arrays.toString(Build.SUPPORTED_ABIS)).append("\n");
-            info.append("JVM Process Alive: ").append(sJavaProcess != null && isProcessAlive(sJavaProcess)).append("\n");
-            info.append("Free Internal Storage (MB): ").append(filesDir.getUsableSpace() / (1024 * 1024)).append("\n");
-            info.append("TermsAccepted: ").append(AsycudaMaterialUi.hasAcceptedTerms(activity)).append("\n");
-            if (!safeDescription.isEmpty()) {
-                info.append("\n=== USER REPORT (REDACTED) ===\n");
-                info.append(safeDescription).append("\n");
-                addBytesToZip(zos, "user_description.txt", safeDescription.getBytes(StandardCharsets.UTF_8));
-            }
-            addBytesToZip(zos, "device_info.txt", info.toString().getBytes(StandardCharsets.UTF_8));
-
-            // 2. Attached Screenshot / Image if explicitly chosen by the user
-            if (attachedImage != null && attachedImage.exists()) {
-                addFileToZipIfExists(zos, attachedImage, attachedImage.getName(), false);
-            }
-
-            // 3. Installed JARs inventory (filenames and byte sizes only)
-            File jarsDir = new File(clientDir, "jars");
-            File[] jars = jarsDir.listFiles();
-            if (jars != null) {
-                java.util.Arrays.sort(jars, Comparator.comparing(File::getName));
-                StringBuilder jarList = new StringBuilder();
-                jarList.append("Total JARs in client/jars: ").append(jars.length).append("\n\n");
-                for (File j : jars) {
-                    jarList.append(String.format(Locale.US, "%-32s  %10d bytes  %s%n",
-                            j.getName(), j.length(), new Date(j.lastModified()).toString()));
-                }
-                addBytesToZip(zos, "jars_inventory.txt", jarList.toString().getBytes(StandardCharsets.UTF_8));
-            }
-
-            // 4. Core ASYCUDA & Client Logs (tail only + strict credential/token redaction)
-            addFileToZipIfExists(zos, new File(clientDir, FILE_ASYCUDA_LOG), FILE_ASYCUDA_LOG, true);
-            addFileToZipIfExists(zos, new File(clientDir, FILE_CLIENT_LOG), FILE_CLIENT_LOG, true);
-            synchronized (sRedactedRamDiagRingBuffer) {
-                if (sRedactedRamDiagRingBuffer.length() > 0) {
-                    addBytesToZip(zos, "universal_diagnostics_ram.txt",
-                            sRedactedRamDiagRingBuffer.toString().getBytes(StandardCharsets.UTF_8));
-                }
-            }
-
-            zos.finish();
-        }
-
-        return zipBuffer.toByteArray();
-    }
-
     private static void purgeStaleDiagnosticFiles(File... dirs) {
         if (dirs == null) return;
         for (File dir : dirs) {
@@ -4004,207 +3988,6 @@ public class AsycudaStandaloneManager {
         return AsycudaSecurityValidator.redactSensitiveLogContent(raw, BRIDGE_AUTH_TOKEN);
     }
 
-    private static long getAppVersionCode(Context ctx) {
-        try {
-            android.content.pm.PackageInfo pInfo = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                return pInfo.getLongVersionCode();
-            }
-            return pInfo.versionCode;
-        } catch (Exception ignored) {
-            return 42L;
-        }
-    }
-
-    private static JSONObject buildSentryContexts(Context ctx, String appVer) throws org.json.JSONException {
-        JSONObject contexts = new JSONObject();
-        JSONObject devCtx = new JSONObject();
-        devCtx.put("name", Build.MODEL);
-        devCtx.put("model", Build.MODEL);
-        devCtx.put("manufacturer", Build.MANUFACTURER);
-        devCtx.put("brand", Build.BRAND);
-        devCtx.put("arch", "arm64-v8a");
-        contexts.put("device", devCtx);
-
-        JSONObject osCtx = new JSONObject();
-        osCtx.put("name", "Android");
-        osCtx.put("version", Build.VERSION.RELEASE);
-        contexts.put("os", osCtx);
-
-        JSONObject appCtx = new JSONObject();
-        appCtx.put("app_identifier", ctx.getPackageName());
-        appCtx.put("app_name", "ASYCUDA Iraq");
-        appCtx.put(KEY_APP_VERSION, appVer);
-        contexts.put("app", appCtx);
-        return contexts;
-    }
-
-    /**
-     * Uploads the user report, device metadata, optional screenshot/image, and in-memory sanitized
-     * diagnostic bundle directly to Sentry's Envelope API (write-only public DSN) over HTTPS.
-     */
-    private boolean uploadReportEnvelopeToSentry(Context ctx, String description, byte[] zipBytes, File attachedImage) {
-        HttpURLConnection conn = null;
-        try {
-            String dsn = BuildConfig.SENTRY_DSN;
-            if (dsn == null || dsn.isEmpty()) return false;
-
-            SentryUriParts parts = parseSentryDsn(dsn);
-            if (parts == null) return false;
-
-            String safeDescription = redactSensitiveLogContent(description != null ? description : "");
-            String eventId = UUID.randomUUID().toString().replace("-", "");
-            SimpleDateFormat isoFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-            isoFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String nowIso = isoFmt.format(new Date());
-
-            String verLabel = AsycudaMaterialUi.getAppVersionLabel(ctx);
-            String firstLine = safeDescription.split("\n")[0].trim();
-            if (firstLine.length() > 90) firstLine = firstLine.substring(0, 90) + "...";
-
-            // 1. Envelope Header
-            JSONObject envHeader = new JSONObject();
-            envHeader.put(KEY_EVENT_ID, eventId);
-            envHeader.put("sent_at", nowIso);
-            envHeader.put("dsn", dsn);
-
-            // 2. Event Payload
-            JSONObject eventObj = new JSONObject();
-            eventObj.put(KEY_EVENT_ID, eventId);
-            eventObj.put("timestamp", nowIso);
-            eventObj.put("platform", "java");
-            eventObj.put("level", "info");
-            eventObj.put("release", "iq.asycuda@" + verLabel.replaceFirst("^v", "") + "+" + getAppVersionCode(ctx));
-            eventObj.put("environment", "production");
-
-            JSONObject msgObj = new JSONObject();
-            msgObj.put("formatted", "[User Report] " + firstLine + "\n\n" + safeDescription);
-            eventObj.put("message", msgObj);
-
-            JSONObject userObj = new JSONObject();
-            userObj.put("id", Build.MANUFACTURER + "_" + Build.MODEL);
-            userObj.put("username", Build.MANUFACTURER + " " + Build.MODEL + " (Android " + Build.VERSION.RELEASE + ")");
-            eventObj.put("user", userObj);
-
-            JSONObject tags = new JSONObject();
-            tags.put(KEY_APP_VERSION, verLabel);
-            tags.put(KEY_DEVICE_MODEL, Build.MANUFACTURER + " " + Build.MODEL);
-            tags.put("android_version", Build.VERSION.RELEASE);
-            tags.put("app_language", AsycudaMaterialUi.getAppLanguage(ctx));
-            tags.put("has_screenshot", String.valueOf(attachedImage != null && attachedImage.exists()));
-            eventObj.put("tags", tags);
-
-            eventObj.put("contexts", buildSentryContexts(ctx, verLabel));
-
-            JSONObject extra = new JSONObject();
-            extra.put("full_description", safeDescription);
-            extra.put("jvm_running", sJavaProcess != null && isProcessAlive(sJavaProcess));
-            File logFile = new File(new File(ctx.getFilesDir(), DIR_CLIENT), FILE_ASYCUDA_LOG);
-            extra.put("asycuda_log_tail", redactSensitiveLogContent(readTail(logFile, 2500)));
-            eventObj.put("extra", extra);
-
-            byte[] eventBytes = eventObj.toString().getBytes(StandardCharsets.UTF_8);
-            JSONObject eventItemHeader = new JSONObject();
-            eventItemHeader.put("type", "event");
-            eventItemHeader.put(KEY_LENGTH, eventBytes.length);
-            eventItemHeader.put(KEY_CONTENT_TYPE, MIME_JSON);
-
-            // 3. User Report Item (also populates Sentry's User Feedback tab)
-            JSONObject fbObj = new JSONObject();
-            fbObj.put(KEY_EVENT_ID, eventId);
-            fbObj.put("name", Build.MANUFACTURER + " " + Build.MODEL);
-            fbObj.put("email", "user@asycuda-iraq.app");
-            fbObj.put("comments", safeDescription);
-            byte[] fbBytes = fbObj.toString().getBytes(StandardCharsets.UTF_8);
-            JSONObject fbItemHeader = new JSONObject();
-            fbItemHeader.put("type", "user_report");
-            fbItemHeader.put(KEY_LENGTH, fbBytes.length);
-            fbItemHeader.put(KEY_CONTENT_TYPE, MIME_JSON);
-
-            String endpoint = "https://" + parts.host + "/api/" + parts.projectId
-                    + "/envelope/?sentry_key=" + parts.publicKey + "&sentry_version=7&sentry_client=asycuda.android/3.8.0";
-
-            conn = (HttpURLConnection) new URL(endpoint).openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(25000);
-            conn.setRequestProperty("Content-Type", "application/x-sentry-envelope");
-
-            try (OutputStream out = conn.getOutputStream()) {
-                out.write((envHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-
-                out.write((eventItemHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                out.write(eventBytes);
-                out.write('\n');
-
-                out.write((fbItemHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                out.write(fbBytes);
-                out.write('\n');
-
-                if (zipBytes != null && zipBytes.length > 0) {
-                    JSONObject zipHeader = new JSONObject();
-                    zipHeader.put("type", TYPE_ATTACHMENT);
-                    zipHeader.put(KEY_LENGTH, zipBytes.length);
-                    zipHeader.put(KEY_FILENAME, "ASYCUDA_Diagnostics_Sanitized.zip");
-                    zipHeader.put(KEY_CONTENT_TYPE, MIME_ZIP);
-                    zipHeader.put(KEY_ATTACHMENT_TYPE, VAL_EVENT_ATTACHMENT);
-                    out.write((zipHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                    out.write(zipBytes);
-                    out.write('\n');
-                }
-
-                if (attachedImage != null && attachedImage.exists()) {
-                    byte[] imgBytes = readFileBytes(attachedImage);
-                    if (imgBytes.length > 0) {
-                        JSONObject imgHeader = new JSONObject();
-                        imgHeader.put("type", TYPE_ATTACHMENT);
-                        imgHeader.put(KEY_LENGTH, imgBytes.length);
-                        imgHeader.put(KEY_FILENAME, attachedImage.getName());
-                        imgHeader.put(KEY_CONTENT_TYPE, guessMime(attachedImage.getName()));
-                        imgHeader.put(KEY_ATTACHMENT_TYPE, VAL_EVENT_ATTACHMENT);
-                        out.write((imgHeader.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                        out.write(imgBytes);
-                        out.write('\n');
-                    }
-                }
-                out.flush();
-            }
-
-            int respCode = conn.getResponseCode();
-            return respCode >= 200 && respCode < 300;
-        } catch (Exception ignored) {
-            return false;
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    private static class SentryUriParts {
-        String publicKey;
-        String host;
-        String projectId;
-    }
-
-    private static SentryUriParts parseSentryDsn(String dsn) {
-        try {
-            URL u = new URL(dsn);
-            SentryUriParts p = new SentryUriParts();
-            p.publicKey = u.getUserInfo();
-            if (p.publicKey != null && p.publicKey.contains(":")) {
-                p.publicKey = p.publicKey.split(":")[0];
-            }
-            p.host = u.getHost();
-            String path = u.getPath();
-            if (path != null && path.startsWith("/")) path = path.substring(1);
-            p.projectId = path;
-            if (p.publicKey == null || p.host == null || p.projectId == null) return null;
-            return p;
-        } catch (Exception t) {
-            return null;
-        }
-    }
-
     private static byte[] readFileBytes(File f) {
         try (FileInputStream fis = new FileInputStream(f);
              ByteArrayOutputStream bos = new ByteArrayOutputStream((int) f.length())) {
@@ -4214,41 +3997,6 @@ public class AsycudaStandaloneManager {
             return bos.toByteArray();
         } catch (Exception t) {
             return new byte[0];
-        }
-    }
-
-    private static void addBytesToZip(java.util.zip.ZipOutputStream zos, String entryName, byte[] data) {
-        try {
-            java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
-            zos.putNextEntry(entry);
-            zos.write(data);
-            zos.closeEntry();
-        } catch (Exception ignored) {
-            // Ignore single zip entry write failure
-        }
-    }
-
-    private static void addFileToZipIfExists(java.util.zip.ZipOutputStream zos, File file, String entryName, boolean redactLogs) {
-        if (file == null || !file.exists() || !file.isFile()) return;
-        if (redactLogs) {
-            String tail = readTail(file, 65536);
-            if (!tail.isEmpty()) {
-                String clean = redactSensitiveLogContent(tail);
-                addBytesToZip(zos, entryName, clean.getBytes(StandardCharsets.UTF_8));
-            }
-            return;
-        }
-        try (FileInputStream fis = new FileInputStream(file)) {
-            java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
-            zos.putNextEntry(entry);
-            byte[] buf = new byte[16384];
-            int n;
-            while ((n = fis.read(buf)) != -1) {
-                zos.write(buf, 0, n);
-            }
-            zos.closeEntry();
-        } catch (Exception ignored) {
-            // Ignore individual file zip failure
         }
     }
 

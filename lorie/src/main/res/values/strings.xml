@@ -1,29 +1,20 @@
 <!DOCTYPE resources [
-    <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
-    <!ENTITY TERMUX_APP_NAME "Termux">
-    <!ENTITY TERMUX_X11_APP_NAME "ASYCUDA Iraq">
+    <!ENTITY TERMUX_PACKAGE_NAME "io.github.mohammedalshimmary.asylauncher">
+    <!ENTITY TERMUX_APP_NAME "AsyLauncher">
+    <!ENTITY TERMUX_X11_APP_NAME "Launcher for ASYCUDA">
     ]>
 <resources>
     <string name="lorie_app_name">&TERMUX_X11_APP_NAME;</string>
 
-    <string name="not_connected">Not connected</string>
-    <string name="preferences_button_text">Preferences</string>
+    <string name="not_connected">Starting display...</string>
+    <string name="preferences_button_text">Control Center</string>
     <string name="help_button_text">Help</string>
     <string name="exit_button_text">Exit</string>
     <string name="displays_button_text">Displays</string>
     <string name="displays_dialog_title">Displays</string>
     <string name="displays_dialog_empty">No other displays are open</string>
-    <string name="extra_keys_config_desc">Here you can set value of extra-keys variable like in Termux app (read <a href="http://wiki.termux.com/wiki/Touch_Keyboard#Extra_Keys_Row">this</a>) and more \n
-E.g. <b>META</b> for <i>META key</i>, \n
-<b>KEYBOARD</b> for <i>soft keyboard toggling key</i>, \n
-<b>PREFERENCES</b> for <i>preferences opening key</i>, \n
-<b>MOUSE_HELPER</b> for <i>mouse helper toggling key</i>, \n
-<b>STYLUS_HELPER</b> for <i>stylus click override overlay toggling key</i>, \n
-<b>ZOOM_IN</b> for <i>zoom in key</i>, \n
-<b>ZOOM_OUT</b> for <i>zoom out key</i>, \n
-<b>ZOOM_RESET</b> for <i>zoom reset key</i>, \n
-<b>EXIT</b> for <i>application exit key</i>.</string>
-    <string name="lorie_notification_content_text">Pull down to show options</string>
+    <string name="extra_keys_config_desc">Configure additional shortcut keys</string>
+    <string name="lorie_notification_content_text">Session active • Network protected in background</string>
     <string name="lorie_notification_open_preferences">Preferences</string>
     <string name="lorie_notification_exit">Exit</string>
     <string name="lorie_notification_restart_activity">Restart</string>
