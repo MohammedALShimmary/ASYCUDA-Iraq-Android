@@ -746,16 +746,19 @@ public final class AsycudaFirebaseManager {
             File cacheFile = new File(ctx.getFilesDir(), "known-errors-catalog-remote.json");
 
             if (remoteVersion >= localVersion || !cacheFile.exists()) {
-                if (cacheFile.exists()) {
-                    cacheFile.setWritable(true, true);
+                if (cacheFile.exists() && !cacheFile.setWritable(true, true)) {
+                    Log.w(TAG, "Unable to mark catalog cache writable before update");
                 }
                 try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
                     fos.write(catalogJson.getBytes(StandardCharsets.UTF_8));
                     fos.getFD().sync();
                 }
-                cacheFile.setReadable(false, false);
-                cacheFile.setReadable(true, true);
-                cacheFile.setWritable(false, false);
+                boolean permissionsHardened = cacheFile.setReadable(false, false)
+                        && cacheFile.setReadable(true, true)
+                        && cacheFile.setWritable(false, false);
+                if (!permissionsHardened) {
+                    Log.w(TAG, "Catalog cache permission hardening returned false");
+                }
                 prefs.edit().putLong(KEY_REMOTE_CATALOG_VERSION, remoteVersion).apply();
             }
             return true;
@@ -1005,9 +1008,7 @@ public final class AsycudaFirebaseManager {
 
         if (playUrl != null && !playUrl.isEmpty()) {
             final String safePlayUrl = sanitizeTrustedAnnouncementUrl(playUrl);
-            TextView playBtn = createButton(activity,
-                    ar ? "Google Play" : (ku ? "Google Play" : "Google Play"),
-                    "#059669", "#FFFFFF");
+            TextView playBtn = createButton(activity, "Google Play", "#059669", "#FFFFFF");
             playBtn.setOnClickListener(v -> {
                 try {
                     activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(safePlayUrl)));

@@ -652,7 +652,7 @@ public class AsycudaMaterialUi {
                                 "خێرایی نیشاندەری تراكپاد (تەنها بۆ دۆخی تراكپاد — لە لمسی ڕاستەوخۆ ناچالاکە)"),
                 50, 250, curPtrSpeed,
                 new LiveSliderCallback() {
-                    @Override public void onStartPreview() {}
+                    @Override public void onStartPreview() { /* No overlay hide needed for speed slider */ }
                     @Override public void onLiveProgress(int val) { setTrackpadSpeedPercent(activity, val); }
                     @Override public void onStopPreview(int val) { setTrackpadSpeedPercent(activity, val); }
                 });
@@ -667,7 +667,7 @@ public class AsycudaMaterialUi {
                 tr(activity, "Two-Finger Scroll Wheel Speed", "سرعة التمرير بإصبعين داخل الجداول", "خێرایی جوڵاندن بە دوو پەنجە"),
                 50, 250, curScrollSpeed,
                 new LiveSliderCallback() {
-                    @Override public void onStartPreview() {}
+                    @Override public void onStartPreview() { /* No overlay hide needed for scroll slider */ }
                     @Override public void onLiveProgress(int val) { setScrollSpeedPercent(activity, val); }
                     @Override public void onStopPreview(int val) { setScrollSpeedPercent(activity, val); }
                 }));
