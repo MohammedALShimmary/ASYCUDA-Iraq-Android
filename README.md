@@ -22,9 +22,9 @@ Independent, open-source Android compatibility launcher (**AsyLauncher**, packag
 
 | Release Asset | SHA-256 Checksum |
 | :--- | :--- |
-| [**`AsyLauncher_v4.3.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) | `c2d88ac3b2830b1308bad96663913ce099e814ca235c4a6f51b2700683c2c111` |
-| [**`AsyLauncher_v4.3.0.aab`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.aab) | `d644a82a1633410764b3aa76623fd8dcb4311f236db03542f12a974f6452f856` |
-| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/asycuda-iraq.tar.xz) | `36a3cc0fcd0e444cdc1dfae70093ff3d6707d76c48fe46fa09ae8b7d3ba05515` |
+| [**`AsyLauncher_v4.3.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.apk) | `8d48bb0b533d2ee74240fac14e350db90d2ecacc8629dd0e76396630d7ec8a1e` |
+| [**`AsyLauncher_v4.3.0.aab`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/AsyLauncher_v4.3.0.aab) | `94fa093786a5b9dae080890ba6cf76f97ef577a7beef77afdc65c020c6e695c1` |
+| [**`asycuda-iraq.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/asycuda-iraq.tar.xz) | `b76d2e5a067981dc6ab9df5f66f4470cce80cfb1f12bc4c9e050dfd899f097c8` |
 | [**`runtime-arm64.tar.xz`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.3.0/runtime-arm64.tar.xz) | `04cdd11f4fb4ceef01ca482d78ad8e8248b3a284edb1c9133518b68fe5af1e37` |
 
 ---
