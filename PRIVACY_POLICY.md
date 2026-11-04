@@ -4,7 +4,7 @@
 **Application Name:** Launcher for ASYCUDA (`AsyLauncher`)  
 **Package Name:** `io.github.mohammedalshimmary.asylauncher`  
 **Developer:** Mohammed Ammar Hussein (Independent Open-Source Developer)  
-**Contact Email:** `mohammedalshimmary@users.noreply.github.com`  
+**Contact Email:** `muhammed.ammar.1997@gmail.com`  
 **Repository:** https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android
 
 ---
@@ -25,14 +25,15 @@ We are committed to protecting user privacy through a strict **Zero-PII (Zero Pe
 - Customs declarations, trade documents, financial records, or clipboard contents.
 - Persistent hardware identifiers (no IMEI, no MAC address, no SIM serial, no Android SSAID, and no Advertising ID).
 - Precise or coarse GPS location data.
+- Camera, microphone, contacts, or external device storage files.
 
-All sessions between the user's device and their configured ASYCUDA server take place **directly** between the user's device and that server over encrypted HTTPS/TLS. Nothing from the user's customs session passes through any developer-operated proxy.
+All sessions between the user's device and the ASYCUDA World portal take place **directly** between the user's device and the target server over encrypted HTTPS/TLS. Nothing from the user's session passes through any developer-operated proxy.
 
 ---
 
 ## 3. Limited Anonymous Telemetry & Voluntary Diagnostic Reports
 
-To maintain application stability and provide bilingual (Arabic/English/Kurdish) self-healing error guidance, the app uses Google Cloud Firestore (`gen-lang-client-0583678881`) for two strictly limited functions:
+To maintain application stability and provide trilingual (Arabic, English, and Kurdish) self-healing error guidance, the app communicates with a secure Google Cloud Firestore backend for two strictly limited functions:
 
 ### A. Anonymous Daily Installation Heartbeat (`app_metrics`)
 - **What is sent:** A randomly generated, installation-scoped UUID (`anon_id`), application version (`4.3.0`), Android API level (`android_sdk`), device manufacturer/model (`device_model`), UI language code (`ui_lang`), and UTC calendar date (`last_active_date`).
@@ -46,20 +47,22 @@ To maintain application stability and provide bilingual (Arabic/English/Kurdish)
 
 ---
 
-## 4. Camera & Local Document Processing
+## 4. Android Permissions Used
 
-If you use the optional built-in **Document Scanner / Image Optimizer** tool to prepare customs attachments:
-- The `android.permission.CAMERA` permission is requested at runtime only when you open the scanner.
-- All image cropping, perspective correction, grayscale filtering, and PDF/JPEG compression occur **100% locally on your device**.
-- Scanned documents are never uploaded to the developer or any third-party cloud service.
+**Launcher for ASYCUDA** requests only the minimum Android permissions required to run the local X11 and Java runtime session:
+- `INTERNET` & `ACCESS_NETWORK_STATE`: Required to connect directly to the ASYCUDA server and perform network transport diagnostics.
+- `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, & `WAKE_LOCK`: Required to keep the local X11/JVM session alive when the user briefly switches apps.
+- `POST_NOTIFICATIONS`: Used for the active session status notification and optional release/announcement alerts.
+
+The application requests **zero** camera, microphone, location, contacts, storage, or package-installer permissions.
 
 ---
 
 ## 5. Data Security, Retention & Deletion
 
-- **Encryption in Transit:** All communication with Google Cloud Firestore uses HTTPS/TLS 1.2+.
-- **Write-Only Isolation:** Cloud Firestore Security Rules enforce strict write-only isolation on `diagnostic_reports` and `app_metrics` so no client can read another client's reports.
-- **Data Deletion:** Because no account or personal identifier is collected, clearing the application storage or uninstalling **Launcher for ASYCUDA** immediately destroys the local random installation ID. Users who wish to request deletion of a specific voluntary diagnostic report may contact `mohammedalshimmary@users.noreply.github.com` with the timestamp of their report.
+- **Encryption in Transit:** All communication uses HTTPS/TLS 1.2+.
+- **Write-Only Isolation:** Backend security rules enforce strict write-only isolation on `diagnostic_reports` and `app_metrics` so no client can read another client's reports.
+- **Data Deletion:** Because no account or personal identifier is collected, clearing the application storage or uninstalling **Launcher for ASYCUDA** immediately destroys the local random installation ID. Users who wish to request deletion of a specific voluntary diagnostic report may contact `muhammed.ammar.1997@gmail.com` with the approximate timestamp of their report.
 
 ---
 
