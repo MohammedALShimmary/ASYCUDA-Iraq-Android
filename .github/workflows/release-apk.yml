@@ -178,7 +178,7 @@ jobs:
 
           # Publish or update the GitHub Release and upload public assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 53\` — Major Release)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 54\` — Major Release)
 
           > [!CAUTION]
           > **MAJOR SECURITY & ARCHITECTURE RELEASE (\`${TAG}\`) — ALL PREVIOUS RELEASES (\`< v4.3.0\`) ARE UNSAFE & NOT RECOMMENDED**
@@ -186,7 +186,7 @@ jobs:
 
           ---
 
-          ### What's New in Major Release \`${TAG}\` (\`versionCode 53\`)
+          ### What's New in Major Release \`${TAG}\` (\`versionCode 54\`)
           1. **AsyLauncher Rebrand & Android 16 (\`targetSdkVersion 36\`) Compliance**:
              - New independent brand identity (**AsyLauncher**, package \`io.github.mohammedalshimmary.asylauncher\`) with dynamic localized App Drawer names (**Launcher for ASYCUDA** / **مشغل أسيكودا** / **کارپێکەری ئەسیکۆدا**), adaptive vector icon, and Android 16 (\`targetSdkVersion 36\`) Google Play compliance.
           2. **Customizable Multi-Finger Gestures & Modern On-Screen Mouse Bar**:
@@ -301,7 +301,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: AsyLauncher-play-aab
-          path: lorie-app/build/outputs/bundle/release/lorie-app-release.aab
+          path: |
+            lorie-app/build/outputs/bundle/release/lorie-app-release.aab
+            lorie-app/build/outputs/mapping/release/mapping.txt
           retention-days: 14
 
       - name: Generate Cryptographic SLSA Build Provenance Attestation

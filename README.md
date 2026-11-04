@@ -14,7 +14,7 @@ Independent, open-source Android compatibility launcher (**AsyLauncher**, packag
 
 ---
 
-## Latest Official Major Release: [`v4.3.0` (`versionCode 53`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0)
+## Latest Official Major Release: [`v4.3.0` (`versionCode 54`)](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.3.0)
 
 > [!CAUTION]
 > **MAJOR SECURITY & ARCHITECTURE RELEASE — ALL PREVIOUS RELEASES (`< v4.3.0`) ARE UNSAFE & NOT RECOMMENDED**

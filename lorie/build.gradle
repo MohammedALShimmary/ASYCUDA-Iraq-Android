@@ -40,7 +40,7 @@ android {
         }
         def firebaseProjectId = System.getenv('FIREBASE_PROJECT_ID') ?: localProps.getProperty('gcp.projectId', localProps.getProperty('FIREBASE_PROJECT_ID', ''))
         buildConfigField "String", "VERSION_NAME", "\"4.3.0\""
-        buildConfigField "int", "VERSION_CODE", "53"
+        buildConfigField "int", "VERSION_CODE", "54"
         buildConfigField "String", "COMMIT", "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""
         buildConfigField "String", "APPLICATION_ID", "\"${hostApplicationId}\""
         buildConfigField "String", "FIREBASE_PROJECT_ID", "\"${firebaseProjectId}\""

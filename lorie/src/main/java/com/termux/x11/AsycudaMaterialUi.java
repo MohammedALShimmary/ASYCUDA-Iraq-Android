@@ -66,7 +66,7 @@ public class AsycudaMaterialUi {
     private static final String PREFS_NAME = "asycuda_ui_prefs";
     private static final String CONSENT_PREFS_NAME = "asycuda_legal_consent";
     public static final String CURRENT_POLICY_VERSION = "2.1-2026.11";
-    public static final int CURRENT_CHANGELOG_VERSION = 53;
+    public static final int CURRENT_CHANGELOG_VERSION = 54;
     private static final String KEY_LAST_CHANGELOG_VER = "last_seen_changelog_version";
     private static final String KEY_APP_LANG = "app_lang";
     private static final String KEY_AUTO_KEYBOARD = "auto_show_keyboard";
