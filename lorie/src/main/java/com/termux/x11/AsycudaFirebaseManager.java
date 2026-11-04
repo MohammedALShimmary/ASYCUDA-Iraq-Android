@@ -747,7 +747,7 @@ public final class AsycudaFirebaseManager {
 
             if (remoteVersion >= localVersion || !cacheFile.exists()) {
                 if (cacheFile.exists() && !cacheFile.setWritable(true, true)) {
-                    Log.w(TAG, "Unable to mark catalog cache writable before update");
+                    return false;
                 }
                 try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
                     fos.write(catalogJson.getBytes(StandardCharsets.UTF_8));
@@ -757,7 +757,7 @@ public final class AsycudaFirebaseManager {
                         && cacheFile.setReadable(true, true)
                         && cacheFile.setWritable(false, false);
                 if (!permissionsHardened) {
-                    Log.w(TAG, "Catalog cache permission hardening returned false");
+                    cacheFile.deleteOnExit();
                 }
                 prefs.edit().putLong(KEY_REMOTE_CATALOG_VERSION, remoteVersion).apply();
             }
