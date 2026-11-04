@@ -229,7 +229,7 @@ jobs:
           sed -i 's/^          //' /tmp/release_notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "${TAG} — Major Release (Customizable Gestures, Floating Mini Calculator, Interactive Tutorial & Cloud Firestore Sync)" --notes-file /tmp/release_notes.md --latest
+            gh release edit "$TAG" --draft=false --prerelease=false --title "${TAG} — Major Release (Customizable Gestures, Floating Mini Calculator, Interactive Tutorial & Cloud Firestore Sync)" --notes-file /tmp/release_notes.md --latest
             gh release upload "$TAG" \
               "/tmp/${APK_NAME}" \
               lorie-app/src/main/assets/asycuda-iraq.tar.xz \
