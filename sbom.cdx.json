@@ -1,0 +1,96 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3900a5ca-9e42-49d0-9b41-a5ca20261020",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-09T16:50:00Z",
+    "component": {
+      "type": "application",
+      "name": "AsyLauncher",
+      "group": "io.github.mohammedalshimmary.asylauncher",
+      "version": "4.4.0",
+      "description": "Independent Android 16 (SDK 36) X11 & Eclipse Temurin OpenJDK 8u504-b01 LTS Compatibility Launcher for ASYCUDA World (asy.mof.gov.iq)",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-only"
+          }
+        }
+      ],
+      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v4.4.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "appcompat",
+      "group": "androidx.appcompat",
+      "version": "1.6.1",
+      "purl": "pkg:maven/androidx.appcompat/appcompat@1.6.1"
+    },
+    {
+      "type": "library",
+      "name": "material",
+      "group": "com.google.android.material",
+      "version": "1.9.0",
+      "purl": "pkg:maven/com.google.android.material/material@1.9.0"
+    },
+    {
+      "type": "library",
+      "name": "preference",
+      "group": "androidx.preference",
+      "version": "1.2.0",
+      "purl": "pkg:maven/androidx.preference/preference@1.2.0"
+    },
+    {
+      "type": "library",
+      "name": "core",
+      "group": "androidx.core",
+      "version": "1.13.1",
+      "purl": "pkg:maven/androidx.core/core@1.13.1"
+    },
+    {
+      "type": "library",
+      "name": "commons-compress",
+      "group": "org.apache.commons",
+      "version": "1.26.2",
+      "purl": "pkg:maven/org.apache.commons/commons-compress@1.26.2"
+    },
+    {
+      "type": "library",
+      "name": "xz",
+      "group": "org.tukaani",
+      "version": "1.9",
+      "purl": "pkg:maven/org.tukaani/xz@1.9"
+    },
+    {
+      "type": "framework",
+      "name": "eclipse-temurin-openjdk-jre-arm64",
+      "group": "net.adoptium",
+      "version": "1.8.0_504-b01",
+      "description": "Embedded ARM64 Linux Eclipse Temurin OpenJDK 8u504-b01 LTS Runtime Environment (runtime-arm64.tar.xz) for executing JNLP/Swing ASYCUDA World client JARs locally on Android"
+    },
+    {
+      "type": "library",
+      "name": "glibc-aarch64",
+      "group": "org.gnu",
+      "version": "2.38",
+      "description": "Embedded ARM64 GNU C Library & X11 client libraries bundled inside runtime-arm64.tar.xz"
+    },
+    {
+      "type": "library",
+      "name": "asylauncher-java-bridge",
+      "group": "io.github.mohammedalshimmary.asylauncher",
+      "version": "4.4.0",
+      "description": "Proprietary R8-obfuscated Android-to-Java8 compatibility engine (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) — Copyright (C) 2026 Mohammed Ammar Hussein, All Rights Reserved"
+    },
+    {
+      "type": "application",
+      "name": "asycuda-world-iraq-client-jars",
+      "group": "iq.gov.mof.asy",
+      "version": "4.2.2",
+      "description": "131 unmodified official Iraqi Ministry of Finance / UNCTAD ASYCUDA World client JAR archives downloaded on first launch from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp and verified against META-INF/SOCODE.RSA (zero government JARs pre-bundled in APK)"
+    }
+  ]
+}

@@ -1,0 +1,453 @@
+// Copyright 2015 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+package com.termux.x11.input;
+
+import android.content.Context;
+import android.graphics.PointF;
+import android.os.SystemClock;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
+
+/**
+ * This interface defines the methods used to customize input handling for
+ * a particular strategy.  The implementing class is responsible for sending
+ * remote input events and defining implementation specific behavior.
+ */
+public interface InputStrategyInterface {
+    /**
+     * Called when a user tap has been detected.
+     *
+     * @param button The button value for the tap event.
+     */
+    void onTap(int button);
+
+    /**
+     * Called when the user has put one or more fingers down on the screen for a period of time.
+     *
+     * @param button The button value for the tap event.
+     * @return A boolean representing whether the event was handled.
+     */
+    boolean onPressAndHold(int button, boolean force);
+
+    /**
+     * Called when a MotionEvent is received.  This method allows the input strategy to store or
+     * react to specific MotionEvents as needed.
+     *
+     * @param event The original event for the current touch motion.
+     */
+    void onMotionEvent(MotionEvent event);
+
+    /**
+     * Called when the user is attempting to scroll/pan the remote UI.
+     *
+     * @param distanceX The distance moved along the x-axis.
+     * @param distanceY The distance moved along the y-axis.
+     */
+    void onScroll(float distanceX, float distanceY);
+
+    class NullInputStrategy implements InputStrategyInterface {
+        @Override public void onTap(int button) {}
+        @Override public boolean onPressAndHold(int button, boolean force) { return false; }
+        @Override public void onScroll(float distanceX, float distanceY) {}
+        @Override public void onMotionEvent(MotionEvent event) {}
+    }
+
+    /**
+     * This class receives local touch events and translates them into the appropriate mouse based
+     * events for the remote host.  The net result is that the local input method feels like a touch
+     * interface but the remote host will be given mouse events to inject.
+     */
+    class SimulatedTouchInputStrategy implements InputStrategyInterface {
+        /** Used to adjust the size of the region used for double tap detection. */
+        private static final float DOUBLE_TAP_SLOP_SCALE_FACTOR = 1.15f;
+
+        private final RenderData mRenderData;
+        private final InputEventSender mInjector;
+
+        /**
+         * Stores the time of the most recent left button single tap processed.
+         */
+        private long mLastTapTimeInMs;
+
+        /**
+         * Stores the position of the last left button single tap processed.
+         */
+        private PointF mLastTapPoint;
+
+        /**
+         * The maximum distance, in pixels, between two points in order for them to be considered a
+         * double tap gesture.
+         */
+        private final int mDoubleTapSlopSquareInPx;
+
+        /**
+         * The interval, measured in milliseconds, in which two consecutive left button taps must
+         * occur in order to be considered a double tap gesture.
+         */
+        private final long mDoubleTapDurationInMs;
+
+        /** Mouse-button currently held down, or BUTTON_UNDEFINED otherwise. */
+        private int mHeldButton = InputStub.BUTTON_UNDEFINED;
+
+        private final int mTouchSlop;
+        private float mDownX, mDownY;
+        private boolean mSingleFinger;
+
+        public SimulatedTouchInputStrategy(
+                RenderData renderData, InputEventSender injector, Context context) {
+            if (injector == null)
+                throw new NullPointerException();
+            mRenderData = renderData;
+            mInjector = injector;
+
+            mDoubleTapDurationInMs = Math.max(420L, ViewConfiguration.getDoubleTapTimeout());
+
+            // In order to detect whether the user is attempting to double tap a target, we define a
+            // region around the first point within which the second tap must occur.  The standard way
+            // to do this in an Android UI (meaning a UI comprised of UI elements which conform to the
+            // visual guidelines for the platform which are 'Touch Friendly') is to use the
+            // getScaledDoubleTapSlop() value for checking this distance (or use a GestureDetector).
+            // Our scenario is a bit different as our UI consists of an image of a remote machine where
+            // the UI elements were probably designed for mouse and keyboard (meaning smaller targets)
+            // and the image itself which can be zoomed to change the size of the targets.  Ths adds up
+            // to the target to be invoked often being either larger or much smaller than a standard
+            // Android UI element.  Our approach to this problem is to make double-tap detection
+            // consistent regardless of the zoom level or remote target size so that the user can rely
+            // on their muscle memory when interacting with our UI.  With respect to the original
+            // problem, getScaledDoubleTapSlop() gives a value which is optimized for an Android based
+            // UI however this value is too large for interacting with remote elements in our app.
+            // Our solution is to use the original value from getScaledDoubleTapSlop() (which includes
+            // scaling to account for display differences between devices) and apply a fudge/scale
+            // factor to make the interaction more intuitive and useful for our scenario.
+            ViewConfiguration config = ViewConfiguration.get(context);
+            int scaledDoubleTapSlopInPx = config.getScaledDoubleTapSlop();
+            scaledDoubleTapSlopInPx = (int) (scaledDoubleTapSlopInPx * DOUBLE_TAP_SLOP_SCALE_FACTOR);
+            mDoubleTapSlopSquareInPx = scaledDoubleTapSlopInPx * scaledDoubleTapSlopInPx;
+            mTouchSlop = config.getScaledTouchSlop();
+        }
+
+        @Override
+        public void onTap(int button) {
+            PointF currentTapPoint = mRenderData.getCursorPosition();
+            if (button == InputStub.BUTTON_LEFT) {
+                // Left clicks are handled a little differently than the events for other buttons.
+                // This is needed because translating touch events to mouse events has a problem with
+                // location consistency for double clicks.  If you take the center location of each tap
+                // and inject them as mouse clicks, the distance between those two points will often
+                // cause the remote OS to recognize the gesture as two distinct clicks instead of a
+                // double click.  In order to increase the success rate of double taps/clicks, we
+                // squirrel away the time and coordinates of each single tap and if we detect the user
+                // attempting a double tap, we use the original event's location for that second tap.
+                long tapInterval = SystemClock.uptimeMillis() - mLastTapTimeInMs;
+                if (isDoubleTap(currentTapPoint.x, currentTapPoint.y, tapInterval)) {
+                    moveCursor(mLastTapPoint.x, mLastTapPoint.y);
+                    mLastTapPoint = null;
+                    mLastTapTimeInMs = 0;
+                } else {
+                    mLastTapPoint = currentTapPoint;
+                    mLastTapTimeInMs = SystemClock.uptimeMillis();
+                }
+            } else {
+                mLastTapPoint = null;
+                mLastTapTimeInMs = 0;
+            }
+
+            mInjector.sendMouseClick(button, false);
+        }
+
+        @Override
+        public boolean onPressAndHold(int button, boolean force) {
+            mInjector.sendMouseDown(button, false);
+            mHeldButton = button;
+            return true;
+        }
+
+        @Override
+        public void onScroll(float distanceX, float distanceY) {
+            mInjector.sendMouseWheelEvent(distanceX, distanceY);
+        }
+
+        @Override
+        public void onMotionEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    mDownX = event.getX();
+                    mDownY = event.getY();
+                    mSingleFinger = true;
+                    // Immediately warp the X11 cursor to the touch-down point so Swing/AsycudaBoot
+                    // can detect window resize edges, title bars, and scrollbars on ACTION_DOWN,
+                    // EXCEPT when the 2nd tap is within the double-tap radius and window of the 1st tap
+                    // (otherwise X11 MotionNotify between Tap 1 and Tap 2 resets OpenJDK clickCount to 1).
+                    PointF simDownPt = mRenderData.mapScreenPoint(mDownX, mDownY);
+                    if (isDoubleTap(simDownPt.x, simDownPt.y, SystemClock.uptimeMillis() - mLastTapTimeInMs)) {
+                        moveCursor(mLastTapPoint.x, mLastTapPoint.y);
+                    } else {
+                        moveCursor(simDownPt.x, simDownPt.y);
+                    }
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (!mSingleFinger || event.getPointerCount() != 1)
+                        break;
+
+                    // In Simulated Touchscreen mode (Mode 2), sliding 1 finger moves the cursor
+                    // smoothly (unless a button is already held via Long-Press Hold & Drag).
+                    if (mHeldButton == InputStub.BUTTON_UNDEFINED) {
+                        if (Math.hypot(event.getX() - mDownX, event.getY() - mDownY) <= mTouchSlop)
+                            break;
+                    }
+                    moveCursorToScreenPoint(event.getX(), event.getY());
+                    break;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    mSingleFinger = false;
+                    // fall through
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP:
+                    if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                        mInjector.sendMouseUp(mHeldButton, false);
+                        mHeldButton = InputStub.BUTTON_UNDEFINED;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private void moveCursorToScreenPoint(float screenX, float screenY) {
+            PointF point = mRenderData.mapScreenPoint(screenX, screenY);
+            moveCursor(point.x, point.y);
+        }
+
+        private void moveCursor(float x, float y) {
+            if (mRenderData.setCursorPosition(x, y))
+                mInjector.sendCursorMove((int) x, (int) y, false);
+        }
+
+        private boolean isDoubleTap(float currentX, float currentY, long tapInterval) {
+            if (tapInterval > mDoubleTapDurationInMs || mLastTapPoint == null) {
+                return false;
+            }
+
+            // Convert the image based coordinates back to screen coordinates so the user experiences
+            // consistent double tap behavior regardless of zoom level.
+            //
+            float[] currentValues = {currentX * mRenderData.scale.x, currentY * mRenderData.scale.y};
+            float[] previousValues = {mLastTapPoint.x * mRenderData.scale.x, mLastTapPoint.y * mRenderData.scale.y};
+
+            int deltaX = (int) (currentValues[0] - previousValues[0]);
+            int deltaY = (int) (currentValues[1] - previousValues[1]);
+            return ((deltaX * deltaX + deltaY * deltaY) <= mDoubleTapSlopSquareInPx);
+        }
+    }
+
+    /**
+     * Defines a set of behavior and methods to simulate trackpad behavior when responding to
+     * local input event data.  This class is also responsible for forwarding input event data
+     * to the remote host for injection there.
+     */
+    class TrackpadInputStrategy implements InputStrategyInterface {
+        private final InputEventSender mInjector;
+
+        /** Mouse-button currently held down, or BUTTON_UNDEFINED otherwise. */
+        private int mHeldButton = InputStub.BUTTON_UNDEFINED;
+
+        public TrackpadInputStrategy(InputEventSender injector) {
+            if ((mInjector = injector) == null)
+                throw new NullPointerException();
+        }
+
+        @Override
+        public void onTap(int button) {
+            mInjector.sendMouseClick(button, true);
+        }
+
+        @Override
+        public boolean onPressAndHold(int button, boolean force) {
+            if (mInjector.tapToMove && !force)
+                return false;
+
+            mInjector.sendMouseDown(button, true);
+            mHeldButton = button;
+            return true;
+        }
+
+        @Override
+        public void onScroll(float distanceX, float distanceY) {
+            mInjector.sendMouseWheelEvent(distanceX, distanceY);
+        }
+
+        @Override
+        public void onMotionEvent(MotionEvent event) {
+            if (event.getActionMasked() == MotionEvent.ACTION_UP && mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                mInjector.sendMouseUp(mHeldButton, true);
+                mHeldButton = InputStub.BUTTON_UNDEFINED;
+            }
+        }
+    }
+
+    /**
+     * Direct Touch strategy (Mode 3) for Java Swing / X11 desktop windows:
+     * - 1-finger tap / 2-finger tap / 3-finger tap warps the cursor 1:1 under the finger and
+     *   executes the user's configured click action (Left Click, Right Click, Double Click, etc.).
+     * - 1-finger hold (Long-Press) executes the user's configured hold1 action (default: Right Click)
+     *   without being swallowed by a premature raw touch grab.
+     * - Immediate 1-finger drag beyond touch slop presses and drags Left Mouse Button 1:1 under the
+     *   finger (for moving windows, dragging scrollbars, or selecting text) and cleanly releases if
+     *   a second finger touches down for 2-finger scroll or 2-finger tap.
+     */
+    class DirectTouchInputStrategy implements InputStrategyInterface {
+        private static final float DOUBLE_TAP_SLOP_SCALE_FACTOR = 1.15f;
+
+        private final RenderData mRenderData;
+        private final InputEventSender mInjector;
+        private final Context mContext;
+        private long mLastTapTimeInMs;
+        private PointF mLastTapPoint;
+        private final int mDoubleTapSlopSquareInPx;
+        private final long mDoubleTapDurationInMs;
+        private int mHeldButton = InputStub.BUTTON_UNDEFINED;
+        private final int mTouchSlop;
+        private float mDownX, mDownY;
+        private boolean mSingleFinger;
+
+        public DirectTouchInputStrategy(
+                RenderData renderData, InputEventSender injector, Context context) {
+            if (injector == null)
+                throw new NullPointerException();
+            mRenderData = renderData;
+            mInjector = injector;
+            mContext = context;
+            mDoubleTapDurationInMs = Math.max(420L, ViewConfiguration.getDoubleTapTimeout());
+            ViewConfiguration config = ViewConfiguration.get(context);
+            int scaledDoubleTapSlopInPx = (int) (config.getScaledDoubleTapSlop() * DOUBLE_TAP_SLOP_SCALE_FACTOR);
+            mDoubleTapSlopSquareInPx = scaledDoubleTapSlopInPx * scaledDoubleTapSlopInPx;
+            mTouchSlop = config.getScaledTouchSlop();
+        }
+
+        @Override
+        public void onTap(int button) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                mInjector.sendMouseUp(mHeldButton, false);
+                mHeldButton = InputStub.BUTTON_UNDEFINED;
+            }
+            PointF currentTapPoint = mRenderData.getCursorPosition();
+            if (button == InputStub.BUTTON_LEFT) {
+                long tapInterval = SystemClock.uptimeMillis() - mLastTapTimeInMs;
+                if (isDoubleTap(currentTapPoint.x, currentTapPoint.y, tapInterval)) {
+                    moveCursor(mLastTapPoint.x, mLastTapPoint.y);
+                    mLastTapPoint = null;
+                    mLastTapTimeInMs = 0;
+                } else {
+                    mLastTapPoint = currentTapPoint;
+                    mLastTapTimeInMs = SystemClock.uptimeMillis();
+                }
+            } else {
+                mLastTapPoint = null;
+                mLastTapTimeInMs = 0;
+            }
+            mInjector.sendMouseClick(button, false);
+        }
+
+        @Override
+        public boolean onPressAndHold(int button, boolean force) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED && mHeldButton != button) {
+                mInjector.sendMouseUp(mHeldButton, false);
+            }
+            mInjector.sendMouseDown(button, false);
+            mHeldButton = button;
+            return true;
+        }
+
+        @Override
+        public void onScroll(float distanceX, float distanceY) {
+            if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                mInjector.sendMouseUp(mHeldButton, false);
+                mHeldButton = InputStub.BUTTON_UNDEFINED;
+            }
+            mInjector.sendMouseWheelEvent(distanceX, distanceY);
+        }
+
+        @Override
+        public void onMotionEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    mDownX = event.getX();
+                    mDownY = event.getY();
+                    mSingleFinger = true;
+                    // Immediately warp the X11 cursor to the touch-down point so Swing/AsycudaBoot
+                    // can detect window resize edges, title bars, and scrollbars on ACTION_DOWN,
+                    // EXCEPT when the 2nd tap is within the double-tap radius and window of the 1st tap
+                    // (otherwise X11 MotionNotify between Tap 1 and Tap 2 resets OpenJDK clickCount to 1).
+                    PointF simDownPt = mRenderData.mapScreenPoint(mDownX, mDownY);
+                    if (isDoubleTap(simDownPt.x, simDownPt.y, SystemClock.uptimeMillis() - mLastTapTimeInMs)) {
+                        moveCursor(mLastTapPoint.x, mLastTapPoint.y);
+                    } else {
+                        moveCursor(simDownPt.x, simDownPt.y);
+                    }
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (!mSingleFinger || event.getPointerCount() != 1)
+                        break;
+
+                    if (mHeldButton == InputStub.BUTTON_UNDEFINED) {
+                        if (com.termux.x11.AsycudaMaterialUi.isDirectTouchOneFingerScrollEnabled(mContext)) {
+                            break;
+                        }
+                        if (Math.hypot(event.getX() - mDownX, event.getY() - mDownY) <= mTouchSlop)
+                            break;
+
+                        String dragAct = com.termux.x11.AsycudaMaterialUi.getGestureAction(mContext, 2, "drag1");
+                        if ("disabled".equals(dragAct) || "no action".equals(dragAct)) {
+                            break;
+                        }
+                        int dragBtn = "right_click".equals(dragAct) ? InputStub.BUTTON_RIGHT
+                                : ("middle_click".equals(dragAct) ? InputStub.BUTTON_MIDDLE : InputStub.BUTTON_LEFT);
+                        moveCursorToScreenPoint(mDownX, mDownY);
+                        onPressAndHold(dragBtn, true);
+                    }
+                    moveCursorToScreenPoint(event.getX(), event.getY());
+                    break;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    mSingleFinger = false;
+                    // fall through
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP:
+                    if (mHeldButton != InputStub.BUTTON_UNDEFINED) {
+                        mInjector.sendMouseUp(mHeldButton, false);
+                        mHeldButton = InputStub.BUTTON_UNDEFINED;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private void moveCursorToScreenPoint(float screenX, float screenY) {
+            PointF point = mRenderData.mapScreenPoint(screenX, screenY);
+            moveCursor(point.x, point.y);
+        }
+
+        private void moveCursor(float x, float y) {
+            if (mRenderData.setCursorPosition(x, y))
+                mInjector.sendCursorMove((int) x, (int) y, false);
+        }
+
+        private boolean isDoubleTap(float currentX, float currentY, long tapInterval) {
+            if (tapInterval > mDoubleTapDurationInMs || mLastTapPoint == null) {
+                return false;
+            }
+            float[] currentValues = {currentX * mRenderData.scale.x, currentY * mRenderData.scale.y};
+            float[] previousValues = {mLastTapPoint.x * mRenderData.scale.x, mLastTapPoint.y * mRenderData.scale.y};
+            int deltaX = (int) (currentValues[0] - previousValues[0]);
+            int deltaY = (int) (currentValues[1] - previousValues[1]);
+            return ((deltaX * deltaX + deltaY * deltaY) <= mDoubleTapSlopSquareInPx);
+        }
+    }
+}

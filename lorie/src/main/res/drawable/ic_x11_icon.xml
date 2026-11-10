@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Desktop window outline (top-left) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,4C2.45,4 2,4.45 2,5V15C2,15.55 2.45,16 3,16H9V14.2H3.8V7.5H16.2V9.5H18V5C18,4.45 17.55,4 17,4H3ZM4.5,5.2C4.83,5.2 5.1,5.47 5.1,5.8C5.1,6.13 4.83,6.4 4.5,6.4C4.17,6.4 3.9,6.13 3.9,5.8C3.9,5.47 4.17,5.2 4.5,5.2ZM6.5,5.2C6.83,5.2 7.1,5.47 7.1,5.8C7.1,6.13 6.83,6.4 6.5,6.4C6.17,6.4 5.9,6.13 5.9,5.8C5.9,5.47 6.17,5.2 6.5,5.2ZM5.2,9.2H11.5V10.6H5.2V9.2ZM5.2,11.6H9.2V13H5.2V11.6Z" />
+    <!-- Landscape Android phone badge (bottom-right) running mini window -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11.5,11C10.67,11 10,11.67 10,12.5V18.5C10,19.33 10.67,20 11.5,20H20.5C21.33,20 22,19.33 22,18.5V12.5C22,11.67 21.33,11 20.5,11H11.5ZM11.8,12.6H19.6V18.4H11.8V12.6ZM20.4,14.5H21V16.5H20.4V14.5ZM13,13.8V17.2H18.4V13.8H13ZM14.2,15H17.2V16H14.2V15Z" />
+</vector>

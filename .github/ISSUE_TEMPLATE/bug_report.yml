@@ -1,0 +1,26 @@
+name: "Bug report"
+description: "Report a bug or technical issue in AsyLauncher"
+title: "[Bug]: "
+labels: [untriaged, "bug report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the issue tracker for **AsyLauncher (`io.github.mohammedalshimmary.asylauncher`)** — the independent, unofficial Android compatibility launcher for ASYCUDA World (not affiliated with the Iraqi Ministry of Finance or UNCTAD).
+        Please ensure you never attach any personal credentials, passwords, or confidential customs declaration documents in public bug reports.
+
+  - type: textarea
+    attributes:
+      label: Problem description
+      description: |
+        A clear and concise description of the issue encountered in AsyLauncher.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What steps will reproduce the bug?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What is the expected behavior?
