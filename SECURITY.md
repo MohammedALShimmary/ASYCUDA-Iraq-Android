@@ -19,7 +19,7 @@ Every asset published on the [official `v4.4.0` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.4.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 56`, `targetSdkVersion 36`) | `ed294191f4a317c8633ef6f4a08e453bd4afaabe98a4b46c308c00505d4760cd` |
+| [**`AsyLauncher_v4.4.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 56`, `targetSdkVersion 36`) | `5b13cd7d26bf6e134c9d365f119197838264a58127b92fe0d694b8d97813e8ed` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Client JARs) | Tracked in repository root |
 
 ### Official APK X.509 Signing Certificate (`apksigner verify --print-certs`)
