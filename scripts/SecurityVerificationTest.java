@@ -146,8 +146,11 @@ public final class SecurityVerificationTest {
 
         File mgrFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaStandaloneManager.java");
         String mgrSrc = new String(Files.readAllBytes(mgrFile.toPath()), StandardCharsets.UTF_8);
-        if (!mgrSrc.contains("MessageDigest.isEqual") || !mgrSrc.contains("isLoopbackPeerOwnedByOurUid")) {
-            throw new AssertionError("AsycudaStandaloneManager must enforce constant-time MessageDigest.isEqual and loopback UID peer verification");
+        if (!mgrSrc.contains("MessageDigest.isEqual") || !mgrSrc.contains("isAuthorizedLoopbackBridgeSocket")) {
+            throw new AssertionError("AsycudaStandaloneManager must enforce constant-time MessageDigest.isEqual and authorized loopback bridge socket verification");
+        }
+        if (mgrSrc.contains("pb.redirectOutput(logFile)") || !mgrSrc.contains("startRedactedJvmLogPump(")) {
+            throw new AssertionError("AsycudaStandaloneManager must pipe JVM stdout/stderr through startRedactedJvmLogPump for pre-disk redaction");
         }
         if (mgrSrc.contains("NextGen-Customs-") || !mgrSrc.contains("AsycudaFirebaseManager.fetchAndSyncKnownErrorsCatalog")) {
             throw new AssertionError("AsycudaStandaloneManager must sync Known-Issues Catalog exclusively via AsycudaFirebaseManager (R5-04)");
@@ -258,7 +261,7 @@ public final class SecurityVerificationTest {
 
         // 2. Verify APK updater SHA-256 & URL validation and Tar symlink traversal protection
         if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(
-                "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk")) {
+                "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk")) {
             throw new AssertionError("Official GitHub release URL should be trusted");
         }
         if (AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(
@@ -322,8 +325,8 @@ public final class SecurityVerificationTest {
         }
         if (mgrSrc.contains("contents/lorie-app/src/main/assets/known-errors-catalog.json")
                 || !mgrSrc.contains("known-errors-catalog-remote.json")
-                || !mgrSrc.contains(".bootpatch_v4_4_0")) {
-            throw new AssertionError("AsycudaStandaloneManager.java must reference known-errors-catalog-remote.json and .bootpatch_v4_4_0 (R7-01/R7-03/R11-03)");
+                || !mgrSrc.contains(".bootpatch_v4_4_1")) {
+            throw new AssertionError("AsycudaStandaloneManager.java must reference known-errors-catalog-remote.json and .bootpatch_v4_4_1 (R7-01/R7-03/R11-03)");
         }
 
         File fbFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaFirebaseManager.java");

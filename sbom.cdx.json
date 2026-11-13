@@ -4,12 +4,12 @@
   "serialNumber": "urn:uuid:3900a5ca-9e42-49d0-9b41-a5ca20261020",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-09T16:50:00Z",
+    "timestamp": "2026-11-13T18:24:00Z",
     "component": {
       "type": "application",
       "name": "AsyLauncher",
       "group": "io.github.mohammedalshimmary.asylauncher",
-      "version": "4.4.0",
+      "version": "4.4.1",
       "description": "Independent Android 16 (SDK 36) X11 & Eclipse Temurin OpenJDK 8u504-b01 LTS Compatibility Launcher for ASYCUDA World (asy.mof.gov.iq)",
       "licenses": [
         {
@@ -18,7 +18,7 @@
           }
         }
       ],
-      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v4.4.0"
+      "purl": "pkg:github/MohammedALShimmary/ASYCUDA-Iraq-Android@v4.4.1"
     }
   },
   "components": [
@@ -82,8 +82,8 @@
       "type": "library",
       "name": "asylauncher-java-bridge",
       "group": "io.github.mohammedalshimmary.asylauncher",
-      "version": "4.4.0",
-      "description": "Proprietary R8-obfuscated Android-to-Java8 compatibility engine (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) — Copyright (C) 2026 Mohammed Ammar Hussein, All Rights Reserved"
+      "version": "4.4.1",
+      "description": "Proprietary R8-obfuscated, string-encrypted & host-APK-certificate-bound Android-to-Java8 compatibility engine (00_bootpatch.jar, 00_boot.jar, 00_jnlp.jar) — Copyright (C) 2026 Mohammed Ammar Hussein, All Rights Reserved"
     },
     {
       "type": "application",

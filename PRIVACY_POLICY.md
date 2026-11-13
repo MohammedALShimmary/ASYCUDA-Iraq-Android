@@ -1,6 +1,6 @@
 # Privacy Policy — Launcher for ASYCUDA (AsyLauncher)
 
-**Effective Date:** November 9, 2026  
+**Effective Date:** November 13, 2026  
 **Application Name:** Launcher for ASYCUDA (`AsyLauncher` / `مشغل أسيكودا` / `کارپێکەری ئەسیکۆدا`)  
 **Package Name:** `io.github.mohammedalshimmary.asylauncher`  
 **Developer:** Mohammed Ammar Hussein (Independent Software Developer — Baghdad, Iraq)  
@@ -18,11 +18,10 @@
 **Launcher for ASYCUDA (`AsyLauncher`) is an independent third-party technical utility. It is NOT affiliated with, sponsored by, authorized by, or endorsed by the Iraqi Ministry of Finance (`وزارة المالية العراقية`), the General Commission of Customs (`الهيئة العامة للكمارك`), the United Nations Conference on Trade and Development (`UNCTAD`), or any government entity.**
 
 ### Official Government & UNCTAD Information Sources
-No government `.jar` packages are pre-bundled inside this application. All official ASYCUDA World client packages and JNLP configuration manifests executed by this compatibility launcher are retrieved directly by the user's device from the following official, publicly accessible government and UNCTAD portals:
-- **Iraqi Ministry of Finance — Official ASYCUDA World Portal:** https://asy.mof.gov.iq/aw/
-- **Official ASYCUDA World JNLP Client Manifest:** https://asy.mof.gov.iq/aw/AWIQWorld.jnlp
+No government `.jar` packages are pre-bundled inside this application. Official ASYCUDA World client packages are downloaded directly from the Iraqi Ministry of Finance ASYCUDA World gateway (`asy.mof.gov.iq`, which is geo-restricted by the Ministry of Finance firewall to networks inside Iraq). Publicly accessible official government and UNCTAD information portals:
 - **Iraqi Ministry of Finance Official Website:** https://www.mof.gov.iq/
 - **UNCTAD ASYCUDA Official Programme Website:** https://asycuda.org/en/
+- **UNCTAD ASYCUDA User Countries Directory:** https://asycuda.org/en/user-countries/
 
 ---
 
@@ -46,13 +45,13 @@ To deliver release announcements (`announcements/latest`), update the remote Kno
 
 Below is the complete, exhaustive disclosure of every data field processed by those functions:
 
-### A. Anonymous Daily Installation Heartbeat (`app_metrics` Collection)
-Once per UTC calendar day—and only after the user accepts the first-launch Terms & Conditions—the application sends a single non-personal heartbeat document (`app_metrics/{anon_id}`) containing **exclusively these 6 technical fields**:
+### A. Anonymous Daily Installation Heartbeat (`app_metrics` Collection — Opt-Out Supported)
+Once per UTC calendar day—and only after the user accepts the first-launch Terms & Conditions (unless disabled via the **"Anonymous Daily Usage Heartbeat"** toggle inside the **About** screen)—the application sends a single non-personal heartbeat document (`app_metrics/{anon_id}`) containing **exclusively these 6 technical fields**:
 
 | Field Name | Example Value | Purpose | Linked to User Identity? |
 | :--- | :--- | :--- | :--- |
 | `anon_id` | `inst_9f8e7d6c-5b4a-...` | Randomly generated installation UUID (`UUID.randomUUID()`). Resets automatically whenever app data is cleared or the app is uninstalled. | **No** |
-| `app_version` | `4.4.0 (56)` | Tracks which app version is active so obsolete versions can be identified. | **No** |
+| `app_version` | `4.4.1 (57)` | Tracks which app version is active so obsolete versions can be identified. | **No** |
 | `android_sdk` | `35` or `36` | Verifies compatibility across Android OS API levels (Android 8.0–16+). | **No** |
 | `device_model` | `Samsung SM-S928B` | Identifies device screen/GPU class for X11 rendering compatibility. | **No** |
 | `ui_lang` | `ar`, `en`, or `ku` | Indicates active interface language preference for translation prioritization. | **No** |

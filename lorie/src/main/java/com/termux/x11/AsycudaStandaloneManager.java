@@ -268,6 +268,12 @@ public class AsycudaStandaloneManager {
                 }
                 sJavaProcess = null;
             }
+            if (ctx != null) {
+                File clientDir = new File(ctx.getFilesDir(), DIR_CLIENT);
+                deleteQuietly(new File(clientDir, FILE_ASYCUDA_LOG));
+                deleteQuietly(new File(clientDir, FILE_CLIENT_LOG));
+                deleteQuietly(new File(clientDir, "boot_debug.log"));
+            }
             for (MainActivity act : MainActivity.getInstances()) {
                 try {
                     act.finishAndRemoveTask();
@@ -871,7 +877,7 @@ public class AsycudaStandaloneManager {
             File printsDir = new File(filesDir, DIR_PRINTS);
             File workspaceDir = new File(filesDir, DIR_WORKSPACE);
             File runtimeMarker = new File(filesDir, ".extracted_v4_3_0");
-            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_4_0");
+            File bootPatchMarker = new File(filesDir, ".bootpatch_v4_4_1");
 
             if (!runtimeMarker.exists()) {
                 deleteRecursive(new File(filesDir, "usr"));
@@ -944,6 +950,7 @@ public class AsycudaStandaloneManager {
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_1_5"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_3_0"));
                 deleteQuietly(new File(filesDir, ".bootpatch_v4_3_1"));
+                deleteQuietly(new File(filesDir, ".bootpatch_v4_4_0"));
                 extractBootJarsOnly(activity, ASSET_ASYCUDA_IRAQ_TAR, clientDir);
                 ensureFileCreated(bootPatchMarker);
             } else {
@@ -977,14 +984,14 @@ public class AsycudaStandaloneManager {
 
             if (!areAllManifestJarsPresent(clientDir)) {
                 updateStatus(AsycudaMaterialUi.tr(activity,
-                        "Internet connection to asy.mof.gov.iq is required for initial installation of official ASYCUDA packages.",
-                        "يلزم الاتصال بخادم الكمارك الرسمي (asy.mof.gov.iq) لتحميل ملفات نظام أسيكودا لأول مرة.",
-                        "پێویستە پەیوەندی بە ڕاژەی فەرمی گومرگ (asy.mof.gov.iq) هەبێت بۆ داگرتنی پەڕگەکانی ئەسیکۆدا بۆ یەکەم جار."));
+                        "Connection to the Iraqi Customs JNLP server is required for initial package download (restricted by the Ministry of Finance firewall to connections inside Iraq). You can still open Control Center, Display Settings, Mini Calculator, Vault & About.",
+                        "يلزم الاتصال بخادم الكمارك الرسمي لتحميل ملفات نظام أسيكودا لأول مرة (الخادم مقيد بجدار حماية وزارة المالية للشبكات داخل العراق فقط). لا يزال بإمكانك استخدام مركز التحكم، إعدادات العرض، الحاسبة، الخزنة، وحول التطبيق.",
+                        "پەیوەندی بە ڕاژەی فەرمی گومرگ پێویستە بۆ یەکەم جار داگرتنی پەڕگەکانی ئەسیکۆدا (ڕاژەکە تەنها لەناو تۆڕەکانی عێراق بەردەستە). دەتوانیت ناوەندی کۆنترۆڵ، ڕێکخستنەکان، ژمێرەر و قاسە بەکاربهێنیت."));
                 diagnoseAndShowUniversalNetworkModal(
                         activity,
                         "initial_package_download",
                         sLastSyncException,
-                        "Initial installation requires downloading the 131 official JAR packages from https://asy.mof.gov.iq/aw/AWIQWorld.jnlp, but the server could not be reached.",
+                        "Initial installation requires downloading the 131 official ASYCUDA World JAR packages from the Iraqi Ministry of Finance JNLP server, which is restricted to Iraqi networks. Outside Iraq, Control Center, Display Settings, Mini Calculator, Private App Vault, and About remain accessible.",
                         () -> {
                             hideSplashButton();
                             new Thread(() -> bootstrapEnvironmentAndStart(activity), "Asycuda-BootstrapRetry").start();
@@ -2119,6 +2126,7 @@ public class AsycudaStandaloneManager {
                 cmd.add("-Duser.home=" + fastInternalHome.getAbsolutePath());
                 cmd.add("-Dasycuda.ui.scale.preset=" + AsycudaMaterialUi.getUiScalePreset(activity));
                 cmd.add("-Dasycuda.font.aa=" + AsycudaMaterialUi.isFontAntiAliasingEnabled(activity));
+                cmd.add("-Dasycuda.host.apk=" + activity.getApplicationInfo().sourceDir);
                 boolean gpuAccel = AsycudaMaterialUi.isGpuHardwareAccelerationEnabled(activity);
                 cmd.add("-Dsun.java2d.pmoffscreen=" + (gpuAccel ? "true" : "false"));
                 cmd.add("-Dsun.java2d.xrender=" + (gpuAccel ? "true" : "false"));
@@ -2133,10 +2141,12 @@ public class AsycudaStandaloneManager {
                 cmd.addAll(parseJnlpApplicationArgs(new File(clientDir, FILE_AWIQ_JNLP)));
 
                 logFile = new File(clientDir, FILE_ASYCUDA_LOG);
+                deleteQuietly(logFile);
+                deleteQuietly(new File(clientDir, FILE_CLIENT_LOG));
+                deleteQuietly(new File(clientDir, "boot_debug.log"));
                 ProcessBuilder pb = new ProcessBuilder(cmd);
                 pb.directory(clientDir);
                 pb.redirectErrorStream(true);
-                pb.redirectOutput(logFile);
 
                 Map<String, String> env = pb.environment();
                 env.remove("LD_PRELOAD");
@@ -2152,6 +2162,7 @@ public class AsycudaStandaloneManager {
 
                 proc = pb.start();
                 sJavaProcess = proc;
+                startRedactedJvmLogPump(proc, logFile);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 return;
@@ -2197,6 +2208,50 @@ public class AsycudaStandaloneManager {
         } catch (Exception t) {
             updateStatus("JVM status error: " + t.getMessage());
         }
+    }
+
+    private static void startRedactedJvmLogPump(final Process proc, final File logFile) {
+        if (proc == null || logFile == null) return;
+        Thread logPump = new Thread(() -> {
+            final long maxLogBytes = 262144L;
+            long writtenBytes = 0L;
+            java.io.BufferedOutputStream bos = null;
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
+                File parent = logFile.getParentFile();
+                if (parent != null) ensureDir(parent);
+                bos = new java.io.BufferedOutputStream(new FileOutputStream(logFile, false));
+                setReadableOwnerOnly(logFile);
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String safeLine = AsycudaSecurityValidator.redactSensitiveLogContent(line, BRIDGE_AUTH_TOKEN);
+                    byte[] bytes = (safeLine + "\n").getBytes(StandardCharsets.UTF_8);
+                    if (writtenBytes + bytes.length > maxLogBytes) {
+                        bos.close();
+                        bos = new java.io.BufferedOutputStream(new FileOutputStream(logFile, false));
+                        writtenBytes = 0L;
+                    }
+                    bos.write(bytes);
+                    writtenBytes += bytes.length;
+                    if (writtenBytes % 4096 < bytes.length) {
+                        bos.flush();
+                    }
+                }
+            } catch (Exception ignored) {
+                // Best-effort redacted JVM output stream draining
+            } finally {
+                if (bos != null) {
+                    try {
+                        bos.flush();
+                        bos.close();
+                    } catch (Exception ignored) {
+                        // Ignore close errors
+                    }
+                }
+            }
+        }, "Asycuda-JvmLogRedactor");
+        logPump.setDaemon(true);
+        logPump.start();
     }
 
     private void scheduleFirstRunTutorialIfNeeded(final MainActivity activity) {
@@ -3108,7 +3163,7 @@ public class AsycudaStandaloneManager {
                     try (Socket s = ss.accept();
                          BufferedReader br = new BufferedReader(
                                  new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8))) {
-                        if (!isLoopbackPeerOwnedByOurUid(s)) {
+                        if (!isAuthorizedLoopbackBridgeSocket(s)) {
                             continue;
                         }
                         String line = br.readLine();
@@ -3125,8 +3180,9 @@ public class AsycudaStandaloneManager {
         t.start();
     }
 
-    private static boolean isLoopbackPeerOwnedByOurUid(Socket s) {
-        return s != null && s.getInetAddress() != null && s.getInetAddress().isLoopbackAddress();
+    private static boolean isAuthorizedLoopbackBridgeSocket(Socket s) {
+        return s != null && s.getInetAddress() != null && s.getInetAddress().isLoopbackAddress()
+                && sJavaProcess != null;
     }
 
     private void handleBridgeMessage(String rawMsg) {

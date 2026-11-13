@@ -61,6 +61,7 @@ public final class AsycudaFirebaseManager {
     private static final String KEY_REMOTE_CATALOG_VERSION = "remote_error_catalog_version";
     private static final String KEY_ANON_INSTALLATION_ID = "anon_installation_id";
     private static final String KEY_LAST_HEARTBEAT_DATE = "last_heartbeat_utc_date";
+    private static final String KEY_ANONYMOUS_HEARTBEAT_ENABLED = "anon_heartbeat_enabled";
 
     // Cached remote broadcast keys
     private static final String KEY_CACHED_ID = "cached_ann_id";
@@ -82,6 +83,7 @@ public final class AsycudaFirebaseManager {
 
     private static volatile boolean sStartupSyncTriggered = false;
     private static volatile Boolean sCachedOfficialBuildStatus = null;
+    private static volatile String sCachedOfficialCertSha1 = "";
 
     private AsycudaFirebaseManager() {}
 
@@ -140,8 +142,12 @@ public final class AsycudaFirebaseManager {
             }
 
             String sha256Lower = toHex(java.security.MessageDigest.getInstance("SHA-256").digest(certBytes), false);
+            String sha1Lower = toHex(java.security.MessageDigest.getInstance("SHA-1").digest(certBytes), false);
 
             boolean certMatches = OFFICIAL_RELEASE_CERT_SHA256.equalsIgnoreCase(sha256Lower);
+            if (certMatches) {
+                sCachedOfficialCertSha1 = sha1Lower;
+            }
             sCachedOfficialBuildStatus = certMatches;
             return certMatches;
         } catch (Throwable t) {
@@ -207,6 +213,10 @@ public final class AsycudaFirebaseManager {
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestProperty("X-Android-Package", OFFICIAL_PACKAGE_NAME);
+        String certSha1 = sCachedOfficialCertSha1;
+        if (certSha1 != null && !certSha1.isEmpty()) {
+            conn.setRequestProperty("X-Android-Cert", certSha1);
+        }
         return conn;
     }
 
@@ -519,7 +529,7 @@ public final class AsycudaFirebaseManager {
                     githubUrl));
         }
 
-        // 2. Built-in Release Highlights Card for v4.4.0
+        // 2. Built-in Release Highlights Card for v4.4.1
         String relCategory = AsycudaMaterialUi.tr(activity,
                 "RELEASE HIGHLIGHTS  •  v" + BuildConfig.VERSION_NAME + " (Build " + BuildConfig.VERSION_CODE + ")",
                 "ملخص ميزات الإصدار  •  v" + BuildConfig.VERSION_NAME + " (بناء " + BuildConfig.VERSION_CODE + ")",
@@ -531,21 +541,18 @@ public final class AsycudaFirebaseManager {
                 "نوێکارییەکانی کارپێکەری ئەسیکۆدا (AsyLauncher) v" + BuildConfig.VERSION_NAME);
 
         String relBody = AsycudaMaterialUi.tr(activity,
-                "• Previous Declaration (PD) Print Restoration: Fixed the unresponsive Print button in the End-of-Transaction confirmation dialog for Previous Declarations.\n"
-                        + "• High-Clarity Search Table PDF & Excel (.xlsx) Exporter: Upgraded ASYCUDA_PDF_Printer (Portrait/Landscape) and added ASYCUDA_Excel_Exporter with formula-injection protection to export search results directly to Excel.\n"
-                        + "• Physical-Size-Invariant Font & UI Presets + Live Display Stability Benchmark: Choose Default, Comfort (Medium), or Touch (Large) with instant live hot-reloading and real-time FPS/Stability recommendations.\n"
-                        + "• Smart Direct Touchscreen Enhancements: Touch-friendly window edge/corner resizing, reliable search criteria dropdowns without premature keyboard popups, instant single-tap file selection in JFileChooser, and double-tap titlebar shade/restore.\n"
-                        + "• High-FPS & GPU Acceleration Boost + Multi-Card Cloud Announcements: Smooth 120Hz frame pacing and up to 10 cached News & Release Broadcast cards.",
-                "• إصلاح طباعة البيان المسبق (PD): تفعيل زر الطباعة داخل نافذة إتمام العملية للبيان المسبق وفتح ملف PDF الرسمي مباشرة.\n"
-                        + "• طباعة الجداول بدقة عالية وتصدير Excel (.xlsx): تطوير طابعة ASYCUDA_PDF_Printer (عمودي/أفقي) وإضافة ASYCUDA_Excel_Exporter لتصدير نتائج البحث مباشرة إلى ملف إكسل.\n"
-                        + "• تكبير الخطوط والقوائم الذكي ومؤشر استقرار الشاشة الحي: اختيار الحجم (افتراضي / مريح / كبير للمس) مع تطبيق فوري ومؤشر حي لتقييم سلاسة واستقرار العرض.\n"
-                        + "• تحسينات شاملة لوضع اللمس المباشر: تسهيل تكبير وتصغير النوافذ من الحواف، استقرار القوائم المنسدلة في البحث دون ظهور مبكر للوحة المفاتيح، اختيار الملفات بلمسة واحدة، وطي/استعادة النوافذ بنقرتين.\n"
-                        + "• تسريع الرسوميات ومعدل الإطارات العالي (120Hz) وسجل التنبيهات المتعدد (حتى ١٠ إشعارات).",
-                "• چاککردنی چاپکردنی بەیانی پێشوەختە (PD): چالاککردنی دوگمەی چاپکردن لە پەنجەرەی کۆتایی مامەڵە.\n"
-                        + "• چاپکردنی خشتەکان بە کوالێتی بەرز و هەناردەکردن بۆ Excel (.xlsx): زیادکردنی ASYCUDA_Excel_Exporter لە پەنجەرەی چاپکردن.\n"
-                        + "• گەورەکردنی فۆنت و لیستەکانی ئەسیکۆدا و پێوەری جێگیریی شاشە: هەڵبژاردنی قەبارەی فۆنت (بنەڕەتی / مامناوەند / گەورە) بە جێبەجێکردنی دەستبەجێ.\n"
-                        + "• باشترکردنی شاشەی لەمسی ڕاستەوخۆ: ئاسانکردنی گۆڕینی قەبارەی پەنجەرەکان، جێگیرکردنی لیستەکانی گەڕان، و هەڵبژاردنی پەڕگەکان بە یەک دەستلێدان.\n"
-                        + "• خێراکردنی گرافیک (120Hz) و پیشاندانی تا ١٠ ئاگاداری هەوری پاشەکەوتکراو.");
+                "• Hardened Proprietary Bridge & Host Signature Binding: Upgraded all 3 Java bridge archives with host APK signing certificate binding, full R8 obfuscation, and build-time string encryption.\n"
+                        + "• Pre-Disk In-RAM JVM Log Redaction & Privacy Opt-Out Toggle: All JVM stdout/stderr output is redacted in RAM before writing to disk, and you can toggle the 6-field Anonymous Daily Heartbeat on/off anytime inside About.\n"
+                        + "• Official Government & UNCTAD Source Link Compliance: Updated in-app Terms & About disclosures to link strictly to globally reachable Iraqi Ministry of Finance & UNCTAD portals.\n"
+                        + "• Includes All v4.4.0 Features: Previous Declaration (PD) Print fix, high-clarity Search Table PDF printer & CWE-1236 Excel (.xlsx) exporter, Comfort/Touch font scaling presets, 120Hz High-FPS GPU boost, and touch window resizing.",
+                "• تعزيز حماية محرك التوافق وربطه بشهادة التطبيق الرسمية: ترقية جميع أرشيفات الجسر بتقنية ربط توقيع التطبيق وتعتيم R8 وتشفير النصوص الداخلية.\n"
+                        + "• تنقية السجلات في الذاكرة قبل الحفظ وزر إيقاف الإحصاء المجهول: تنقية مخرجات جافا داخل RAM قبل كتابتها على القرص، مع إمكانية إيقاف نبض الاستخدام اليومي المجهول من نافذة «حول التطبيق».\n"
+                        + "• تحديث المصادر الحكومية الرسمية المتاحة عالمياً: توضيح الروابط الرسمية لوزارة المالية العراقية ومنظمة UNCTAD.\n"
+                        + "• يتضمن جميع مزايا v4.4.0: إصلاح طباعة البيان المسبق (PD)، طباعة جداول PDF وتصدير Excel (.xlsx)، تكبير الخطوط والقوائم، وتسريع الشاشة 120Hz.",
+                "• بەهێزکردنی پاراستنی بزوێنەری گونجاندن و بەستنەوەی بە واژۆی فەرمی بەرنامە و شاردنەوەی R8.\n"
+                        + "• پاککردنەوەی تۆمارەکان لە RAM پێش نووسین لەسەر دیسک و دوگمەی وەستاندنی ئاماری نەناسراو لە بەشی دەربارە.\n"
+                        + "• نوێکردنەوەی بەستەرە فەرمییەکانی وەزارەتی دارایی عێراق و ڕێکخراوی UNCTAD.\n"
+                        + "• هەموو تایبەتمەندییەکانی v4.4.0 لەخۆدەگرێت: چاککردنی چاپکردنی PD، هەناردەکردنی Excel (.xlsx) و PDF، و گەورەکردنی فۆنت.");
 
         container.addView(createAlertCardView(
                 activity,
@@ -918,18 +925,30 @@ public final class AsycudaFirebaseManager {
                 "AsycudaFirestoreReport").start();
     }
 
+    public static boolean isAnonymousHeartbeatEnabled(Context ctx) {
+        if (ctx == null) return false;
+        SharedPreferences prefs = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_ANONYMOUS_HEARTBEAT_ENABLED, true);
+    }
+
+    public static void setAnonymousHeartbeatEnabled(Context ctx, boolean enabled) {
+        if (ctx == null) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_ANONYMOUS_HEARTBEAT_ENABLED, enabled).apply();
+    }
+
     /**
      * Sends a once-per-calendar-day Zero-PII anonymous installation heartbeat to Cloud Firestore
      * (`app_metrics/{anonId}`) containing ONLY 6 non-personal technical fields:
      *  - anon_id (random app-scoped UUID, resets on app uninstall/clear)
-     *  - app_version ("4.4.0 (56)")
+     *  - app_version ("4.4.1 (57)")
      *  - android_sdk (e.g. 34)
      *  - device_model ("ZTE NX729J")
      *  - ui_lang ("ar" | "en" | "ku")
      *  - last_active_date ("YYYY-MM-DD" in UTC)
      */
     public static void sendAnonymousDailyHeartbeatSync(Context ctx) {
-        if (ctx == null) return;
+        if (ctx == null || !isAnonymousHeartbeatEnabled(ctx)) return;
         HttpURLConnection conn = null;
         try {
             SharedPreferences prefs = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);

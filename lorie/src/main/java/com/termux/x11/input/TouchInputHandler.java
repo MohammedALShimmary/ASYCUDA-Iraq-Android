@@ -526,12 +526,12 @@ public class TouchInputHandler {
                             int rw = Integer.parseInt(parts[3]);
                             int rh = Integer.parseInt(parts[4]);
                             if (x11X >= rx && x11X <= (rx + rw) && x11Y >= ry && x11Y <= (ry + rh)) {
-                                // "X|" = clickable button or foreground dialog exclusion
+                                // Painter's algorithm (back-to-front Z-order): later layers override earlier ones
                                 if (line.startsWith("X|")) {
-                                    return 0;
+                                    zoneType = 0;
                                 } else if (line.startsWith("R|")) {
                                     zoneType = 1;
-                                } else if (line.startsWith("T|") && zoneType == 0) {
+                                } else if (line.startsWith("T|")) {
                                     zoneType = 2;
                                 }
                             }

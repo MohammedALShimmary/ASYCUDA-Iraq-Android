@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag to build and publish (e.g. v4.4.0)'
+        description: 'Release tag to build and publish (e.g. v4.4.1)'
         required: true
-        default: 'v4.4.0'
+        default: 'v4.4.1'
 
 permissions:
   contents: write
@@ -117,7 +117,7 @@ jobs:
         run: |
           TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
           if [[ "$TAG" != v* ]]; then
-            TAG="v4.4.0"
+            TAG="v4.4.1"
           fi
           APK_NAME="AsyLauncher_${TAG}.apk"
           AAB_NAME="AsyLauncher_${TAG}.aab"
@@ -172,52 +172,46 @@ jobs:
             git add README.md SECURITY.md
             git commit -m "Docs: Sync CI-built SHA-256 checksums for ${TAG} [skip ci]"
             git push origin HEAD:main
+            git tag -f "${TAG}"
+            git push origin -f "refs/tags/${TAG}"
           fi
 
           # Publish or update the GitHub Release and upload public assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 56\`)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 57\`)
 
           **AsyLauncher** (\`io.github.mohammedalshimmary.asylauncher\`) is an independent, unofficial Android compatibility launcher for running the ASYCUDA World desktop client on phones and tablets.
 
-          ### What's New in \`${TAG}\` (\`versionCode 56\`)
-          1. **Previous Declaration (PD) Print Restoration & Final Declarations Table Print Fix**:
-             - Restored the unresponsive **Print** button inside the End-of-Transaction confirmation dialog for Previous Declarations (\`البيان المسبق\`), generating and opening the official multi-page customs declaration PDF directly on Android.
-             - Resolved the empty-header exception when printing **Final Declarations (\`تفاصيل البيان\`)** search tables.
-          2. **Search Table Vector PDF Printer & Native Excel (\`.xlsx\`) Exporter (\`CWE-1236\` Protected)**:
-             - Upgraded \`ASYCUDA_PDF_Printer\` (Portrait & Landscape) with crisp vector table headers, automatic column-width fitting, RTL Arabic text shaping, and full-row pagination.
-             - Added \`ASYCUDA_Excel_Exporter\` directly inside ASYCUDA's print dialog so customs brokers can export any search result table into an OpenXML Excel (\`.xlsx\`) spreadsheet inside the Private App Vault.
-          3. **Font & UI Scaling Engine + Live Display Stability Benchmark**:
-             - Choose **Default (100%)**, **Comfort (Medium)**, or **Touch (Large)** in Display Settings to dynamically enlarge ASYCUDA World's internal Swing menus, document trees, tables, buttons, and cursors across all screen densities without restarting the session.
-             - Added a real-time **Display Stability & Clarity Benchmark** indicator in Display Settings that evaluates active canvas resolution, DPI, UI preset, and live frame pacing.
-          4. **Direct Touchscreen Window Resizing, Search Dropdown & File-Chooser Enhancements**:
-             - **Touch-Friendly Window Resizing**: Expanded outer resize grab zones for internal Swing frames (\`JInternalFrame\`) with interactive control protection so inner buttons, scrollbars, and tabs remain clickable while window edges and corners resize smoothly by finger drag.
-             - **Search Criteria Dropdown Stability & Auto-Keyboard Guard**: Prevented immediate dropdown collapse in **Declaration Search (\`بحث البيان\`)** and **Previous Declaration Search (\`بحث البيان المسبق\`)** across both Direct Touchscreen and Trackpad modes, and suppressed premature keyboard popups when selecting dropdown criteria in Column 2 (\`المعيار\`).
-             - **Single-Tap \`JFileChooser\` Selection & Titlebar Shade/Restore**: Enabled single-tap file selection in Java file choosers, eliminated accidental tooltip hold traps on toolbar buttons (\`جديد\`), and restored double-tap titlebar un-minimize/restore for shaded windows.
-          5. **High-FPS (120Hz) & GPU Acceleration + Multi-Card Cloud Broadcasts**:
-             - Added high-refresh-rate (\`60Hz–120Hz\`) frame pacing and hardware GPU acceleration in Display Settings, plus a scrollable multi-card Cloud Broadcast feed displaying up to 10 cached News & Release announcements.
-          6. **JVM Sandbox Hardening & Official Government Source Links**:
-             - Locked the JVM \`SecurityManager\` against \`PropertyPermission\` write tampering and \`.asycuda_display_state\` IPC file modification from inside the JVM sandbox, and added clickable official Ministry of Finance & UNCTAD source links inside the in-app Terms & Conditions and About dialogs.
+          ### What's New in \`${TAG}\` (\`versionCode 57\`)
+          1. **Proprietary Java Bridge Hardening (Host APK Certificate Binding, String Encryption & Full R8)**:
+             - Added runtime host APK X.509 certificate verification (\`verifyHostApkIntegrity()\`) and build-time string literal encryption across \`00_boot.jar\`, \`00_bootpatch.jar\`, and \`00_jnlp.jar\`, plus full R8 obfuscation on \`00_bootpatch.jar\` and \`00_jnlp.jar\`.
+          2. **Window Corner & Edge Resize Enhancement**:
+             - Upgraded corner and edge touch hit-testing, Z-order painter's algorithm occlusion, and EventQueue dispatch interception for effortless 1-finger resizing of internal windows across all UI scale presets.
+          3. **Pre-Disk JVM Log Redaction Pipe & Auto-Cleanup**:
+             - Replaced direct JVM output file redirection with an in-RAM log pump (\`AsycudaSecurityValidator.redactSensitiveLogContent()\`) that scrubs credentials before disk persistence and clears runtime \`.log\` files on graceful exit.
+          4. **Google Play Compliance & Accessible Official Information Sources**:
+             - Updated official government and UNCTAD information links in Terms & Conditions, About, and \`PRIVACY_POLICY.md\` to globally accessible URLs (\`www.mof.gov.iq\`, \`asycuda.org\`, \`asycuda.org/en/user-countries/\`) while clearly explaining Iraq geo-restriction of the customs endpoint.
+          5. **Firestore Security Rules (\`firestore.rules\`) & Usage Heartbeat Opt-Out**:
+             - Published \`firestore.rules\` in the repository, added \`X-Android-Cert\` binding on Firestore REST requests, and added a persistent ON/OFF toggle for the 6-field anonymous daily heartbeat inside **About, Security & Software Licences**.
 
           ---
 
-          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 56\`) — (العربية)
+          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 57\`) — (العربية)
 
-          1. **إصلاح طباعة البيان المسبق (PD) وطباعة جدول تفاصيل البيان**: تفعيل زر الطباعة داخل نافذة إتمام العملية للبيان المسبق لتوليد وفتح ملف \`PDF\` الرسمي مباشرة، ومعالجة خطأ الأعمدة الفارغة عند طباعة جدول بحث تفاصيل البيان.
-          2. **طباعة الجداول بدقة عالية وتصدير مباشر إلى ملف إكسل (\`Excel .xlsx\`)**: تطوير طابعة \`ASYCUDA_PDF_Printer\` (عمودي/أفقي) وإضافة \`ASYCUDA_Excel_Exporter\` داخل نافذة الطباعة لتصدير نتائج البحث مباشرة إلى جدول \`Excel (.xlsx)\` داخل الخزنة الخاصة مع حماية ضد حقن المعادلات.
-          3. **محرك تكبير الخطوط والقوائم الذكي ومؤشر استقرار الشاشة الحي**: إمكانية اختيار حجم واجهة وخطوط أسيكودا (**افتراضي** / **مريح** / **كبير للمس**) مع تطبيق حي فوري دون إعادة تشغيل الجلسة، ومؤشر حي لتقييم سلاسة واستقرار العرض.
-          4. **تحسينات شاملة لوضع اللمس المباشر والنوافذ**: تسهيل تكبير وتصغير النوافذ الداخلية من الحواف والزوايا باللمس دون التأثير على الأزرار الداخلية، تثبيت القوائم المنسدلة في **بحث البيان** و**بحث البيان المسبق** ومنع الظهور المبكر للوحة المفاتيح عند اختيار **المعيار**، تفعيل اختيار الملفات بلمسة واحدة في متصفح ملفات الجافا، واستعادة فتح النوافذ المطوية بنقرتين على شريط العنوان.
-          5. **دعم معدل الإطارات العالي (\`120Hz\`) وتسريع الرسوميات وسجل التنبيهات المتعدد**: سلاسة فائقة في تحريك النوافذ والماوس مع عرض حتى ١٠ إشعارات وتنبيهات سحابية محفوظة.
+          1. **تعزيز حماية محرك الجافا الاحتكاري (\`00_boot.jar\`, \`00_bootpatch.jar\`, \`00_jnlp.jar\`)**: التحقق التلقائي من التوقيع الرقمي لتطبيق الأندرويد المضيف (\`X.509\`)، وتشفير النصوص البرمجية أثناء البناء، وتطبيق تشويش **R8** الكامل على كافة ملفات الجسر الثلاثة.
+          2. **تحسين استجابة لمس حواف وزوايا النوافذ الداخلية**: ترقية كشف الزوايا والحواف لتكبير وتصغير النوافذ بسهولة بإصبع واحد في جميع أوضاع العرض.
+          3. **تنقية سجلات الجافا في الذاكرة قبل الحفظ**: تمرير مخرجات الجافا عبر فلتر التنقية (\`AsycudaSecurityValidator\`) لإزالة أي بيانات حساسة قبل الكتابة على القرص وحذف السجلات المؤقتة عند الإغلاق الآمن.
+          4. **تحديث روابط المصادر الرسمية وتوافق متجر Google Play**: اعتماد الروابط الحكومية والأممية المتاحة عالمياً (\`www.mof.gov.iq\` و \`asycuda.org\`) في الشروط وحول التطبيق وسياسة الخصوصية.
+          5. **إعدادات خصوصية نبضة الاستخدام (\`Heartbeat Opt-Out\`) ونشر قواعد أمان Firestore**: إضافة مفتاح تفعيل/إيقاف فوري لنبضة الاستخدام المجهولة داخل نافذة «حول التطبيق»، ونشر \`firestore.rules\` في المستودع مع إرفاق ترويسة \`X-Android-Cert\`.
 
           ---
 
-          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 56\`) — (کوردی)
+          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 57\`) — (کوردی)
 
-          1. **چاککردنی چاپکردنی بەیانی پێشوەختە (PD) و خشتەی گەڕان**: چالاککردنی دوگمەی چاپکردن لە پەنجەرەی کۆتایی مامەڵە و کردنەوەی پەڕگەی \`PDF\`، لەگەڵ چارەسەرکردنی کێشەی چاپکردنی خشتەی گەڕان.
-          2. **چاپکردنی خشتەکان بە کوالێتی بەرز و هەناردەکردن بۆ Excel (\`.xlsx\`)**: زیادکردنی \`ASYCUDA_Excel_Exporter\` لە پەنجەرەی چاپکردن بۆ هەناردەکردنی ئەنجامەکانی گەڕان ڕاستەوخۆ بۆ پەڕگەی ئێکسڵ.
-          3. **گەورەکردنی فۆنت و لیستەکانی ئەسیکۆدا و پێوەری جێگیریی شاشە**: هەڵبژاردنی قەبارەی فۆنت و ڕووکار (**بنەڕەتی** / **مامناوەند** / **گەورە بۆ لەمس**) بە جێبەجێکردنی دەستبەجێ.
-          4. **باشترکردنی شاشەی لەمسی ڕاستەوخۆ**: ئاسانکردنی گۆڕینی قەبارەی پەنجەرەکان، جێگیرکردنی لیستەکانی گەڕان بەبێ دەرکەوتنی پێشوەختەی کیبۆرد، و هەڵبژاردنی پەڕگەکان بە یەک دەستلێدان.
-          5. **خێراکردنی گرافیک (\`120Hz\`) و پیشاندانی تا ١٠ ئاگاداری هەوری پاشەکەوتکراو**.
+          1. **بەهێزکردنی پاراستنی بزوێنەری جاڤا**: پشکنینی واژۆی دیجیتاڵی بەرنامەی ئەندرۆید، شفرەکردنی دەقەکان، و تەشویشکردنی **R8** بۆ هەموو پەڕگەکانی پردی جاڤا.
+          2. **باشترکردنی هەستیاری دەستلێدان بۆ گۆشە و قەراغەکانی پەنجەرە ناوخۆییەکان** بۆ گەورەکردن و بچووککردنەوەی پەنجەرەکان بە یەک پەنجە.
+          3. **پاڵاوتنی تۆمارەکانی جاڤا لە بیرگەدا پێش پاشەکەوتکردن** و سڕینەوەی تۆمارە کاتییەکان لە کاتی داخستندا.
+          4. **نوێکردنەوەی بەستەرە فەرمییە گشتییەکان (\`www.mof.gov.iq\`, \`asycuda.org\`)** و زیادکردنی **کلیلی ڕاگرتن/کارپێکردنی ناردنی ئاماری بەکارهێنان** لە بەشی «دەربارەی بەرنامە».
 
           ---
 
@@ -235,7 +229,7 @@ jobs:
           sed -i 's/^          //' /tmp/release_notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --draft=false --prerelease=false --title "${TAG} — AsyLauncher (PD Print Fix, Excel Exporter, Touch Resizing & Font Scaling, 120Hz)" --notes-file /tmp/release_notes.md --latest
+            gh release edit "$TAG" --draft=false --prerelease=false --title "${TAG} — AsyLauncher (Bridge Hardening, Pre-Disk Log Redaction, Telemetry Opt-Out & Play Compliance)" --notes-file /tmp/release_notes.md --latest
             gh release upload "$TAG" \
               "/tmp/${APK_NAME}" \
               sbom.cdx.json \
@@ -246,7 +240,7 @@ jobs:
             gh release create "$TAG" \
               "/tmp/${APK_NAME}" \
               sbom.cdx.json \
-              --title "${TAG} — AsyLauncher (PD Print Fix, Excel Exporter, Touch Resizing & Font Scaling, 120Hz)" \
+              --title "${TAG} — AsyLauncher (Bridge Hardening, Pre-Disk Log Redaction, Telemetry Opt-Out & Play Compliance)" \
               --notes-file /tmp/release_notes.md \
               --latest
           fi

@@ -6228,24 +6228,24 @@ public class AsycudaMaterialUi {
         legalText.setText(tr(activity,
                 "This application was developed solely as a helpful tool to assist customs brokers, logistics coordinators, and trade operators in accessing ASYCUDA World on Android devices. It is an independent technical utility and does NOT represent a government entity. It is not affiliated with, sponsored by, or officially endorsed by the Iraqi Ministry of Finance, the General Commission for Customs, or UNCTAD.\n\n"
                         + "Official Government & UNCTAD Information Sources:\n"
-                        + "• Iraqi Ministry of Finance — Official ASYCUDA World Portal: https://asy.mof.gov.iq/aw/\n"
-                        + "• Official ASYCUDA World JNLP Client Manifest: https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
                         + "• Iraqi Ministry of Finance Official Website: https://www.mof.gov.iq/\n"
-                        + "• UNCTAD ASYCUDA Official Programme Website: https://asycuda.org/en/\n\n"
+                        + "• UNCTAD ASYCUDA Official Programme Website: https://asycuda.org/en/\n"
+                        + "• UNCTAD ASYCUDA User Countries Directory: https://asycuda.org/en/user-countries/\n"
+                        + "Note: Operational ASYCUDA World JNLP connections are directed exclusively to the official Iraqi Ministry of Finance customs gateway (restricted by the Ministry firewall to networks inside Iraq).\n\n"
                         + "This software is provided \"as is\" without warranties or guarantees of any kind. The developer assumes no responsibility or liability whatsoever for any direct, indirect, incidental, or consequential harm, financial loss, data discrepancy, account suspension, administrative penalty, or any action taken by government authorities or any other entity against individual users or companies using this application. By using this app, you acknowledge that you do so entirely at your own risk and responsibility.",
-                "تم تطوير هذا التطبيق لغرض المساعدة فقط وتسهيل عمل المخلصين الكمركيين، المنسقين اللوجستيين، والشركات التجارية في تشغيل نظام أسيكودا العالمي على أجهزة الأندرويد. هذا التطبيق مبادرة تقنية مستقلة ولا يمثل أي جهة حكومية، ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD).\n\n"
+                "تم تطوير هذا التطبيق لغرض المساعدة فقط وتسهيل عمل المخلصين الكمركيين، المنسقين اللوجستيين، والشركات التجارية في تشغيل نظام أسيكودا العالمي على أجهزة الأندرويد. هذا التطبيق مبادرة تقنية مستقلة ولا يمثل أي جهة حكومية، ولا يتبع رسمياً لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة الأمم المتحدة للتجارة والتنمية (UNCTAD).\n\n"
                         + "المصادر الحكومية والدولية الرسمية للمعلومات والنظام:\n"
-                        + "• بوابة نظام أسيكودا العالمي الرسمية — وزارة المالية العراقية: https://asy.mof.gov.iq/aw/\n"
-                        + "• ملف تشغيل حزم العميل الرسمي (JNLP): https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
                         + "• الموقع الرسمي لوزارة المالية العراقية: https://www.mof.gov.iq/\n"
-                        + "• الموقع الرسمي لبرنامج أسيكودا التابع للأمم المتحدة (UNCTAD): https://asycuda.org/en/\n\n"
+                        + "• الموقع الرسمي لبرنامج أسيكودا التابع للأمم المتحدة (UNCTAD): https://asycuda.org/en/\n"
+                        + "• دليل الدول المستخدمة لنظام أسيكودا (UNCTAD): https://asycuda.org/en/user-countries/\n"
+                        + "ملاحظة: تتصل جلسات العمل التشغيلية بالخادم الرسمي لنظام أسيكودا التابع لوزارة المالية العراقية حصرياً (وهو مقيد بجدار حماية الوزارة للشبكات داخل العراق فقط).\n\n"
                         + "يُقدّم هذا البرنامج \"كما هو\" دون أي ضمانات صريحة أو ضمنية. يخلي مطور التطبيق مسؤوليته القانونية والمالية والفنية الكاملة عن أي ضرر مباشر أو غير مباشر، أو خسائر مالية، أو إيقاف للحسابات، أو غرامات، أو أي إجراءات إدارية أو قانونية قد تُتخذ من قِبل الجهات الحكومية أو أي جهة أخرى بحق المستخدمين أو الشركات التي تستخدم هذا التطبيق. إن استخدامك لهذا التطبيق يعني موافقتك التامة على تحمّل كامل المسؤولية المترتبة على ذلك.",
                 "ئەم بەرنامەیە تەنها بە مەبەستی هاوکاری و کارئاسانی بۆ بریکارانی گومرگی و کۆمپانیا بازرگانییەکان دروستکراوە بۆ بەکارهێنانی سیستەمی ئەسیکۆدای جیهانی لەسەر ئامێرەکانی ئەندرۆید. ئەم پڕۆژەیە دەستپێشخەرییەکی تەکنیکی سەربەخۆیە و نوێنەرایەتی هیچ لایەنێکی حکومی ناکات و بە فەرمی سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە.\n\n"
                         + "سەرچاوە فەرمییەکانی زانیاری حکومی و نێودەوڵەتی:\n"
-                        + "• دەروازەی فەرمی سیستەمی ئەسیکۆدا — وەزارەتی دارایی عێراق: https://asy.mof.gov.iq/aw/\n"
-                        + "• پەڕگەی فەرمی کارپێکردنی سیستەم (JNLP): https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
                         + "• ماڵپەڕی فەرمی وەزارەتی دارایی عێراق: https://www.mof.gov.iq/\n"
-                        + "• ماڵپەڕی فەرمی پڕۆگرامی ئەسیکۆدای نەتەوە یەکگرتووەکان (UNCTAD): https://asycuda.org/en/\n\n"
+                        + "• ماڵپەڕی فەرمی پڕۆگرامی ئەسیکۆدای نەتەوە یەکگرتووەکان (UNCTAD): https://asycuda.org/en/\n"
+                        + "• ڕێبەری وڵاتانی بەکارهێنەری ئەسیکۆدا (UNCTAD): https://asycuda.org/en/user-countries/\n"
+                        + "تێبینی: پەیوەندییەکانی کارپێکردنی سیستەمی ئەسیکۆدا ڕاستەوخۆ بە ڕاژەی فەرمی گومرگی عێراق دەبەسترێنەوە (تەنها لەناو تۆڕەکانی عێراق بەردەستە).\n\n"
                         + "ئەم نەرمەکاڵایە \"وەک خۆی\" پێشکەش دەکرێت بەبێ هیچ گەرەنتییەک. گەشەپێدەری بەرنامەکە هیچ بەرپرسیارێتییەکی یاسایی، دارایی، یان تەکنیکی هەڵناگرێت بەرامبەر هەر زیانێکی ڕاستەوخۆ یان ناڕاستەوخۆ، ڕاگرتنی هەژمار، سزا، یان هەر ڕێکارێک کە لەلایەن لایەنە حکومییەکان یان هەر دامەزراوەیەکی ترەوە بگیرێتەبەر بەرامبەر بەکارهێنەران یان کۆمپانیاکان. بەکارهێنانی ئەم بەرنامەیە بە تەواوی لەسەر بەرپرسیارێتی تایبەتی خۆتانە."));
         legalText.setTextColor(TEXT_SECONDARY);
         legalText.setLinkTextColor(SYSTEM_BLUE);
@@ -6253,18 +6253,79 @@ public class AsycudaMaterialUi {
         android.text.util.Linkify.addLinks(legalText, android.text.util.Linkify.WEB_URLS);
         legalCard.addView(legalText);
 
+        // Privacy Control: Explicit Opt-Out Toggle for the 6-Field Anonymous Daily Heartbeat
+        final boolean[] hbEnabled = { AsycudaFirebaseManager.isAnonymousHeartbeatEnabled(activity) };
+        LinearLayout hbToggleCard = new LinearLayout(activity);
+        hbToggleCard.setOrientation(LinearLayout.HORIZONTAL);
+        hbToggleCard.setGravity(Gravity.CENTER_VERTICAL);
+        hbToggleCard.setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10));
+        hbToggleCard.setBackground(createRippleCardDrawable(activity, SURFACE_GROUPED_CARD, 10, SEPARATOR_HAIRLINE));
+        hbToggleCard.setClickable(true);
+        hbToggleCard.setFocusable(true);
+        LinearLayout.LayoutParams hbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hbLp.topMargin = dp(activity, 10);
+        hbToggleCard.setLayoutParams(hbLp);
+
+        LinearLayout hbTextCol = new LinearLayout(activity);
+        hbTextCol.setOrientation(LinearLayout.VERTICAL);
+        hbTextCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView hbTitle = new TextView(activity);
+        hbTitle.setText(tr(activity,
+                "Anonymous Daily Usage Heartbeat (6 Technical Fields)",
+                "نبض الاستخدام اليومي المجهول (6 حقول تقنية غير شخصية)",
+                "ئاماری بەکارهێنانی ڕۆژانەی نەناسراو (٦ خانەی تەکنیکی)"));
+        hbTitle.setTextColor(TEXT_PRIMARY);
+        hbTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        hbTitle.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        hbTextCol.addView(hbTitle);
+
+        TextView hbSub = new TextView(activity);
+        hbSub.setText(tr(activity,
+                "Optional zero-PII daily health ping (app version, SDK, device class, UI language, random ID). Tap to toggle.",
+                "إرسال يومي اختياري بدون أي بيانات شخصية (رقم الإصدار، إصدار أندرويد، فئة الجهاز، اللغة، ومعرّف عشوائي). اضغط للتبديل.",
+                "ناردنی ڕۆژانەی بێ زانیاری کەسی (وەشان، ئەندرۆید، جۆری ئامێر، زمان و ناسنامەی هەڕەمەکی). گرتە بکە بۆ گۆڕین."));
+        hbSub.setTextColor(TEXT_SECONDARY);
+        hbSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        LinearLayout.LayoutParams hbsLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hbsLp.topMargin = dp(activity, 2);
+        hbTextCol.addView(hbSub, hbsLp);
+        hbToggleCard.addView(hbTextCol);
+
+        TextView hbBadge = new TextView(activity);
+        hbBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        hbBadge.setTypeface(Typeface.create(SANS_SERIF_MEDIUM, Typeface.BOLD));
+        hbBadge.setTextColor(Color.WHITE);
+        hbBadge.setPadding(dp(activity, 10), dp(activity, 5), dp(activity, 10), dp(activity, 5));
+        hbBadge.setText(hbEnabled[0] ? tr(activity, "ON", "مفعّل", "کارا") : tr(activity, "OFF", "متوقف", "ناکارا"));
+        hbBadge.setBackground(createCardDrawable(activity, hbEnabled[0] ? SYSTEM_GREEN : Color.parseColor("#FF636366"), 8, 0));
+        LinearLayout.LayoutParams hbbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hbbLp.setMarginStart(dp(activity, 8));
+        hbToggleCard.addView(hbBadge, hbbLp);
+
+        hbToggleCard.setOnClickListener(v -> {
+            hbEnabled[0] = !hbEnabled[0];
+            AsycudaFirebaseManager.setAnonymousHeartbeatEnabled(activity, hbEnabled[0]);
+            hbBadge.setText(hbEnabled[0] ? tr(activity, "ON", "مفعّل", "کارا") : tr(activity, "OFF", "متوقف", "ناکارا"));
+            hbBadge.setBackground(createCardDrawable(activity, hbEnabled[0] ? SYSTEM_GREEN : Color.parseColor("#FF636366"), 8, 0));
+        });
+        legalCard.addView(hbToggleCard);
+
         GridLayout srcGrid = new GridLayout(activity);
         srcGrid.setColumnCount(isCompactWidth(activity) ? 1 : 3);
         LinearLayout.LayoutParams sgLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         sgLp.topMargin = dp(activity, 10);
         srcGrid.setLayoutParams(sgLp);
-        addSocialButton(activity, srcGrid, "asy.mof.gov.iq/aw", true,
-                () -> cb.onOpenUrl("https://asy.mof.gov.iq/aw/"));
-        addSocialButton(activity, srcGrid, "www.mof.gov.iq", false,
+        addSocialButton(activity, srcGrid, "www.mof.gov.iq", true,
                 () -> cb.onOpenUrl("https://www.mof.gov.iq/"));
         addSocialButton(activity, srcGrid, "asycuda.org", false,
                 () -> cb.onOpenUrl("https://asycuda.org/en/"));
+        addSocialButton(activity, srcGrid, "user-countries", false,
+                () -> cb.onOpenUrl("https://asycuda.org/en/user-countries/"));
         legalCard.addView(srcGrid);
         content.addView(legalCard);
 
@@ -6480,9 +6541,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "Major Feature, Touch & Security Upgrade — Previous Versions (< v4.4.0) Are Superseded",
-                "تحديث رئيسي للمزايا واللمس والأمان — جميع الإصدارات السابقة (< v4.4.0) أصبحت قديمة",
-                "نوێکردنەوەی سەرەکی تایبەتمەندی و ئاسایش — گشت وەشانەکانی پێشتر (< v4.4.0) کۆن بوون"));
+                "v" + BuildConfig.VERSION_NAME + " — Hardened Bridge Security, Pre-Disk Log Redaction & Privacy Controls",
+                "الإصدار v" + BuildConfig.VERSION_NAME + " — تعزيز حماية الجسر، تنقية السجلات، وخيارات الخصوصية",
+                "وەشانی v" + BuildConfig.VERSION_NAME + " — بەهێزکردنی ئاسایشی بزوێنەر و پاککردنەوەی تۆمارەکان"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
@@ -6561,6 +6622,16 @@ public class AsycudaMaterialUi {
                         "Enable High-FPS Display Boost (up to 120Hz/144Hz) and Java2D GPU Hardware Acceleration in Display Settings for smoother scrolling, and browse up to 10 cached News & Release Broadcast cards in the Announcements Center.",
                         "تفعيل خيار معدل الإطارات العالي (حتى 120Hz/144Hz) وتسريع المعالج الرسومي (GPU) من إعدادات العرض لتمرير أكثر سلاسة، مع إمكانية تصفح حتى ١٠ إشعارات وتنبيهات سحابية محفوظة.",
                         "چالاککردنی خێرایی بەرزی شاشە (تا 120Hz/144Hz) و خێراکردنی گرافیک (GPU) لە ڕێکخستنەکانی شاشە، لەگەڵ پیشاندانی تا ١٠ ئاگاداری هەوری پاشەکەوتکراو."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "6. Bridge Security Hardening, Pre-Disk Log Redaction & Privacy Toggle (v4.4.1)",
+                        "6. تعزيز أمان الجسر، تنقية السجلات، وخيار إيقاف الإحصاء اليومي (v4.4.1)",
+                        "٦. بەهێزکردنی ئاسایشی بزوێنەر و پاککردنەوەی تۆمارەکان لە RAM (v4.4.1)"),
+                tr(activity,
+                        "All proprietary Java compatibility archives now verify the host APK X.509 signature, encrypt internal reflection constants, scrub every JVM log line in RAM before disk output, attach X-Android-Cert verification headers, and provide an interactive opt-out toggle in About for the 6-field Anonymous Daily Heartbeat.",
+                        "تتحقق جميع مكونات التوافق الآن من شهادة توقيع التطبيق الرسمية وتشفّر النصوص الداخلية، مع تنقية كل سطر من مخرجات جافا في الذاكرة RAM قبل الحفظ وإتاحة زر إيقاف نبض الاستخدام اليومي المجهول في نافذة «حول التطبيق».",
+                        "پێکهاتەکانی گونجاندن ئێستا بڕوانامەی فەرمی بەرنامەکە پشتڕاست دەکەنەوە و هەموو تۆمارەکانی جاڤا لە RAM دەپشکنرێن پێش پاشەکەوتکردن، لەگەڵ دوگمەی ڕاگرتنی ئاماری ڕۆژانەی نەناسراو لە بەشی دەربارە."));
 
         scroll.addView(card);
         root.addView(scroll);
@@ -6774,24 +6845,21 @@ public class AsycudaMaterialUi {
                         "2. المصادر الحكومية الرسمية وحصر الاتصال بالخادم الحكومي",
                         "٢. سەرچاوە فەرمییەکانی حکومەت و پەیوەندی ڕاستەوخۆ"),
                 tr(activity,
-                        "All official ASYCUDA World client packages and portal connections accessed through this compatibility utility originate directly from the following official sources:\n"
-                                + "• Iraqi Ministry of Finance — Official ASYCUDA World Portal: https://asy.mof.gov.iq/aw/\n"
-                                + "• Official ASYCUDA World JNLP Client Manifest: https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
+                        "All official ASYCUDA World client packages and portal information accessed through this compatibility utility correspond to the Iraqi Ministry of Finance Customs Programme and UNCTAD:\n"
                                 + "• Iraqi Ministry of Finance Official Website: https://www.mof.gov.iq/\n"
                                 + "• UNCTAD ASYCUDA Official Programme Website: https://asycuda.org/en/\n"
-                                + "The application downloads the 131 official UNCTAD/SOClass-signed JAR packages on first launch after verifying their X.509 cryptographic signature, and enforces a strict JVM SecurityManager network allowlist confining all ASYCUDA traffic exclusively to asy.mof.gov.iq.",
-                        "جميع حزم نظام أسيكودا العالمي والاتصالات التي يتم الوصول إليها عبر هذه الأداة التقنية المستقلة مصدرها المباشر والوحيد هو المواقع الحكومية والدولية الرسمية التالية:\n"
-                                + "• بوابة نظام أسيكودا العالمي الرسمية — وزارة المالية العراقية: https://asy.mof.gov.iq/aw/\n"
-                                + "• ملف تشغيل حزم العميل الرسمي (JNLP): https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
+                                + "• UNCTAD ASYCUDA User Countries Directory: https://asycuda.org/en/user-countries/\n"
+                                + "The application downloads the 131 official UNCTAD/SOClass-signed JAR packages directly from the Iraqi Customs JNLP gateway (restricted by the Ministry firewall to networks inside Iraq) after verifying their X.509 cryptographic signature, and enforces a strict JVM SecurityManager network allowlist confining all ASYCUDA traffic exclusively to that official gateway.",
+                        "جميع حزم نظام أسيكودا العالمي والاتصالات التي يتم الوصول إليها عبر هذه الأداة التقنية المستقلة تعود إلى نظام الكمارك في وزارة المالية العراقية وبرنامج أسيكودا التابع للأمم المتحدة:\n"
                                 + "• الموقع الرسمي لوزارة المالية العراقية: https://www.mof.gov.iq/\n"
                                 + "• الموقع الرسمي لبرنامج أسيكودا التابع للأمم المتحدة (UNCTAD): https://asycuda.org/en/\n"
-                                + "يقوم التطبيق بتحميل الحزم الرسمية الموقّعة رقمياً (131 ملف JAR) والتحقق من شهادتها التشفيرية (X.509)، مع فرض جدار حماية برمجي (SecurityManager) يحصر اتصالات بيئة الجافا بالخادم الحكومي حصرياً.",
+                                + "• دليل الدول المستخدمة لنظام أسيكودا (UNCTAD): https://asycuda.org/en/user-countries/\n"
+                                + "يقوم التطبيق بتحميل الحزم الرسمية الموقّعة رقمياً (131 ملف JAR) من الخادم الكمركي الرسمي لوزارة المالية العراقية (المقيد بجدار حماية الوزارة للشبكات داخل العراق فقط) والتحقق من شهادتها التشفيرية (X.509)، مع فرض جدار حماية برمجي (SecurityManager) يحصر اتصالات بيئة الجافا بالخادم الحكومي حصرياً.",
                         "گشت پەڕگە فەرمییەکانی سیستەمی ئەسیکۆدا و پەیوەندییەکان لەم سەرچاوە فەرمییانەوە دابین دەکرێن:\n"
-                                + "• دەروازەی فەرمی سیستەمی ئەسیکۆدا — وەزارەتی دارایی عێراق: https://asy.mof.gov.iq/aw/\n"
-                                + "• پەڕگەی فەرمی کارپێکردنی سیستەم (JNLP): https://asy.mof.gov.iq/aw/AWIQWorld.jnlp\n"
                                 + "• ماڵپەڕی فەرمی وەزارەتی دارایی عێراق: https://www.mof.gov.iq/\n"
                                 + "• ماڵپەڕی فەرمی پڕۆگرامی ئەسیکۆدای نەتەوە یەکگرتووەکان (UNCTAD): https://asycuda.org/en/\n"
-                                + "بەرنامەکە ١٣١ پەڕگە فەرمییەکانی ئەسیکۆدا دوای پشتڕاستکردنەوەی بڕوانامەی X.509 کارپێدەکات."));
+                                + "• ڕێبەری وڵاتانی بەکارهێنەری ئەسیکۆدا (UNCTAD): https://asycuda.org/en/user-countries/\n"
+                                + "بەرنامەکە ١٣١ پەڕگە فەرمییەکانی ئەسیکۆدا لە ڕاژەی فەرمی گومرگی عێراق (کە تەنها لەناو تۆڕەکانی عێراق بەردەستە) دوای پشتڕاستکردنەوەی بڕوانامەی X.509 کارپێدەکات."));
 
         addPolicyClause(activity, bodyCard,
                 tr(activity,

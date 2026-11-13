@@ -20,8 +20,8 @@ if (hostProjects.size() > 1)
     throw new GradleException("Multiple application modules depend on :${project.name} (${hostProjects.collect { it.path }}); cannot determine which one is the real host")
 def hostProject = hostProjects[0]
 def hostApplicationId = hostProject.android.defaultConfig.applicationId ?: hostProject.android.namespace
-def hostVersionName = hostProject.android.defaultConfig.versionName ?: "4.4.0"
-def hostVersionCode = hostProject.android.defaultConfig.versionCode ?: 56
+def hostVersionName = hostProject.android.defaultConfig.versionName ?: "4.4.1"
+def hostVersionCode = hostProject.android.defaultConfig.versionCode ?: 57
 
 android {
     namespace 'com.termux.x11'

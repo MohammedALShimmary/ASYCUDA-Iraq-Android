@@ -1,0 +1,193 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model — AsyLauncher — Launcher for ASYCUDA (io.github.mohammedalshimmary.asylauncher)
+// Project ID: gen-lang-client-0583678881
+// ===============================================================
+//
+// Collection: announcements
+// Document ID: {docId} (e.g., "latest")
+// Access: Public read-only (fetched via Firestore REST API without Auth);
+//         writes restricted strictly to Admin SDK / IAM Service Account.
+// Fields (managed by Admin SDK):
+//   - id: string (required) - unique announcement identifier
+//   - enabled: bool (required) - whether the broadcast is active
+//   - severity: string (required, "info" | "warning" | "critical")
+//   - version_tag: string (optional) - release version tag (e.g., "v4.3.0")
+//   - published_utc: string (optional) - publication date string
+//   - min_version_code: int (optional) - minimum targeted Android versionCode
+//   - max_version_code: int (optional) - maximum targeted Android versionCode
+//   - title_en, title_ar, title_ku: string (required) - localized titles
+//   - body_en, body_ar, body_ku: string (required) - localized announcement body
+//   - action_url: string (optional) - external reference URL (e.g., GitHub release)
+//   - play_store_url: string (optional) - Google Play Store listing URL
+//
+// Collection: app_config
+// Document ID: {docId} (e.g., "known_errors_catalog")
+// Access: Public read-only (hot-reloaded by Android client at startup);
+//         writes restricted strictly to Admin SDK / IAM Service Account.
+// Fields (managed by Admin SDK):
+//   - version: int (required) - catalog schema/revision number
+//   - catalog_json: string (required) - serialized known-errors catalog JSON
+//
+// Collection: diagnostic_reports
+// Document ID: {reportId} (e.g., "rep_<timestamp>_<uuid>")
+// Access: Write-only creation (allow create) from Android clients with strict
+//         schema, type, and size validation; read, update, and delete are
+//         completely denied to clients (Admin SDK / IAM only) to protect
+//         voluntary user contact notes and diagnostic telemetry.
+// Fields (all required on create, immutable thereafter):
+//   - error_code: string (0..128 chars) - diagnostic error code or "UNKNOWN"
+//   - title: string (0..500 chars) - error or feedback title
+//   - summary: string (0..2000 chars) - diagnostic summary (truncated client-side to 1800)
+//   - user_phone: string (must be empty "" — 0 chars — to enforce strict Zero-PII policy)
+//   - user_note: string (0..1500 chars) - optional user description (truncated client-side to 1000)
+//   - network_transport: string (0..128 chars) - active network transport summary
+//   - app_version: string (1..128 chars) - app version name and code
+//   - device_model: string (1..256 chars) - manufacturer, model, and Android SDK level
+//   - created_at_ms: int (> 0) - client epoch timestamp in milliseconds
+//
+// Collection: app_metrics
+// Document ID: {anonId} (16..64 chars, random installation-scoped anonymous ID)
+// Access: Write-only upsert (allow create, update) from Android clients once
+//         per calendar day with strict schema, type, and size validation;
+//         read and delete are completely denied to clients (Admin SDK / IAM only).
+//         Contains zero PII (no hardware serials, IMEI, MAC, IP, or account data).
+// Fields (all required on create and update):
+//   - anon_id: string (16..64 chars, must match document ID {anonId})
+//   - app_version: string (1..64 chars) - e.g. "4.3.0 (430)"
+//   - android_sdk: int (1..100) - Android API level
+//   - device_model: string (1..128 chars) - manufacturer and model
+//   - ui_lang: string (2..16 chars) - active UI language ("ar", "en", "ku")
+//   - last_active_date: string (10 chars, "YYYY-MM-DD") - UTC active date
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isPositiveInt(field) {
+      return request.resource.data[field] is int &&
+        request.resource.data[field] > 0;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidDiagnosticReport(data) {
+      let allowedFields = [
+        'error_code',
+        'title',
+        'summary',
+        'user_phone',
+        'user_note',
+        'network_transport',
+        'app_version',
+        'device_model',
+        'created_at_ms'
+      ];
+      return hasRequiredFields(allowedFields) &&
+        hasOnlyAllowedFields(allowedFields) &&
+        data.error_code is string && data.error_code.size() <= 128 &&
+        data.title is string && data.title.size() <= 500 &&
+        data.summary is string && data.summary.size() <= 2000 &&
+        data.user_phone is string && data.user_phone.size() == 0 &&
+        data.user_note is string && data.user_note.size() <= 1500 &&
+        data.network_transport is string && data.network_transport.size() <= 128 &&
+        data.app_version is string && data.app_version.size() >= 1 && data.app_version.size() <= 128 &&
+        data.device_model is string && data.device_model.size() >= 1 && data.device_model.size() <= 256 &&
+        isPositiveInt('created_at_ms');
+    }
+
+    function isValidAppMetric(data) {
+      let allowedFields = [
+        'anon_id',
+        'app_version',
+        'android_sdk',
+        'device_model',
+        'ui_lang',
+        'last_active_date'
+      ];
+      return hasRequiredFields(allowedFields) &&
+        hasOnlyAllowedFields(allowedFields) &&
+        data.anon_id is string &&
+        data.anon_id.size() >= 16 &&
+        data.anon_id.size() <= 64 &&
+        data.anon_id.matches('^(inst_[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$') &&
+        data.app_version is string && data.app_version.size() >= 1 && data.app_version.size() <= 64 &&
+        data.android_sdk is int && data.android_sdk > 0 && data.android_sdk <= 100 &&
+        data.device_model is string && data.device_model.size() >= 1 && data.device_model.size() <= 128 &&
+        data.ui_lang is string && data.ui_lang.size() >= 2 && data.ui_lang.size() <= 16 &&
+        data.last_active_date is string &&
+        data.last_active_date.size() == 10 &&
+        data.last_active_date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // 1. Public News & Release Broadcasts (Read-only for Android clients; Admin SDK writes)
+    match /announcements/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // 2. Remote App Configuration & Known Errors Catalog (Read-only for Android clients; Admin SDK writes)
+    match /app_config/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // 3. Diagnostic & Crash/Feedback Telemetry Reports (Write-only create; Admin SDK reads/manages)
+    match /diagnostic_reports/{reportId} {
+      allow create: if reportId.size() >= 1 &&
+        reportId.size() <= 128 &&
+        reportId.matches('^rep_[0-9]+_[a-f0-9]{6,12}$') &&
+        isValidDiagnosticReport(request.resource.data);
+      allow read, update, delete: if false;
+    }
+
+    // 4. Zero-PII Anonymous App Health & Active-User Heartbeat (Write-only create/update; Admin SDK reads)
+    match /app_metrics/{anonId} {
+      allow create, update: if anonId.size() >= 16 &&
+        anonId.size() <= 64 &&
+        anonId.matches('^(inst_[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$') &&
+        request.resource.data.anon_id == anonId &&
+        isValidAppMetric(request.resource.data);
+      allow read, delete: if false;
+    }
+
+    // 5. Default Deny on all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

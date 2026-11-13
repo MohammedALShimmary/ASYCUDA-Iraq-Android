@@ -15,23 +15,23 @@
 >
 > **تنبيه هام (تطبيق تقني مستقل وغير رسمي):** تطبيق **AsyLauncher (`مشغل أسيكودا`)** هو أداة توافقية تقنية مستقلة ومطورة بشكل فردي لتزويد نظام أندرويد ببيئة تشغيل الجافا المفقودة، **وهو تطبيق غير حكومي ولا يتبع بأي شكل من الأشكال لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD) ولا يمثلها رسمياً.**
 
-[**Download Release `v4.4.0` (`AsyLauncher_v4.4.0.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.0) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk) • [**Security & Architecture (`SECURITY.md`)**](SECURITY.md) • [**Privacy Policy (`PRIVACY_POLICY.md`)**](PRIVACY_POLICY.md) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Release `v4.4.1` (`AsyLauncher_v4.4.1.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.1) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) • [**Security & Architecture (`SECURITY.md`)**](SECURITY.md) • [**Privacy Policy (`PRIVACY_POLICY.md`)**](PRIVACY_POLICY.md) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Current Release (`v4.4.0` • `versionCode 56`)
+## Current Release (`v4.4.1` • `versionCode 57`)
 
 | Release Asset | Version | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.4.0.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk) | `v4.4.0` (`versionCode 56`) | `ed294191f4a317c8633ef6f4a08e453bd4afaabe98a4b46c308c00505d4760cd` |
+| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | `v4.4.1` (`versionCode 57`) | `843d447d511fe69ac2046bf8708b1fd82ac9683ccf4ce7b0b711695cfd4f36db` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 SBOM | Tracked in repository root |
 
 ### Official Government & UNCTAD Information Sources
-No government `.jar` packages are bundled inside the APK. All official client packages and JNLP manifests executed by this compatibility launcher are fetched directly from:
-- **Iraqi Ministry of Finance — Official ASYCUDA World Portal:** https://asy.mof.gov.iq/aw/
-- **Official ASYCUDA World JNLP Client Manifest:** https://asy.mof.gov.iq/aw/AWIQWorld.jnlp
+No government `.jar` packages are bundled inside the APK. Official public portals and ASYCUDA programme references:
 - **Iraqi Ministry of Finance Official Website:** https://www.mof.gov.iq/
 - **UNCTAD ASYCUDA Official Programme Website:** https://asycuda.org/en/
+- **UNCTAD ASYCUDA User Countries Directory (Iraq Profile):** https://asycuda.org/en/user-countries/
+- **Iraq Customs Client Runtime Endpoint (accessible inside Iraq):** ``https://asy.mof.gov.iq/aw/AWIQWorld.jnlp`` (strictly geo-restricted by the Ministry firewall to Iraqi IP addresses)
 
 ---
 
@@ -79,24 +79,25 @@ This repository publishes the complete Android X11 Host & Security Layer (`lorie
 
 - **Zero Credential & Zero PII Collection + Enforced JVM Network Allowlist (`checkConnect`)**: Usernames, passwords, personal/company names, and declaration data are never collected or routed through third-party servers. The embedded Eclipse Temurin OpenJDK `8u504-b01` LTS runtime connects directly to `https://asy.mof.gov.iq` and the dynamic RMI port parsed from `AWIQWorld.jnlp` (with zero hardcoded server IPs or fallback ports), and `00_boot.jar`'s `SecurityManager` blocks all JVM connections to any host other than `localhost` and `asy.mof.gov.iq`.
 - **Verified TLS & Pinned Publisher Signatures**: Enforces full X.509 certificate chain verification (`Sectigo Root R46` / `ZeroSSL RSA DV SSL CA 2`, plus the composite MOF trust store `mof_cacerts.jks`) and RFC 2818 hostname verification for `asy.mof.gov.iq`, alongside pinned `SOCODE.RSA` X.509 verification on every `AWIQWorld.jnlp` JAR.
-- **Proprietary R8-Hardened Java Compatibility Engine (`00_boot.jar`)**: The custom Java-to-Android compatibility engine (`00_boot.jar`, `00_bootpatch.jar`, `00_jnlp.jar`) is a proprietary, R8-obfuscated component (`Copyright © 2026 Mohammed Ammar Hussein — All Rights Reserved`) provided free of charge inside official signed builds of `AsyLauncher`. Official Ministry of Finance `.jar` packages are never modified.
-- **Automated 7-Suite Security Verification & SBOM**: Every commit runs [`scripts/SecurityVerificationTest.java`](scripts/SecurityVerificationTest.java) in GitHub Actions alongside Snyk and SonarQube Cloud.
+- **Proprietary R8-Hardened & String-Encrypted Java Compatibility Engine (`00_boot.jar`)**: The custom Java-to-Android compatibility engine (`00_boot.jar`, `00_bootpatch.jar`, `00_jnlp.jar`) is a proprietary, R8-obfuscated and string-encrypted component (`Copyright © 2026 Mohammed Ammar Hussein — All Rights Reserved`) bound cryptographically to official signed `AsyLauncher` builds (`verifyHostApkIntegrity()`). Official Ministry of Finance `.jar` packages are never modified.
+- **Pre-Disk JVM Log Redaction & Telemetry Opt-Out**: `AsycudaStandaloneManager` scrubs JVM `stdout`/`stderr` in RAM before writing to disk (and deletes `.log` files on graceful exit), while **About, Security & Software Licences** provides a persistent opt-out toggle for the once-per-day 6-field anonymous installation heartbeat.
+- **Automated 7-Suite Security Verification & SBOM**: Every commit runs [`scripts/SecurityVerificationTest.java`](scripts/SecurityVerificationTest.java) in GitHub Actions alongside Snyk and SonarQube Cloud, with [`firestore.rules`](firestore.rules) published openly for audit.
 - Read the complete 4-layer architecture, Mermaid data-flow diagram, and security audit details in **[`SECURITY.md`](SECURITY.md)**.
 
 ---
 
 ## Installation
 
-1. Download [`AsyLauncher_v4.4.0.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.0/AsyLauncher_v4.4.0.apk) from the [v4.4.0 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.0) or install from **Google Play Store**.
+1. Download [`AsyLauncher_v4.4.1.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) from the [v4.4.1 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.1) or install from **Google Play Store**.
 2. Open the APK on your Android phone or tablet (requires 64-bit ARM `arm64-v8a`, Android 8.0–16+).
 3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1) and complete the 5-step gesture walkthrough.
-4. On initial run, the launcher downloads the 131 official ASYCUDA World client JARs directly from `https://asy.mof.gov.iq/aw/AWIQWorld.jnlp` and starts the session.
+4. On initial run (on an Iraqi internet connection), the launcher downloads the 131 official ASYCUDA World client JARs directly from the Ministry server (`asy.mof.gov.iq`) and starts the session.
 
 ---
 
 <div dir="rtl">
 
-## 🇮🇶 العربية — AsyLauncher (مشغل أسيكودا — تطبيق توافقي مستقل وغير رسمي) — الإصدار `v4.4.0`
+## 🇮🇶 العربية — AsyLauncher (مشغل أسيكودا — تطبيق توافقي مستقل وغير رسمي) — الإصدار `v4.4.1`
 
 أداة توافقية تقنية مستقلة وغير رسمية (**AsyLauncher** — الحزمة `io.github.mohammedalshimmary.asylauncher`) مصممة لتزويد هواتف وأجهزة الأندرويد اللوحية ببيئة الجافا اللازمة لتشغيل عميل سطح المكتب لنظام **أسيكودا العالمي** (`asy.mof.gov.iq`) للمخلصين الكمركيين وشركات الشحن والتجارة. **هذا المشروع مستقل تماماً ولا يتبع لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة UNCTAD.**
 
@@ -115,7 +116,7 @@ This repository publishes the complete Android X11 Host & Security Layer (`lorie
 
 <div dir="rtl">
 
-## کوردی — AsyLauncher (کارپێکەری ئەسیکۆدا — ئامرازی سەربەخۆ و نافەرمی) — وەشانی `v4.4.0`
+## کوردی — AsyLauncher (کارپێکەری ئەسیکۆدا — ئامرازی سەربەخۆ و نافەرمی) — وەشانی `v4.4.1`
 
 ئامرازێکی تەکنیکی سەربەخۆ و نافەرمی (**AsyLauncher** — پاکێجی `io.github.mohammedalshimmary.asylauncher`) بۆ کارپێکردنی سیستەمی **ئەسیکۆدای جیهانی** (`asy.mof.gov.iq`) لەسەر مۆبایل و تابلێتی ئەندرۆید، تایبەت بە بریکارانی گومرگی و کۆمپانیا بازرگانییەکان. **ئەم پڕۆژەیە سەربەخۆیە و سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە.**
 

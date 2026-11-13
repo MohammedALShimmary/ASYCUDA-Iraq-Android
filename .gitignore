@@ -25,8 +25,6 @@ lorie-app/asycuda_release.jks
 google-services.json
 **/google-services.json
 *service-account*.json
-firestore.rules
-**/firestore.rules
 firebase.json
 .firebaserc
 
