@@ -178,11 +178,11 @@ jobs:
 
           # Publish or update the GitHub Release and upload public assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 57\`)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 58\`)
 
           **AsyLauncher** (\`io.github.mohammedalshimmary.asylauncher\`) is an independent, unofficial Android compatibility launcher for running the ASYCUDA World desktop client on phones and tablets.
 
-          ### What's New in \`${TAG}\` (\`versionCode 57\`)
+          ### What's New in \`${TAG}\` (\`versionCode 58\`)
           1. **Proprietary Java Bridge Hardening (Host APK Certificate Binding, String Encryption & Full R8)**:
              - Added runtime host APK X.509 certificate verification (\`verifyHostApkIntegrity()\`) and build-time string literal encryption across \`00_boot.jar\`, \`00_bootpatch.jar\`, and \`00_jnlp.jar\`, plus full R8 obfuscation on \`00_bootpatch.jar\` and \`00_jnlp.jar\`.
           2. **Window Corner & Edge Resize Enhancement**:
@@ -192,11 +192,11 @@ jobs:
           4. **Google Play Compliance & Accessible Official Information Sources**:
              - Updated official government and UNCTAD information links in Terms & Conditions, About, and \`PRIVACY_POLICY.md\` to globally accessible URLs (\`www.mof.gov.iq\`, \`asycuda.org\`, \`asycuda.org/en/user-countries/\`) while clearly explaining Iraq geo-restriction of the customs endpoint.
           5. **Firestore Security Rules (\`firestore.rules\`) & Usage Heartbeat Opt-Out**:
-             - Published \`firestore.rules\` in the repository, added \`X-Android-Cert\` binding on Firestore REST requests, and added a persistent ON/OFF toggle for the 6-field anonymous daily heartbeat inside **About, Security & Software Licences**.
+             - Published \`firestore.rules\` in the repository, added \`X-Android-Cert\` binding on Firestore REST requests without client-side \`SHA-1\` digest calls, and added a persistent ON/OFF toggle for the 6-field anonymous daily heartbeat inside **About, Security & Software Licences**.
 
           ---
 
-          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 57\`) — (العربية)
+          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 58\`) — (العربية)
 
           1. **تعزيز حماية محرك الجافا الاحتكاري (\`00_boot.jar\`, \`00_bootpatch.jar\`, \`00_jnlp.jar\`)**: التحقق التلقائي من التوقيع الرقمي لتطبيق الأندرويد المضيف (\`X.509\`)، وتشفير النصوص البرمجية أثناء البناء، وتطبيق تشويش **R8** الكامل على كافة ملفات الجسر الثلاثة.
           2. **تحسين استجابة لمس حواف وزوايا النوافذ الداخلية**: ترقية كشف الزوايا والحواف لتكبير وتصغير النوافذ بسهولة بإصبع واحد في جميع أوضاع العرض.
@@ -206,7 +206,7 @@ jobs:
 
           ---
 
-          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 57\`) — (کوردی)
+          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 58\`) — (کوردی)
 
           1. **بەهێزکردنی پاراستنی بزوێنەری جاڤا**: پشکنینی واژۆی دیجیتاڵی بەرنامەی ئەندرۆید، شفرەکردنی دەقەکان، و تەشویشکردنی **R8** بۆ هەموو پەڕگەکانی پردی جاڤا.
           2. **باشترکردنی هەستیاری دەستلێدان بۆ گۆشە و قەراغەکانی پەنجەرە ناوخۆییەکان** بۆ گەورەکردن و بچووککردنەوەی پەنجەرەکان بە یەک پەنجە.

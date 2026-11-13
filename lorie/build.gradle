@@ -21,7 +21,7 @@ if (hostProjects.size() > 1)
 def hostProject = hostProjects[0]
 def hostApplicationId = hostProject.android.defaultConfig.applicationId ?: hostProject.android.namespace
 def hostVersionName = hostProject.android.defaultConfig.versionName ?: "4.4.1"
-def hostVersionCode = hostProject.android.defaultConfig.versionCode ?: 57
+def hostVersionCode = hostProject.android.defaultConfig.versionCode ?: 58
 
 android {
     namespace 'com.termux.x11'

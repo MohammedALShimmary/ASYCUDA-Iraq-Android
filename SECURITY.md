@@ -19,7 +19,7 @@ Every asset published on the [official `v4.4.1` GitHub Release](https://github.c
 
 | Release Asset | Purpose | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 57`, `targetSdkVersion 36`) | `d93596bd8d4b4cd5c45ca013706ac377379b6b2dfa073af3c552f3740e46a7da` |
+| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | Signed Android release APK (`io.github.mohammedalshimmary.asylauncher`, `versionCode 58`, `targetSdkVersion 36`) | `d93596bd8d4b4cd5c45ca013706ac377379b6b2dfa073af3c552f3740e46a7da` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 Software Bill of Materials (Android Maven + ARM64 Runtime + Client JARs) | Tracked in repository root |
 
 ### Official APK X.509 Signing Certificate (`apksigner verify --print-certs`)
@@ -27,7 +27,7 @@ Every asset published on the [official `v4.4.1` GitHub Release](https://github.c
 | Field | Value |
 | :--- | :--- |
 | **Application ID** | `io.github.mohammedalshimmary.asylauncher` |
-| **Version Name / Code** | `4.4.1` (`versionCode 57`) |
+| **Version Name / Code** | `4.4.1` (`versionCode 58`) |
 | **Signer Certificate DN** | `CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ` |
 | **Signer SHA-256 Digest** | `d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023` |
 | **Signer SHA-1 Digest** | `e1b9c91b50e50223885fd2ee5326b165f16535e7` |

@@ -50,6 +50,8 @@ public final class AsycudaFirebaseManager {
     private static final String OFFICIAL_PACKAGE_NAME = "io.github.mohammedalshimmary.asylauncher";
     private static final String OFFICIAL_RELEASE_CERT_SHA256 =
             "d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023";
+    private static final String OFFICIAL_RELEASE_CERT_SHA1 =
+            "e1b9c91b50e50223885fd2ee5326b165f16535e7";
     private static final String DEFAULT_PLAY_STORE_URL =
             "https://play.google.com/store/apps/details?id=" + OFFICIAL_PACKAGE_NAME;
     private static final int MAX_FIRESTORE_RESPONSE_BYTES = 262144; // 256 KB hard cap
@@ -142,11 +144,10 @@ public final class AsycudaFirebaseManager {
             }
 
             String sha256Lower = toHex(java.security.MessageDigest.getInstance("SHA-256").digest(certBytes), false);
-            String sha1Lower = toHex(java.security.MessageDigest.getInstance("SHA-1").digest(certBytes), false);
 
             boolean certMatches = OFFICIAL_RELEASE_CERT_SHA256.equalsIgnoreCase(sha256Lower);
             if (certMatches) {
-                sCachedOfficialCertSha1 = sha1Lower;
+                sCachedOfficialCertSha1 = OFFICIAL_RELEASE_CERT_SHA1;
             }
             sCachedOfficialBuildStatus = certMatches;
             return certMatches;
@@ -941,7 +942,7 @@ public final class AsycudaFirebaseManager {
      * Sends a once-per-calendar-day Zero-PII anonymous installation heartbeat to Cloud Firestore
      * (`app_metrics/{anonId}`) containing ONLY 6 non-personal technical fields:
      *  - anon_id (random app-scoped UUID, resets on app uninstall/clear)
-     *  - app_version ("4.4.1 (57)")
+     *  - app_version ("4.4.1 (58)")
      *  - android_sdk (e.g. 34)
      *  - device_model ("ZTE NX729J")
      *  - ui_lang ("ar" | "en" | "ku")
