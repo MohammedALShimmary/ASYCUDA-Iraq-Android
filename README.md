@@ -23,7 +23,7 @@
 
 | Release Asset | Version | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | `v4.4.1` (`versionCode 58`) | `d93596bd8d4b4cd5c45ca013706ac377379b6b2dfa073af3c552f3740e46a7da` |
+| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | `v4.4.1` (`versionCode 58`) | `358c8f42b1e2e648102a05e4b7114dee61ad213e7816865715ead42414b55c10` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 SBOM | Tracked in repository root |
 
 ### Official Government & UNCTAD Information Sources
