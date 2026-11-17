@@ -15,15 +15,15 @@
 >
 > **تنبيه هام (تطبيق تقني مستقل وغير رسمي):** تطبيق **AsyLauncher (`مشغل أسيكودا`)** هو أداة توافقية تقنية مستقلة ومطورة بشكل فردي لتزويد نظام أندرويد ببيئة تشغيل الجافا المفقودة، **وهو تطبيق غير حكومي ولا يتبع بأي شكل من الأشكال لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة مؤتمر الأمم المتحدة للتجارة والتنمية (UNCTAD) ولا يمثلها رسمياً.**
 
-[**Download Release `v4.4.1` (`AsyLauncher_v4.4.1.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.1) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) • [**Security & Architecture (`SECURITY.md`)**](SECURITY.md) • [**Privacy Policy (`PRIVACY_POLICY.md`)**](PRIVACY_POLICY.md) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
+[**Download Release `v4.4.2` (`AsyLauncher_v4.4.2.apk`)**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.2) • [**Direct APK Download**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.2/AsyLauncher_v4.4.2.apk) • [**Security & Architecture (`SECURITY.md`)**](SECURITY.md) • [**Privacy Policy (`PRIVACY_POLICY.md`)**](PRIVACY_POLICY.md) • [**CycloneDX SBOM (`sbom.cdx.json`)**](sbom.cdx.json)
 
 ---
 
-## Current Release (`v4.4.1` • `versionCode 58`)
+## Current Release (`v4.4.2` • `versionCode 59`)
 
 | Release Asset | Version | SHA-256 Checksum |
 | :--- | :--- | :--- |
-| [**`AsyLauncher_v4.4.1.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) | `v4.4.1` (`versionCode 58`) | `358c8f42b1e2e648102a05e4b7114dee61ad213e7816865715ead42414b55c10` |
+| [**`AsyLauncher_v4.4.2.apk`**](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.2/AsyLauncher_v4.4.2.apk) | `v4.4.2` (`versionCode 59`) | `TBD_ON_RELEASE_BUILD` |
 | [**`sbom.cdx.json`**](sbom.cdx.json) | CycloneDX 1.5 SBOM | Tracked in repository root |
 
 ### Official Government & UNCTAD Information Sources
@@ -88,7 +88,7 @@ This repository publishes the complete Android X11 Host & Security Layer (`lorie
 
 ## Installation
 
-1. Download [`AsyLauncher_v4.4.1.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk) from the [v4.4.1 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.1) or install from **Google Play Store**.
+1. Download [`AsyLauncher_v4.4.2.apk`](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.2/AsyLauncher_v4.4.2.apk) from the [v4.4.2 Release page](https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/tag/v4.4.2) or install from **Google Play Store**.
 2. Open the APK on your Android phone or tablet (requires 64-bit ARM `arm64-v8a`, Android 8.0–16+).
 3. On first launch, review and accept the Click-Wrap Terms & Conditions and Liability Waiver (Iraqi Civil Code Art. 259/2 & Electronic Transactions Law No. 78/2012 Art. 18/1) and complete the 5-step gesture walkthrough.
 4. On initial run (on an Iraqi internet connection), the launcher downloads the 131 official ASYCUDA World client JARs directly from the Ministry server (`asy.mof.gov.iq`) and starts the session.
@@ -97,14 +97,14 @@ This repository publishes the complete Android X11 Host & Security Layer (`lorie
 
 <div dir="rtl">
 
-## 🇮🇶 العربية — AsyLauncher (مشغل أسيكودا — تطبيق توافقي مستقل وغير رسمي) — الإصدار `v4.4.1`
+## 🇮🇶 العربية — AsyLauncher (مشغل أسيكودا — تطبيق توافقي مستقل وغير رسمي) — الإصدار `v4.4.2`
 
 أداة توافقية تقنية مستقلة وغير رسمية (**AsyLauncher** — الحزمة `io.github.mohammedalshimmary.asylauncher`) مصممة لتزويد هواتف وأجهزة الأندرويد اللوحية ببيئة الجافا اللازمة لتشغيل عميل سطح المكتب لنظام **أسيكودا العالمي** (`asy.mof.gov.iq`) للمخلصين الكمركيين وشركات الشحن والتجارة. **هذا المشروع مستقل تماماً ولا يتبع لوزارة المالية العراقية أو الهيئة العامة للكمارك أو منظمة UNCTAD.**
 
 ### المميزات الكاملة:
 - **تثبيت مباشر وبدون ملفات حكومية مدمجة أو صلاحيات تخزين واسعة**: يعمل مباشرة دون طلب صلاحية الوصول الشامل للملفات (`MANAGE_EXTERNAL_STORAGE`)، ويقوم بتحميل ملفات العميل الرسمية (131 ملف `JAR`) مباشرة من `asy.mof.gov.iq` عند التشغيل الأول مع التحقق من التوقيع الرقمي (`SOCODE.RSA`) لكل ملف.
 - **إصلاح طباعة البيان المسبق (PD) وتصدير الجداول إلى Excel (`.xlsx`) و PDF**: تفعيل زر الطباعة داخل نافذة إتمام العملية للبيان المسبق (`البيان المسبق`)، معالجة طباعة جدول **تفاصيل البيان**، وتصدير نتائج البحث مباشرة إلى ملف `Excel (.xlsx)` أو `PDF` عالي الدقة داخل الخزنة الخاصة.
-- **تكبير الخطوط والقوائم الذكي وتحسينات اللمس المباشر (`120Hz`)**: اختيار حجم واجهة وخطوط أسيكودا (**افتراضي** / **مريح** / **كبير للمس**) مع تطبيق فوري ومؤشر حي لاستقرار الشاشة، تسهيل تغيير حجم النوافذ باللمس من الحواف والزوايا، تثبيت القوائم المنسدلة في **بحث البيان** و**بحث البيان المسبق**، واختيار الملفات بلمسة واحدة.
+- **تكبير الخطوط والقوائم ومنتقي التاريخ وتحسينات اللمس المباشر (`120Hz`)**: اختيار حجم واجهة وخطوط أسيكودا (**افتراضي** / **مريح** / **كبير للمس**) مع ضبط حجم تقويم التاريخ (`Date Picker`) وتوزيع أعمدة القوائم المنسدلة (2D/3D) حسب طول النص، وتسهيل تغيير حجم النوافذ باللمس من الحواف والزوايا، ومنع ظهور لوحة المفاتيح على الحقول غير النصية.
 - **إيماءات اللمس المخصصة والحاسبة الكمركية المصغرة العائمة**: تخصيص نقرات الأصابع لكل من وضع لوحة اللمس (Trackpad) ووضع اللمس المباشر، مع حاسبة كمركية عائمة قابلة للتحريك وتغيير الحجم بجانب زر `AsyLauncher` العائم، ودليل تفاعلي من ٥ خطوات عند التشغيل لأول مرة.
 - **الخزنة الخاصة للمستندات (`Vault`) وجسر استيراد الملفات التلقائي**: حفظ جميع التصاريح والوصلات المطبوعة وملفات الإكسل داخل المساحة المعزولة للتطبيق (`0700`) مع إدارة كاملة للمجلدات (**إنشاء مجلد، إعادة تسمية، نسخ، نقل، فتح، مشاركة، وحذف**)، واكتشاف نافذة اختيار الملفات (`JFileChooser`) تلقائياً لاستيراد الملفات من الهاتف بأمان.
 - **تشخيص الشبكة الشامل ومركز التحديثات الذكي (`Cloud Firestore`)**: فحص تلقائي لمشاكل الاتصال وملف الشبكة وحجب مزودي خدمة الواي فاي (مع التوجيه لاستخدام بيانات الهاتف `4G` عند الحاجة)، واستلام التنبيهات الفورية وتحديثات الأخطاء المعروفة عبر `Google Cloud Firestore` مع إمكانية معاينة وإرسال تقارير الأعطال الاختيارية من الذاكرة العشوائية (`RAM`) بعد تنقيتها من أي بيانات حساسة.
@@ -116,14 +116,14 @@ This repository publishes the complete Android X11 Host & Security Layer (`lorie
 
 <div dir="rtl">
 
-## کوردی — AsyLauncher (کارپێکەری ئەسیکۆدا — ئامرازی سەربەخۆ و نافەرمی) — وەشانی `v4.4.1`
+## کوردی — AsyLauncher (کارپێکەری ئەسیکۆدا — ئامرازی سەربەخۆ و نافەرمی) — وەشانی `v4.4.2`
 
 ئامرازێکی تەکنیکی سەربەخۆ و نافەرمی (**AsyLauncher** — پاکێجی `io.github.mohammedalshimmary.asylauncher`) بۆ کارپێکردنی سیستەمی **ئەسیکۆدای جیهانی** (`asy.mof.gov.iq`) لەسەر مۆبایل و تابلێتی ئەندرۆید، تایبەت بە بریکارانی گومرگی و کۆمپانیا بازرگانییەکان. **ئەم پڕۆژەیە سەربەخۆیە و سەر بە وەزارەتی دارایی عێراق، دەستەی گشتیی گومرگ، یان ڕێکخراوی UNCTAD نییە.**
 
 ### تایبەتمەندییەکان:
 - **دامەزراندنی ڕاستەوخۆ و بەبێ مۆڵەتی گشتیی پەڕگەکان**: کاردەکات بەبێ داواکردنی مۆڵەتی گشتیی پەڕگەکان (`MANAGE_EXTERNAL_STORAGE`) و هەموو پەڕگە فەرمییەکان (131 پەڕگەی `JAR`) ڕاستەوخۆ لە `asy.mof.gov.iq` دادەگرێت بە پشتڕاستکردنەوەی واژۆی ئەلیکترۆنی (`SOCODE.RSA`).
 - **چاککردنی چاپکردنی بەیانی پێشوەختە (PD) و هەناردەکردنی خشتەکان بۆ Excel (`.xlsx`) و PDF**: چالاککردنی دوگمەی چاپکردنی بەیانی پێشوەختە و هەناردەکردنی ئەنجامەکانی گەڕان بۆ پەڕگەی `Excel` و `PDF` لەناو قاسەی تایبەتی بەرنامەکەدا.
-- **گەورەکردنی فۆنت و لیستەکانی ئەسیکۆدا و باشترکردنی شاشەی لەمس (`120Hz`)**: هەڵبژاردنی قەبارەی فۆنت (**بنەڕەتی** / **مامناوەند** / **گەورە بۆ لەمس**)، ئاسانکردنی گۆڕینی قەبارەی پەنجەرەکان، جێگیرکردنی لیستەکانی گەڕان، و هەڵبژاردنی پەڕگەکان بە یەک دەستلێدان.
+- **گەورەکردنی فۆنت، پەنجەرەی بەروار و لیستەکان + باشترکردنی شاشەی لەمس (`120Hz`)**: هەڵبژاردنی قەبارەی فۆنت (**بنەڕەتی** / **مامناوەند** / **گەورە بۆ لەمس**)، چاککردنی قەبارەی ڕۆژژمێری بەروار، دابەشکردنی پانی ستوونی لیستە ٢D/٣Dـەکان بەپێی دەق، ئاسانکردنی گۆڕینی قەبارەی پەنجەرەکان، و ڕێگری لە دەرکەوتنی خۆکارانەی تەختەکلیل لە لیست و بەروارەکان.
 - **ڕێکخستنی جوڵەی پەنجەکان و ژمێرەری گومرگی بچووک**: دیاریکردنی فرمانەکانی پەنجەکان بۆ تراکپاد و شاشەی لەمس، لەگەڵ ژمێرەری سەرئاوکەوتوو و فێرکاری کارلێککاری ٥ هەنگاوی.
 - **قاسەی نهێنی بەرنامە (`Vault`) و پردی هاوردەکردنی پەڕگە**: چاپکردن و بەڕێوەبردنی بەڵگەنامەکان (فۆڵدەر، گۆڕینی ناو، کۆپی، گواستنەوە، کردنەوە، هاوبەشکردن، سڕینەوە) لەناو بیرگەی تایبەت و پارێزراوی بەرنامەکەدا.
 - **پشکنینی تۆڕ و ناوەندی نوێکردنەوەی زیرەک (`Cloud Firestore`)**: دەستنیشانکردنی کێشەکانی هێڵی ئینتەرنێت و وەرگرتنی ئاگادارییەکان لە ڕێگەی `Google Cloud Firestore`.

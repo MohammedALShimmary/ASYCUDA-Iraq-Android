@@ -52,6 +52,10 @@ public final class AsycudaFirebaseManager {
             "d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023";
     private static final String OFFICIAL_RELEASE_CERT_SHA1 =
             "e1b9c91b50e50223885fd2ee5326b165f16535e7";
+    private static final String OFFICIAL_PLAY_CERT_SHA256 =
+            "385f2b5436777608303d1b3d4ecd43a659c075fb8d1a3b1695d8bd82a24a4133";
+    private static final String OFFICIAL_PLAY_CERT_SHA1 =
+            "27dac8c89e5a8c9aef762aa09a2be6272b5771d0";
     private static final String DEFAULT_PLAY_STORE_URL =
             "https://play.google.com/store/apps/details?id=" + OFFICIAL_PACKAGE_NAME;
     private static final int MAX_FIRESTORE_RESPONSE_BYTES = 262144; // 256 KB hard cap
@@ -92,8 +96,9 @@ public final class AsycudaFirebaseManager {
     /**
      * 3-Layer Fork/Clone & Repack Protection:
      *  - Layer 1: Requires BuildConfig.FIREBASE_PROJECT_ID injected from private CI/local secrets (empty on forks/clones).
-     *  - Layer 2: Verifies package name ("io.github.mohammedalshimmary.asylauncher"), non-debuggable release flag, and either the pinned
-     *             official release X.509 signing certificate SHA-256 (d302d4d050fb...) or official Google Play Store installation.
+     *  - Layer 2: Verifies package name ("io.github.mohammedalshimmary.asylauncher"), non-debuggable release flag, and either the
+     *             pinned upload/GitHub release X.509 signing certificate SHA-256 (d302d4d050fb...) or the official Google Play
+     *             App Signing certificate SHA-256 (385f2b543677...).
      *  - Layer 3: Attaches X-Android-Package and X-Android-Cert (SHA-1) headers for Google Cloud enforcement.
      */
     public static boolean isAuthorizedOfficialBuild(Context ctx) {
@@ -145,9 +150,13 @@ public final class AsycudaFirebaseManager {
 
             String sha256Lower = toHex(java.security.MessageDigest.getInstance("SHA-256").digest(certBytes), false);
 
-            boolean certMatches = OFFICIAL_RELEASE_CERT_SHA256.equalsIgnoreCase(sha256Lower);
-            if (certMatches) {
+            boolean releaseMatches = OFFICIAL_RELEASE_CERT_SHA256.equalsIgnoreCase(sha256Lower);
+            boolean playMatches = OFFICIAL_PLAY_CERT_SHA256.equalsIgnoreCase(sha256Lower);
+            boolean certMatches = releaseMatches || playMatches;
+            if (releaseMatches) {
                 sCachedOfficialCertSha1 = OFFICIAL_RELEASE_CERT_SHA1;
+            } else if (playMatches) {
+                sCachedOfficialCertSha1 = OFFICIAL_PLAY_CERT_SHA1;
             }
             sCachedOfficialBuildStatus = certMatches;
             return certMatches;
@@ -530,7 +539,7 @@ public final class AsycudaFirebaseManager {
                     githubUrl));
         }
 
-        // 2. Built-in Release Highlights Card for v4.4.1
+        // 2. Built-in Release Highlights Card for v4.4.2
         String relCategory = AsycudaMaterialUi.tr(activity,
                 "RELEASE HIGHLIGHTS  •  v" + BuildConfig.VERSION_NAME + " (Build " + BuildConfig.VERSION_CODE + ")",
                 "ملخص ميزات الإصدار  •  v" + BuildConfig.VERSION_NAME + " (بناء " + BuildConfig.VERSION_CODE + ")",
@@ -542,18 +551,18 @@ public final class AsycudaFirebaseManager {
                 "نوێکارییەکانی کارپێکەری ئەسیکۆدا (AsyLauncher) v" + BuildConfig.VERSION_NAME);
 
         String relBody = AsycudaMaterialUi.tr(activity,
-                "• Hardened Proprietary Bridge & Host Signature Binding: Upgraded all 3 Java bridge archives with host APK signing certificate binding, full R8 obfuscation, and build-time string encryption.\n"
-                        + "• Pre-Disk In-RAM JVM Log Redaction & Privacy Opt-Out Toggle: All JVM stdout/stderr output is redacted in RAM before writing to disk, and you can toggle the 6-field Anonymous Daily Heartbeat on/off anytime inside About.\n"
-                        + "• Official Government & UNCTAD Source Link Compliance: Updated in-app Terms & About disclosures to link strictly to globally reachable Iraqi Ministry of Finance & UNCTAD portals.\n"
-                        + "• Includes All v4.4.0 Features: Previous Declaration (PD) Print fix, high-clarity Search Table PDF printer & CWE-1236 Excel (.xlsx) exporter, Comfort/Touch font scaling presets, 120Hz High-FPS GPU boost, and touch window resizing.",
-                "• تعزيز حماية محرك التوافق وربطه بشهادة التطبيق الرسمية: ترقية جميع أرشيفات الجسر بتقنية ربط توقيع التطبيق وتعتيم R8 وتشفير النصوص الداخلية.\n"
-                        + "• تنقية السجلات في الذاكرة قبل الحفظ وزر إيقاف الإحصاء المجهول: تنقية مخرجات جافا داخل RAM قبل كتابتها على القرص، مع إمكانية إيقاف نبض الاستخدام اليومي المجهول من نافذة «حول التطبيق».\n"
-                        + "• تحديث المصادر الحكومية الرسمية المتاحة عالمياً: توضيح الروابط الرسمية لوزارة المالية العراقية ومنظمة UNCTAD.\n"
-                        + "• يتضمن جميع مزايا v4.4.0: إصلاح طباعة البيان المسبق (PD)، طباعة جداول PDF وتصدير Excel (.xlsx)، تكبير الخطوط والقوائم، وتسريع الشاشة 120Hz.",
-                "• بەهێزکردنی پاراستنی بزوێنەری گونجاندن و بەستنەوەی بە واژۆی فەرمی بەرنامە و شاردنەوەی R8.\n"
-                        + "• پاککردنەوەی تۆمارەکان لە RAM پێش نووسین لەسەر دیسک و دوگمەی وەستاندنی ئاماری نەناسراو لە بەشی دەربارە.\n"
-                        + "• نوێکردنەوەی بەستەرە فەرمییەکانی وەزارەتی دارایی عێراق و ڕێکخراوی UNCTAD.\n"
-                        + "• هەموو تایبەتمەندییەکانی v4.4.0 لەخۆدەگرێت: چاککردنی چاپکردنی PD، هەناردەکردنی Excel (.xlsx) و PDF، و گەورەکردنی فۆنت.");
+                "• Google Play App Signing & Live Firestore Fix: Pinned Google Play's App Signing certificate alongside our release upload key so Play Store installations launch smoothly and sync live Cloud Firestore alerts & diagnostics.\n"
+                        + "• Date Picker Scaling Fix: Fixed oversized/stretched calendar popups (Previous Declaration & declaration date fields) so year/month selectors and the day grid render cleanly within the screen.\n"
+                        + "• Smart 2D/3D Drop-Down Column Sizing: Multi-column lookup menus now allocate widths according to each column's actual text content—keeping short code columns compact so full descriptions remain readable.\n"
+                        + "• Smarter Auto-Show Keyboard: Tapping drop-down menus, date pickers, spinners, or special non-text cells no longer pops up the on-screen keyboard unnecessarily.",
+                "• توافق توقيع متجر Google Play والمزامنة السحابية: إضافة شهادة توقيع متجر Google Play الرسمية لتعمل النسخة المثبتة من المتجر بكامل كفاءتها مع استعادة الاتصال السحابي الفوري.\n"
+                        + "• إصلاح تكبير نافذة منتقي التاريخ (Date Picker): معالجة تمدد تقويم التاريخ في البيان المسبق ونوافذ الإدخال بحيث يظهر التقويم وأزرار السنة والشهر بحجم متناسق داخل الشاشة.\n"
+                        + "• توزيع ذكي لأعمدة القوائم المنسدلة (2D / 3D): تخصيص عرض الأعمدة حسب طول النص الفعلي بحيث تبقى أعمدة الرموز القصيرة مدمجة مع منح الوصف مساحة أوضح.\n"
+                        + "• تحسين الإظهار التلقائي للوحة المفاتيح: منع ظهور لوحة المفاتيح تلقائياً عند لمس القوائم المنسدلة أو منتقي التاريخ أو الحقول الخاصة غير النصية.",
+                "• گونجاندن لەگەڵ واژۆی Google Play و هاوکاتکردنی هەوری: زیادکردنی بڕوانامەی فەرمی Google Play بۆ ئەوەی وەشانی کۆگای پلەی بە تەواوی کار بکات و پەیوەندی بە هەورەوە جێگیر ببێت.\n"
+                        + "• چاککردنی قەبارەی پەنجەرەی هەڵبژاردنی بەروار (Date Picker): چارەسەرکردنی کشانی ڕۆژژمێر لە بەیانی پێشوەختە و فۆرمەکاندا.\n"
+                        + "• دابەشکردنی زیرەکی پانی ستوونەکان لە لیستە ٢D و ٣Dـەکاندا بەپێی درێژی دەقەکان بۆ خوێندنەوەیەکی ڕوونتر.\n"
+                        + "• باشترکردنی پیشاندانی خۆکارانەی تەختەکلیل: ڕێگریکردن لە هەڵبوونی تەختەکلیل کاتێک دەست لە لیستەکان یان هەڵبژاردنی بەروار دەدرێت.");
 
         container.addView(createAlertCardView(
                 activity,
@@ -942,7 +951,7 @@ public final class AsycudaFirebaseManager {
      * Sends a once-per-calendar-day Zero-PII anonymous installation heartbeat to Cloud Firestore
      * (`app_metrics/{anonId}`) containing ONLY 6 non-personal technical fields:
      *  - anon_id (random app-scoped UUID, resets on app uninstall/clear)
-     *  - app_version ("4.4.1 (58)")
+     *  - app_version ("4.4.2 (59)")
      *  - android_sdk (e.g. 34)
      *  - device_model ("ZTE NX729J")
      *  - ui_lang ("ar" | "en" | "ku")

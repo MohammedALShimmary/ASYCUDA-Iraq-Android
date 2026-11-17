@@ -6541,9 +6541,9 @@ public class AsycudaMaterialUi {
 
         TextView subtitle = new TextView(activity);
         subtitle.setText(tr(activity,
-                "v" + BuildConfig.VERSION_NAME + " — Hardened Bridge Security, Pre-Disk Log Redaction & Privacy Controls",
-                "الإصدار v" + BuildConfig.VERSION_NAME + " — تعزيز حماية الجسر، تنقية السجلات، وخيارات الخصوصية",
-                "وەشانی v" + BuildConfig.VERSION_NAME + " — بەهێزکردنی ئاسایشی بزوێنەر و پاککردنەوەی تۆمارەکان"));
+                "v" + BuildConfig.VERSION_NAME + " — Google Play App Signing, Date Picker Scaling & Drop-Down Improvements",
+                "الإصدار v" + BuildConfig.VERSION_NAME + " — توافق متجر Google Play وإصلاح منتقي التاريخ والقوائم المنسدلة",
+                "وەشانی v" + BuildConfig.VERSION_NAME + " — گونجاندن لەگەڵ Google Play، چاککردنی بەروار و لیستەکان"));
         subtitle.setTextColor(SYSTEM_BLUE);
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.8f);
         titleCol.addView(subtitle);
@@ -6632,6 +6632,16 @@ public class AsycudaMaterialUi {
                         "All proprietary Java compatibility archives now verify the host APK X.509 signature, encrypt internal reflection constants, scrub every JVM log line in RAM before disk output, attach X-Android-Cert verification headers, and provide an interactive opt-out toggle in About for the 6-field Anonymous Daily Heartbeat.",
                         "تتحقق جميع مكونات التوافق الآن من شهادة توقيع التطبيق الرسمية وتشفّر النصوص الداخلية، مع تنقية كل سطر من مخرجات جافا في الذاكرة RAM قبل الحفظ وإتاحة زر إيقاف نبض الاستخدام اليومي المجهول في نافذة «حول التطبيق».",
                         "پێکهاتەکانی گونجاندن ئێستا بڕوانامەی فەرمی بەرنامەکە پشتڕاست دەکەنەوە و هەموو تۆمارەکانی جاڤا لە RAM دەپشکنرێن پێش پاشەکەوتکردن، لەگەڵ دوگمەی ڕاگرتنی ئاماری ڕۆژانەی نەناسراو لە بەشی دەربارە."));
+
+        addPolicyClause(activity, card,
+                tr(activity,
+                        "7. Google Play Store Support, Date Picker, 2D/3D Drop-Downs & Keyboard Focus (v4.4.2)",
+                        "7. دعم توقيع Google Play، إصلاح منتقي التاريخ، أعمدة القوائم، ولوحة المفاتيح (v4.4.2)",
+                        "٧. پاڵپشتی واژۆی Google Play، چاککردنی بەروار، لیستە ٢D/٣D و تەختەکلیل (v4.4.2)"),
+                tr(activity,
+                        "Recognizes Google Play App Signing alongside our release key so Play Store builds launch and sync live Cloud Firestore updates seamlessly. Also fixes stretched Date Picker calendar popups, apportions 2D/3D drop-down column widths by text content, and stops Auto-Show Keyboard from popping up on drop-downs or date pickers.",
+                        "إضافة شهادة توقيع Google Play الرسمية لتعمل نسخة المتجر ومزامنة السحابة بسلاسة، مع إصلاح حجم نافذة منتقي التاريخ (Date Picker) وتوزيع عرض أعمدة القوائم المنسدلة (2D/3D) حسب طول النص ومنع ظهور لوحة المفاتيح تلقائياً على القوائم وحقول التاريخ.",
+                        "زیادکردنی واژۆی فەرمی Google Play بۆ کارکردنی تەواو لە وەشانی کۆگای پلەی و هاوکاتکردنی هەور، چاککردنی قەبارەی پەنجەرەی بەروار، دابەشکردنی پانی ستوونەکان بەپێی دەق و ڕێگری لە دەرکەوتنی خۆکارانەی تەختەکلیل لە لیست و بەروارەکان."));
 
         scroll.addView(card);
         root.addView(scroll);

@@ -1,6 +1,6 @@
 # Privacy Policy — Launcher for ASYCUDA (AsyLauncher)
 
-**Effective Date:** November 13, 2026  
+**Effective Date:** November 17, 2026  
 **Application Name:** Launcher for ASYCUDA (`AsyLauncher` / `مشغل أسيكودا` / `کارپێکەری ئەسیکۆدا`)  
 **Package Name:** `io.github.mohammedalshimmary.asylauncher`  
 **Developer:** Mohammed Ammar Hussein (Independent Software Developer — Baghdad, Iraq)  
@@ -51,7 +51,7 @@ Once per UTC calendar day—and only after the user accepts the first-launch Ter
 | Field Name | Example Value | Purpose | Linked to User Identity? |
 | :--- | :--- | :--- | :--- |
 | `anon_id` | `inst_9f8e7d6c-5b4a-...` | Randomly generated installation UUID (`UUID.randomUUID()`). Resets automatically whenever app data is cleared or the app is uninstalled. | **No** |
-| `app_version` | `4.4.1 (58)` | Tracks which app version is active so obsolete versions can be identified. | **No** |
+| `app_version` | `4.4.2 (59)` | Tracks which app version is active so obsolete versions can be identified. | **No** |
 | `android_sdk` | `35` or `36` | Verifies compatibility across Android OS API levels (Android 8.0–16+). | **No** |
 | `device_model` | `Samsung SM-S928B` | Identifies device screen/GPU class for X11 rendering compatibility. | **No** |
 | `ui_lang` | `ar`, `en`, or `ku` | Indicates active interface language preference for translation prioritization. | **No** |

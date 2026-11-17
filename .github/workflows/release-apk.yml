@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag to build and publish (e.g. v4.4.1)'
+        description: 'Release tag to build and publish (e.g. v4.4.2)'
         required: true
-        default: 'v4.4.1'
+        default: 'v4.4.2'
 
 permissions:
   contents: write
@@ -117,7 +117,7 @@ jobs:
         run: |
           TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
           if [[ "$TAG" != v* ]]; then
-            TAG="v4.4.1"
+            TAG="v4.4.2"
           fi
           APK_NAME="AsyLauncher_${TAG}.apk"
           AAB_NAME="AsyLauncher_${TAG}.aab"
@@ -178,40 +178,37 @@ jobs:
 
           # Publish or update the GitHub Release and upload public assets
           cat << EOF > /tmp/release_notes.md
-          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 58\`)
+          # AsyLauncher — Launcher for ASYCUDA (\`${TAG}\` • \`versionCode 59\`)
 
           **AsyLauncher** (\`io.github.mohammedalshimmary.asylauncher\`) is an independent, unofficial Android compatibility launcher for running the ASYCUDA World desktop client on phones and tablets.
 
-          ### What's New in \`${TAG}\` (\`versionCode 58\`)
-          1. **Proprietary Java Bridge Hardening (Host APK Certificate Binding, String Encryption & Full R8)**:
-             - Added runtime host APK X.509 certificate verification (\`verifyHostApkIntegrity()\`) and build-time string literal encryption across \`00_boot.jar\`, \`00_bootpatch.jar\`, and \`00_jnlp.jar\`, plus full R8 obfuscation on \`00_bootpatch.jar\` and \`00_jnlp.jar\`.
-          2. **Window Corner & Edge Resize Enhancement**:
-             - Upgraded corner and edge touch hit-testing, Z-order painter's algorithm occlusion, and EventQueue dispatch interception for effortless 1-finger resizing of internal windows across all UI scale presets.
-          3. **Pre-Disk JVM Log Redaction Pipe & Auto-Cleanup**:
-             - Replaced direct JVM output file redirection with an in-RAM log pump (\`AsycudaSecurityValidator.redactSensitiveLogContent()\`) that scrubs credentials before disk persistence and clears runtime \`.log\` files on graceful exit.
-          4. **Google Play Compliance & Accessible Official Information Sources**:
-             - Updated official government and UNCTAD information links in Terms & Conditions, About, and \`PRIVACY_POLICY.md\` to globally accessible URLs (\`www.mof.gov.iq\`, \`asycuda.org\`, \`asycuda.org/en/user-countries/\`) while clearly explaining Iraq geo-restriction of the customs endpoint.
-          5. **Firestore Security Rules (\`firestore.rules\`) & Usage Heartbeat Opt-Out**:
-             - Published \`firestore.rules\` in the repository, added \`X-Android-Cert\` binding on Firestore REST requests without client-side \`SHA-1\` digest calls, and added a persistent ON/OFF toggle for the 6-field anonymous daily heartbeat inside **About, Security & Software Licences**.
+          ### What's New in \`${TAG}\` (\`versionCode 59\`)
+          1. **Google Play App Signing & Live Firestore Compatibility Fix**:
+             - Added the official Google Play App Signing SHA-256 & SHA-1 certificate hashes alongside our release upload key inside \`AsycudaBoot.java\`, \`AsycudaFirebaseManager.java\`, and \`AsycudaSecurityValidator.java\`, resolving both the host certificate mismatch error and live Cloud Firestore sync on Google Play Store installations.
+          2. **Date Picker (\`ElfDate\` / \`CalendarComponent\`) Popup Scaling Fix**:
+             - Fixed stretched/oversized Date Picker calendar popups (Previous Declaration \`PD\` & declaration date fields) so the 7-column day table, weekday headers, and year/month \`KSpinBox\` selectors scale proportionally and anchor cleanly within screen bounds.
+          3. **Content-Proportional Column Sizing for 2D & 3D Lookup Drop-Downs**:
+             - Replaced equal column width division in \`BasicKComboPopup\` with per-column text-width sampling across 3 table zones, keeping short code columns compact so full descriptions fit without unnecessary clipping.
+          4. **Smarter "Auto Show Keyboard" Focus Filtering**:
+             - Restricted auto-keyboard triggers strictly to basic text and numeric inputs, preventing the soft keyboard from popping up when tapping drop-down menus, date pickers, spinners, checkboxes, or non-text table editors.
 
           ---
 
-          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 58\`) — (العربية)
+          ## 🇮🇶 الجديد في الإصدار \`${TAG}\` (\`versionCode 59\`) — (العربية)
 
-          1. **تعزيز حماية محرك الجافا الاحتكاري (\`00_boot.jar\`, \`00_bootpatch.jar\`, \`00_jnlp.jar\`)**: التحقق التلقائي من التوقيع الرقمي لتطبيق الأندرويد المضيف (\`X.509\`)، وتشفير النصوص البرمجية أثناء البناء، وتطبيق تشويش **R8** الكامل على كافة ملفات الجسر الثلاثة.
-          2. **تحسين استجابة لمس حواف وزوايا النوافذ الداخلية**: ترقية كشف الزوايا والحواف لتكبير وتصغير النوافذ بسهولة بإصبع واحد في جميع أوضاع العرض.
-          3. **تنقية سجلات الجافا في الذاكرة قبل الحفظ**: تمرير مخرجات الجافا عبر فلتر التنقية (\`AsycudaSecurityValidator\`) لإزالة أي بيانات حساسة قبل الكتابة على القرص وحذف السجلات المؤقتة عند الإغلاق الآمن.
-          4. **تحديث روابط المصادر الرسمية وتوافق متجر Google Play**: اعتماد الروابط الحكومية والأممية المتاحة عالمياً (\`www.mof.gov.iq\` و \`asycuda.org\`) في الشروط وحول التطبيق وسياسة الخصوصية.
-          5. **إعدادات خصوصية نبضة الاستخدام (\`Heartbeat Opt-Out\`) ونشر قواعد أمان Firestore**: إضافة مفتاح تفعيل/إيقاف فوري لنبضة الاستخدام المجهولة داخل نافذة «حول التطبيق»، ونشر \`firestore.rules\` في المستودع مع إرفاق ترويسة \`X-Android-Cert\`.
+          1. **توافق توقيع متجر Google Play واستعادة المزامنة السحابية**: إضافة بصمات شهادة توقيع متجر Google Play الرسمية بجانب شهادة الإصدار داخل \`00_boot.jar\` و\`AsycudaFirebaseManager\` لحل خطأ مطابقة الشهادة وتفعيل الاتصال السحابي المباشر على نسخة المتجر.
+          2. **إصلاح تحجيم منتقي التاريخ (\`Date Picker\`)**: ضبط أبعاد نافذة التقويم وأزرار اختيار السنة والشهر وجدول الأيام في البيان المسبق ونوافذ الإدخال لتظهر بحجم متناسق داخل حدود الشاشة.
+          3. **توزيع ذكي لأعمدة القوائم المنسدلة (2D / 3D)**: احتساب عرض كل عمود حسب طول النص الفعلي بحيث تبقى أعمدة الرموز القصيرة مدمجة مع إعطاء أعمدة الوصف مساحة أوضح.
+          4. **تحسين ميزة الإظهار التلقائي للوحة المفاتيح**: قصر الفتح التلقائي للوحة المفاتيح على حقول النص والأرقام فقط ومنع ظهورها عند لمس القوائم المنسدلة أو منتقي التاريخ أو الحقول الخاصة.
 
           ---
 
-          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 58\`) — (کوردی)
+          ## نوێکارییەکانی وەشانی \`${TAG}\` (\`versionCode 59\`) — (کوردی)
 
-          1. **بەهێزکردنی پاراستنی بزوێنەری جاڤا**: پشکنینی واژۆی دیجیتاڵی بەرنامەی ئەندرۆید، شفرەکردنی دەقەکان، و تەشویشکردنی **R8** بۆ هەموو پەڕگەکانی پردی جاڤا.
-          2. **باشترکردنی هەستیاری دەستلێدان بۆ گۆشە و قەراغەکانی پەنجەرە ناوخۆییەکان** بۆ گەورەکردن و بچووککردنەوەی پەنجەرەکان بە یەک پەنجە.
-          3. **پاڵاوتنی تۆمارەکانی جاڤا لە بیرگەدا پێش پاشەکەوتکردن** و سڕینەوەی تۆمارە کاتییەکان لە کاتی داخستندا.
-          4. **نوێکردنەوەی بەستەرە فەرمییە گشتییەکان (\`www.mof.gov.iq\`, \`asycuda.org\`)** و زیادکردنی **کلیلی ڕاگرتن/کارپێکردنی ناردنی ئاماری بەکارهێنان** لە بەشی «دەربارەی بەرنامە».
+          1. **گونجاندن لەگەڵ واژۆی فەرمی Google Play و هاوکاتکردنی هەور**: زیادکردنی بڕوانامەی Google Play بۆ کارکردنی وەشانی کۆگای پلەی بە تەواوی و پەیوەندی ڕاستەوخۆ بە Cloud Firestore.
+          2. **چاککردنی قەبارەی پەنجەرەی هەڵبژاردنی بەروار (\`Date Picker\`)** لە بەیانی پێشوەختە و فۆرمەکاندا.
+          3. **دابەشکردنی زیرەکی پانی ستوونەکان لە لیستە ٢D و ٣Dـەکاندا** بەپێی درێژی دەقی ناو هەر ستوونێک.
+          4. **باشترکردنی دەرکەوتنی خۆکارانەی تەختەکلیل** بە جۆرێک تەنها لە خانە دەقییە سادەکاندا هەڵببێت و لەسەر لیست و بەروارەکان دەرنەکەوێت.
 
           ---
 
@@ -222,14 +219,15 @@ jobs:
           | **\`${APK_NAME}\`** | \`${APK_SHA256}\` |
           | **\`sbom.cdx.json\`** | Tracked in repository root |
 
-          ### APK X.509 Signing Certificate (\`apksigner verify --print-certs\`)
-          - **Signer DN**: \`CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ\`
-          - **SHA-256 Digest**: \`d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023\`
+          ### APK X.509 Signing Certificates (\`apksigner verify --print-certs\`)
+          - **Upload / GitHub Key DN**: \`CN=Mohammed Ammar Hussein, OU=Logistics and Customs Software, O=ASYCUDA Iraq Open Source, L=Baghdad, ST=Baghdad, C=IQ\`
+          - **Upload / GitHub SHA-256**: \`d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023\`
+          - **Google Play App Signing SHA-256**: \`385f2b5436777608303d1b3d4ecd43a659c075fb8d1a3b1695d8bd82a24a4133\`
           EOF
           sed -i 's/^          //' /tmp/release_notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --draft=false --prerelease=false --title "${TAG} — AsyLauncher (Bridge Hardening, Pre-Disk Log Redaction, Telemetry Opt-Out & Play Compliance)" --notes-file /tmp/release_notes.md --latest
+            gh release edit "$TAG" --draft=false --prerelease=false --title "${TAG} — AsyLauncher (Google Play App Signing Fix, Date Picker Scaling, 2D/3D Drop-Downs & Smart Keyboard Focus)" --notes-file /tmp/release_notes.md --latest
             gh release upload "$TAG" \
               "/tmp/${APK_NAME}" \
               sbom.cdx.json \
@@ -240,7 +238,7 @@ jobs:
             gh release create "$TAG" \
               "/tmp/${APK_NAME}" \
               sbom.cdx.json \
-              --title "${TAG} — AsyLauncher (Bridge Hardening, Pre-Disk Log Redaction, Telemetry Opt-Out & Play Compliance)" \
+              --title "${TAG} — AsyLauncher (Google Play App Signing Fix, Date Picker Scaling, 2D/3D Drop-Downs & Smart Keyboard Focus)" \
               --notes-file /tmp/release_notes.md \
               --latest
           fi

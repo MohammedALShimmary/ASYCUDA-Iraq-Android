@@ -34,6 +34,8 @@ public final class AsycudaSecurityValidator {
             "5614dc62a20653686934a216439c8c779cd84d58ccbc37e85dda33433f9e972d";
     public static final String PINNED_APK_RELEASE_CERT_SHA256 =
             "d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023";
+    public static final String PINNED_APK_PLAY_STORE_CERT_SHA256 =
+            "385f2b5436777608303d1b3d4ecd43a659c075fb8d1a3b1695d8bd82a24a4133";
 
     private AsycudaSecurityValidator() {
         // Pure-Java static security validator

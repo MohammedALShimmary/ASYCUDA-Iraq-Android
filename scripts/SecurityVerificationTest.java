@@ -226,8 +226,9 @@ public final class SecurityVerificationTest {
         if (fbSrc.contains("gen-lang-client-") || !fbSrc.contains("BuildConfig.FIREBASE_PROJECT_ID")
                 || !fbSrc.contains("isAuthorizedOfficialBuild")
                 || !fbSrc.contains("d302d4d050fb986e4088dd3e684c90662d00da748dde8da3d4966baea02da023")
+                || !fbSrc.contains("385f2b5436777608303d1b3d4ecd43a659c075fb8d1a3b1695d8bd82a24a4133")
                 || !fbSrc.contains("X-Android-Cert")) {
-            throw new AssertionError("AsycudaFirebaseManager.java must enforce 3-layer fork/clone protection (BuildConfig.FIREBASE_PROJECT_ID, release signing cert lock, and X-Android-Cert header)");
+            throw new AssertionError("AsycudaFirebaseManager.java must enforce 3-layer fork/clone protection (BuildConfig.FIREBASE_PROJECT_ID, release + Play Store signing cert lock, and X-Android-Cert header)");
         }
 
         File catFile = resolveProjectFile("config/known-errors-catalog.json");
@@ -261,7 +262,7 @@ public final class SecurityVerificationTest {
 
         // 2. Verify APK updater SHA-256 & URL validation and Tar symlink traversal protection
         if (!AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(
-                "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.1/AsyLauncher_v4.4.1.apk")) {
+                "https://github.com/MohammedALShimmary/ASYCUDA-Iraq-Android/releases/download/v4.4.2/AsyLauncher_v4.4.2.apk")) {
             throw new AssertionError("Official GitHub release URL should be trusted");
         }
         if (AsycudaSecurityValidator.isTrustedGitHubReleaseAssetUrl(
@@ -325,8 +326,8 @@ public final class SecurityVerificationTest {
         }
         if (mgrSrc.contains("contents/lorie-app/src/main/assets/known-errors-catalog.json")
                 || !mgrSrc.contains("known-errors-catalog-remote.json")
-                || !mgrSrc.contains(".bootpatch_v4_4_1")) {
-            throw new AssertionError("AsycudaStandaloneManager.java must reference known-errors-catalog-remote.json and .bootpatch_v4_4_1 (R7-01/R7-03/R11-03)");
+                || !mgrSrc.contains(".bootpatch_v4_4_2")) {
+            throw new AssertionError("AsycudaStandaloneManager.java must reference known-errors-catalog-remote.json and .bootpatch_v4_4_2 (R7-01/R7-03/R11-03)");
         }
 
         File fbFile = resolveProjectFile("lorie/src/main/java/com/termux/x11/AsycudaFirebaseManager.java");
